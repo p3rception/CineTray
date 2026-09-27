@@ -100,6 +100,15 @@ enum MediaSource: String, Codable, Hashable {
     case jellyfin
     /// Locally downloaded content, served by LocalMediaProvider.
     case local
+
+    /// The server web app an item can be opened in; nil for local items.
+    var webAppName: String? {
+        switch self {
+        case .plex: "Plex"
+        case .jellyfin: "Jellyfin"
+        case .local, .sample: nil
+        }
+    }
 }
 
 /// Which hierarchy levels expose a download control. Movies always show

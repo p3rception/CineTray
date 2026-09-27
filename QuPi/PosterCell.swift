@@ -45,11 +45,13 @@ struct PosterCell: View {
                 compactBox
                     .overlay(alignment: .bottomTrailing) { downloadButton }
                     .overlay(alignment: .bottomLeading) { infoButton }
+                    .overlay(alignment: .topTrailing) { openInWebAppButton }
             } else {
                 VStack(alignment: .leading, spacing: 4) {
                     poster
                         .overlay(alignment: .bottomTrailing) { downloadButton }
                         .overlay(alignment: .bottomLeading) { infoButton }
+                        .overlay(alignment: .topTrailing) { openInWebAppButton }
                     MarqueeText(text: displayTitle, font: isCompact ? .system(size: 11) : .caption)
                     MarqueeText(text: displaySubtitle ?? " ", font: isCompact ? .system(size: 9) : .caption2)
                         .foregroundStyle(.secondary)
@@ -63,6 +65,29 @@ struct PosterCell: View {
         .animation(.snappy(duration: 0.15), value: isHovering)
         .onHover { isHovering = $0 }
         .help(item.title)
+        .accessibilityActions {
+            if let name = item.source.webAppName {
+                Button("Open in \(name)") { appState.openInWebApp(item) }
+            }
+        }
+    }
+
+    /// Opens the item in Plex or Jellyfin, so the collection can be browsed
+    /// here and watched there. Shown on hover to keep posters clean;
+    /// VoiceOver gets it as an action on the poster instead.
+    @ViewBuilder
+    private var openInWebAppButton: some View {
+        if isHovering, let name = item.source.webAppName {
+            Button("Open in \(name)", systemImage: "arrow.up.forward.circle.fill") {
+                appState.openInWebApp(item)
+            }
+            .buttonStyle(.plain)
+            .labelStyle(.iconOnly)
+            .foregroundStyle(.white, .black.opacity(0.55))
+            .font(.system(size: isCompact ? 10 : 14))
+            .padding(isCompact ? 2 : 3)
+            .help("Open in \(name)")
+        }
     }
 
     @ViewBuilder

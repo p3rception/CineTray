@@ -247,28 +247,13 @@ struct PlayerView: View {
             }
     }
 
-    /// The web app the playing item can be opened in, if any.
-    private var serverName: String? {
-        switch item.source {
-        case .plex: "Plex"
-        case .jellyfin: "Jellyfin"
-        case .local, .sample: nil
-        }
-    }
-
     /// Opens the playing item's page in Plex Web or Jellyfin.
     @ToolbarContentBuilder
     private var openInServerToolbarItem: some ToolbarContent {
-        if let serverName {
+        if let serverName = item.source.webAppName {
             ToolbarItem(placement: .primaryAction) {
                 Button {
-                    Task {
-                        if let url = await appState.webURL(for: item) {
-                            NSWorkspace.shared.open(url)
-                        } else {
-                            NSSound.beep()
-                        }
-                    }
+                    appState.openInWebApp(item)
                 } label: {
                     Image(systemName: "arrow.up.forward.app")
                         .font(toolbarIconFont)

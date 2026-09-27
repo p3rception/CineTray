@@ -680,6 +680,18 @@ final class AppState {
         try? await provider(for: item)?.webURL(for: item)
     }
 
+    /// Opens the item's page in its server's web app, or beeps when the
+    /// server can't be reached.
+    func openInWebApp(_ item: MediaItem) {
+        Task {
+            if let url = await webURL(for: item) {
+                NSWorkspace.shared.open(url)
+            } else {
+                NSSound.beep()
+            }
+        }
+    }
+
     func downloadURL(for item: MediaItem) async throws -> URL {
         guard let provider = provider(for: item) else {
             throw URLError(.resourceUnavailable)

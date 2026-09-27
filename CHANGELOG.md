@@ -7,7 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- An "Open in Plex" / "Open in Jellyfin" button in the player window toolbar opens the playing item's page in the server's web app. Plex links use the web app hosted by the server itself, so they work without a plex.tv account.
+- An "Open in Plex" / "Open in Jellyfin" button opens an item's page in the server's web app: in the player window toolbar, and at the top right of any poster in the menu when you hover over it, so you can browse your collection in QuPi and watch in Plex or Jellyfin. VoiceOver offers it as an action on the poster. Plex links use the web app hosted by the server itself, so they work without a plex.tv account.
 - One menu section per server library, named as on the server (see Changed).
 - Jellyfin Quick Connect: in Settings > Accounts, click Quick Connect, then enter the code shown on any device already signed in to Jellyfin. No password needed. Requires Jellyfin 10.9 or later with Quick Connect enabled.
 - A small sort button on every open movie, show and music section in the menu, for choosing the sort field and order without opening Settings. Order labels match the field (for example "Newest First" for dates instead of "Z -> A"), here and in Settings > Visuals.
