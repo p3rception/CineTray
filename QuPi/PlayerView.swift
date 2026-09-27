@@ -22,6 +22,16 @@ struct PlayerView: View {
         PlayerUISize(rawValue: playerUISizeRaw) ?? .medium
     }
 
+    /// Toolbar icon size from Settings > Visuals > Player UI Size. Text
+    /// styles, so Dynamic follows the system text size.
+    private var toolbarIconFont: Font {
+        switch playerUISize {
+        case .small: .body
+        case .medium, .dynamic: .title3
+        case .large: .title2
+        }
+    }
+
     /// The aspect ratio to lock the window to. Uses the crop target when one is
     /// chosen, otherwise falls back to the video's native presentation ratio.
     private var effectiveVideoAspectRatio: CGFloat? {
@@ -226,8 +236,8 @@ struct PlayerView: View {
                             .pickerStyle(.inline)
                         } label: {
                             Label("Crop", systemImage: "aspectratio")
+                                .font(toolbarIconFont)
                         }
-                        .controlSize(.small)
                         .help("Crop the video to a fixed aspect ratio")
                     }
                     .sharedBackgroundVisibility(.hidden)
@@ -261,9 +271,8 @@ struct PlayerView: View {
                     }
                 } label: {
                     Image(systemName: "arrow.up.forward.app")
-                        .font(.system(size: 9))
+                        .font(toolbarIconFont)
                 }
-                .controlSize(.small)
                 .help("Open in \(serverName)")
                 .accessibilityLabel("Open in \(serverName)")
             }
@@ -277,9 +286,8 @@ struct PlayerView: View {
                 isPinned.toggle()
             } label: {
                 Image(systemName: isPinned ? "pin.fill" : "pin")
-                    .font(.system(size: 9))
+                    .font(toolbarIconFont)
             }
-            .controlSize(.small)
             .help(isPinned ? "Let other windows cover this player" : "Keep this player above other windows")
         }
         // Drop the shared glass pill; the button keeps its own compact
