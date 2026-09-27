@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+Contribution rules for all changes: @AGENTS.md
+
 ## Build & Verify
 
 Two build paths. Both must keep working.
