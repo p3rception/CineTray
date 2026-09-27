@@ -25,6 +25,8 @@ struct SettingsView: View {
                 .tag("data")
         }
         .frame(width: 520, height: 560)
+        .onAppear { AppWindowActivation.windowOpened() }
+        .onDisappear { AppWindowActivation.windowClosed() }
     }
 }
 

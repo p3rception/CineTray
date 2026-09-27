@@ -37,7 +37,7 @@ struct MediaLibrary: Hashable {
 
 /// A row in the menu bar dropdown: one per library, using the server's own
 /// library name (libraries with the same name and type on different servers
-/// share a row), plus the fixed Playlists and Continue… rows.
+/// share a row), plus the fixed Playlists and Continue Watching rows.
 struct MenuSection: Hashable, Identifiable {
     enum Kind: Hashable {
         case library(MediaType)
@@ -50,7 +50,7 @@ struct MenuSection: Hashable, Identifiable {
     let kind: Kind
 
     static let playlists = MenuSection(id: "playlists", title: "Playlists", kind: .playlists)
-    static let continueItems = MenuSection(id: "continueItems", title: "Continue…", kind: .continueItems)
+    static let continueItems = MenuSection(id: "continueItems", title: "Continue Watching", kind: .continueItems)
 
     /// The row for libraries called `name` that hold `type`.
     static func library(named name: String, type: MediaType) -> MenuSection {
@@ -72,7 +72,7 @@ struct MenuSection: Hashable, Identifiable {
         }
     }
 
-    /// Sections whose tracks play with the inline music overlay. Continue…
+    /// Sections whose tracks play with the inline music overlay. Continue Watching
     /// is included so its grouped album/playlist cells can host the overlay.
     var supportsInlineMusic: Bool {
         switch kind {
@@ -94,7 +94,7 @@ struct MenuSection: Hashable, Identifiable {
 /// playback reporting.
 enum MediaSource: String, Codable, Hashable {
     /// No longer produced (the sample catalog is gone); kept so progress
-    /// saved by older builds still decodes instead of wiping Continue….
+    /// saved by older builds still decodes instead of wiping Continue Watching.
     case sample
     case plex
     case jellyfin
@@ -210,14 +210,14 @@ enum MusicAutoContinue: String, CaseIterable {
     case shuffleByGenre
 }
 
-/// Whether the Continue… section lists individual in-progress songs or
+/// Whether the Continue Watching section lists individual in-progress songs or
 /// collapses them into their parent album/playlist.
 enum ContinueMusicGrouping: String, CaseIterable {
     case byAlbumPlaylist
     case bySong
 }
 
-/// How long unfinished items stay in the Continue… section.
+/// How long unfinished items stay in the Continue Watching section.
 enum ContinueTimeout: String, CaseIterable {
     case day = "24h"
     case threeDays = "72h"
@@ -353,7 +353,7 @@ struct MediaItem: Identifiable, Hashable, Codable {
     var parentID: String?
     var parentKind: MediaKind?
     /// Display info for the container above, so a track can rebuild its parent
-    /// album/playlist cell in the grouped Continue… section without a fetch.
+    /// album/playlist cell in the grouped Continue Watching section without a fetch.
     var parentTitle: String?
     var parentPosterURL: URL?
     /// Source-specific extras (artist IDs, release dates, …) that
@@ -363,6 +363,16 @@ struct MediaItem: Identifiable, Hashable, Codable {
     var addedAt: Date?
     /// Total play count. Nil when the backend does not report it.
     var playCount: Int?
+    /// Whether the server reports this as fully watched (shows and seasons:
+    /// every episode). Nil when the backend does not report it.
+    var isWatched: Bool?
+    /// How far through a partly watched item the server says playback got (0-1).
+    var watchedFraction: Double?
+    /// Where the server says playback of a partly watched item stopped.
+    var resumePositionSeconds: Double?
+    /// When the server says this was last played; orders Continue Watching
+    /// and decides whether the server's resume point is newer than QuPi's.
+    var lastViewedAt: Date?
 
     /// Release year when the subtitle carries one (used for Trakt matching).
     var year: Int? {
@@ -392,6 +402,16 @@ struct MediaItem: Identifiable, Hashable, Codable {
         case .artist, .album, .track, .playlist: 110
         case .movie, .show, .season: 165
         }
+    }
+
+    /// The show's portrait poster for an episode, which Continue Watching
+    /// shows instead of the episode still.
+    var showPosterURL: URL? {
+        kind == .episode ? attributes["grandparentPosterURL"].flatMap(URL.init(string:)) : nil
+    }
+
+    func posterHeight(byShow: Bool) -> CGFloat {
+        byShow && showPosterURL != nil ? 165 : posterHeight
     }
 }
 
@@ -463,6 +483,8 @@ protocol MediaProvider {
     func randomTrack(sameArtistAs item: MediaItem) async throws -> MediaItem?
     /// The item's page in the server's own web app, or nil when there is none.
     func webURL(for item: MediaItem) async throws -> URL?
+    /// The server's own Continue Watching list.
+    func continueWatching() async throws -> [MediaItem]
 }
 
 extension MediaProvider {
@@ -472,6 +494,7 @@ extension MediaProvider {
     func nextMovie(after item: MediaItem, by criterion: MovieAutoContinue) async throws -> MediaItem? { nil }
     func randomTrack(sameArtistAs item: MediaItem) async throws -> MediaItem? { nil }
     func webURL(for item: MediaItem) async throws -> URL? { nil }
+    func continueWatching() async throws -> [MediaItem] { [] }
 }
 
 /// Returns true when AVFoundation can decode the file at `url` without
@@ -488,6 +511,18 @@ func isAVFoundationPlayable(_ url: URL) -> Bool {
         "mp3", "m4a", "aac", "flac", "aiff", "wav", "caf",
     ]
     return supported.contains(ext)
+}
+
+/// Whether `text` contains `query`, ignoring case, accents, spacing and
+/// punctuation ("madmen" finds "Mad Men", "amelie" finds "Amélie"). A query
+/// without letters or digits falls back to a plain case-insensitive match.
+func searchMatches(_ text: String, query: String) -> Bool {
+    func key(_ s: String) -> String {
+        let folded = s.folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: nil)
+        return String(String.UnicodeScalarView(folded.unicodeScalars.filter(CharacterSet.alphanumerics.contains)))
+    }
+    let queryKey = key(query)
+    return queryKey.isEmpty ? text.localizedCaseInsensitiveContains(query) : key(text).contains(queryKey)
 }
 
 /// Strips sequel numbering and subtitles ("Movie 2", "Movie II: Subtitle")
@@ -545,6 +580,11 @@ nonisolated enum SettingsKeys {
     static func sectionEnabled(_ section: MenuSection) -> String {
         "sectionEnabled_\(section.id)"
     }
+    /// Continue Watching opens and closes on its own, independently of the
+    /// one-open-at-a-time library sections.
+    static let continueExpanded = "continueExpanded"
+    /// Menu section ids in the order chosen in Settings > Libraries.
+    static let sectionOrder = "sectionOrder"
 
     static func downloadFolderBookmark(_ type: MediaType) -> String {
         "downloadFolderBookmark_\(type.rawValue)"

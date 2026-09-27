@@ -170,6 +170,27 @@ struct JellyfinClient {
 
     private struct UserData: Decodable {
         let PlayCount: Int?
+        let Played: Bool?
+        let PlaybackPositionTicks: Int?
+        let PlayedPercentage: Double?
+        let LastPlayedDate: String?
+    }
+
+    /// Adds the watched state Jellyfin reports (series and seasons count as
+    /// played once every episode is). Music isn't tracked.
+    private static func withWatchState(_ item: MediaItem, from entry: Item) -> MediaItem {
+        guard ["Movie", "Episode", "Series", "Season"].contains(entry.itemType), let data = entry.UserData else { return item }
+        var item = item
+        item.lastViewedAt = data.LastPlayedDate.flatMap {
+            try? Date($0, strategy: Date.ISO8601FormatStyle(includingFractionalSeconds: true))
+        }
+        if let ticks = data.PlaybackPositionTicks, ticks > 0, let percent = data.PlayedPercentage {
+            item.resumePositionSeconds = Double(ticks) / 10_000_000
+            item.watchedFraction = min(percent / 100, 1)
+        } else {
+            item.isWatched = data.Played
+        }
+        return item
     }
 
     private struct PersonRef: Decodable {
@@ -237,7 +258,7 @@ struct JellyfinClient {
             URLQueryItem(name: "Fields", value: "Overview,DateCreated,UserData"),
         ])
         return items.map { item in
-            MediaItem(
+            Self.withWatchState(MediaItem(
                 id: item.Id,
                 source: .jellyfin,
                 type: type,
@@ -256,7 +277,7 @@ struct JellyfinClient {
                     try? Date($0, strategy: Date.ISO8601FormatStyle(includingFractionalSeconds: true))
                 },
                 playCount: item.UserData?.PlayCount
-            )
+            ), from: item)
         }
     }
 
@@ -286,50 +307,53 @@ struct JellyfinClient {
                 URLQueryItem(name: "Fields", value: "Overview"),
             ]
         }
-        return try await queryItems(query).compactMap { entry in
-            let kind: MediaKind? = switch entry.itemType {
-            case "Movie": .movie
-            case "Season": .season
-            case "Episode": .episode
-            case "MusicAlbum": .album
-            case "Audio": .track
-            default: nil
-            }
-            guard let kind else { return nil }
-            // Playlists mix media types, so derive each child's type.
-            let childType: MediaType = switch kind {
-            case .movie: .movies
-            case .season, .episode: .tvShows
-            case .album, .track: .music
-            default: item.type
-            }
-            let subtitle: String? = switch kind {
-            case .episode: entry.IndexNumber.map { index in
-                entry.ParentIndexNumber.map { "S\($0)E\(index)" } ?? "Episode \(index)"
-            }
-            case .track: entry.AlbumArtist
-            default: entry.ProductionYear.map(String.init)
-            }
-            return MediaItem(
-                id: entry.Id,
-                source: .jellyfin,
-                type: childType,
-                kind: kind,
-                title: entry.Name,
-                subtitle: subtitle,
-                posterURL: imageURL(itemID: entry.Id),
-                summary: entry.Overview,
-                parentID: item.id,
-                parentKind: item.kind,
-                parentTitle: item.title,
-                parentPosterURL: item.posterURL,
-                attributes: [
-                    "originalPath": entry.Path ?? "",
-                    "grandparentTitle": entry.SeriesName ?? "",
-                    "grandparentRatingKey": entry.SeriesId ?? ""
-                ]
-            )
+        return try await queryItems(query).compactMap { childItem(from: $0, parent: item) }
+    }
+
+    private func childItem(from entry: Item, parent item: MediaItem) -> MediaItem? {
+        let kind: MediaKind? = switch entry.itemType {
+        case "Movie": .movie
+        case "Season": .season
+        case "Episode": .episode
+        case "MusicAlbum": .album
+        case "Audio": .track
+        default: nil
         }
+        guard let kind else { return nil }
+        // Playlists mix media types, so derive each child's type.
+        let childType: MediaType = switch kind {
+        case .movie: .movies
+        case .season, .episode: .tvShows
+        case .album, .track: .music
+        default: item.type
+        }
+        let subtitle: String? = switch kind {
+        case .episode: entry.IndexNumber.map { index in
+            entry.ParentIndexNumber.map { "S\($0)E\(index)" } ?? "Episode \(index)"
+        }
+        case .track: entry.AlbumArtist
+        default: entry.ProductionYear.map(String.init)
+        }
+        return Self.withWatchState(MediaItem(
+            id: entry.Id,
+            source: .jellyfin,
+            type: childType,
+            kind: kind,
+            title: entry.Name,
+            subtitle: subtitle,
+            posterURL: imageURL(itemID: entry.Id),
+            summary: entry.Overview,
+            parentID: item.id,
+            parentKind: item.kind,
+            parentTitle: item.title,
+            parentPosterURL: item.posterURL,
+            attributes: [
+                "originalPath": entry.Path ?? "",
+                "grandparentTitle": entry.SeriesName ?? "",
+                "grandparentRatingKey": entry.SeriesId ?? "",
+                "grandparentPosterURL": entry.SeriesId.map { imageURL(itemID: $0).absoluteString } ?? ""
+            ]
+        ), from: entry)
     }
 
     /// The user's playlists.
@@ -413,6 +437,43 @@ struct JellyfinClient {
         }
     }
 
+    // MARK: - Continue Watching
+
+    /// Movies and episodes in progress (Resume) plus the next episode of
+    /// shows being watched (Next Up), limited to `libraryIDs` unless empty.
+    func continueWatching(inLibraries libraryIDs: Set<String>) async throws -> [MediaItem] {
+        var entries: [Item] = []
+        // Both endpoints take a single ParentId, so ask once per library.
+        for parentID in libraryIDs.isEmpty ? [nil] : libraryIDs.map(Optional.init) {
+            let parent = parentID.map { [URLQueryItem(name: "ParentId", value: $0)] } ?? []
+            for (path, query) in [
+                ("/Users/\(config.userID)/Items/Resume", [URLQueryItem(name: "MediaTypes", value: "Video")]),
+                // In-progress episodes already come from Resume.
+                ("/Shows/NextUp", [
+                    URLQueryItem(name: "UserId", value: config.userID),
+                    URLQueryItem(name: "EnableResumable", value: "false"),
+                    URLQueryItem(name: "Limit", value: "20"),
+                ]),
+            ] {
+                let (data, _) = try await URLSession.shared.data(for: request(path: path, query: query + parent))
+                entries += try JSONDecoder().decode(ItemsResponse.self, from: data).Items
+            }
+        }
+        return entries.compactMap { entry in
+            switch entry.itemType {
+            case "Movie":
+                return movieItem(from: entry)
+            case "Episode":
+                // Listed outside its season, so give it the season as parent,
+                // as children(of:) does: next-episode and downloads work the same.
+                guard let season = ancestorItem(id: entry.SeasonId, title: entry.SeasonName ?? "Season", kind: .season, type: .tvShows) else { return nil }
+                return childItem(from: entry, parent: season)
+            default:
+                return nil
+            }
+        }
+    }
+
     // MARK: - Auto-continue queries
 
     private func itemDetail(id: String) async throws -> Item {
@@ -423,7 +484,7 @@ struct JellyfinClient {
     }
 
     private func movieItem(from entry: Item) -> MediaItem {
-        MediaItem(
+        Self.withWatchState(MediaItem(
             id: entry.Id,
             source: .jellyfin,
             type: .movies,
@@ -436,7 +497,7 @@ struct JellyfinClient {
                 "releaseDate": entry.PremiereDate ?? "",
                 "originalPath": entry.Path ?? ""
             ]
-        )
+        ), from: entry)
     }
 
     /// Picks the next movie per the criterion using the item's People
@@ -756,5 +817,9 @@ struct JellyfinMediaProvider: MediaProvider {
 
     func webURL(for item: MediaItem) async throws -> URL? {
         client.webURL(itemID: item.id)
+    }
+
+    func continueWatching() async throws -> [MediaItem] {
+        try await client.continueWatching(inLibraries: selectedLibraryIDs)
     }
 }

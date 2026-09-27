@@ -5,12 +5,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## 2026-09-27
 
+### Added
+
+- Continue Watching (renamed from "Continue…") includes the server's own list (Plex Continue Watching, Jellyfin Resume and Next Up), so things started on another device and the next episode of shows you're watching show up next to what you started in QuPi, most recently played first. Episodes show their show's poster and name, with the episode underneath. The section is on and open by default, first in the menu, and opens and closes independently of the library sections.
+- Movies and episodes resume where you stopped, in QuPi or in Plex or Jellyfin on another device, whichever was more recent. Before, only music resumed. Right-click a poster and choose Play from Beginning to start over.
+- Plex and Jellyfin posters show a checkmark for watched movies and episodes, and for shows and seasons once every episode is watched, plus a progress bar for anything in progress. They update a few seconds after playback stops.
+- Menu Order in Settings > Libraries: drag sections into any order, or Control-click one to move it up or down.
+- While a player or the Settings window is open, QuPi has a Dock icon and a menu bar, so the usual shortcuts work (Control-Command-F for Full Screen, Command-H, Command-W).
+
 ### Changed
 
+- Search ignores spacing, punctuation and accents ("madmen" finds "Mad Men", "amelie" finds "Amélie"). While you type, the menu shows only the sections with matches, with a single "Searching…" or "No matches" line instead of one per section.
+- The search field is ready for typing as soon as the menu opens.
+- Opening the menu refreshes Continue Watching, and libraries loaded more than two minutes earlier refresh in the background, so changes made elsewhere show up without restarting QuPi.
+- Plex connects faster after a network change. All of a server's addresses are checked at once, 3 seconds at most, on first use, after the network changes and when the current address stops answering. Switching to a hotspot or VPN connects in seconds instead of about three minutes.
 - Jellyfin videos in mp4 or mov files with H.264, HEVC (hvc1) or AV1 video and a compatible audio track play the original file directly, so playback starts in well under a second instead of waiting a few seconds for the server to prepare a stream. Other files still go through the server.
 
 ### Fixed
 
+- The Plex token could be sent unencrypted over the internet. For remote servers found through your plex.tv account, QuPi tried plain HTTP before HTTPS, and every request carries the token. Remote addresses now use HTTPS only, and local ones try HTTPS first. Servers connected before this change keep their saved addresses until you connect them again in Settings > Accounts.
 - Jellyfin HEVC videos (for example mkv files, or mp4 files tagged hev1) played audio only, with a gray QuickTime placeholder instead of the picture. The server now sends them in fragmented MP4 segments, which macOS can display. VP9 videos are converted by the server instead of being sent in a format macOS can't play.
 
 ## 2026-09-26

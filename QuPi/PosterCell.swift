@@ -7,6 +7,9 @@ struct PosterCell: View {
     let item: MediaItem
     var isSelected = false
     var isCompact = false
+    /// Show an episode by its show's poster and name, with "S1E2 - Title"
+    /// underneath (Continue Watching).
+    var presentsEpisodesByShow = false
     let action: () -> Void
 
     @Environment(AppState.self) private var appState
@@ -22,12 +25,19 @@ struct PosterCell: View {
     }
 
     private var cellHeight: CGFloat {
-        isCompact ? item.posterHeight * (MediaCarouselView.compactCellWidth / MediaCarouselView.baseCellWidth) : item.posterHeight
+        item.posterHeight(byShow: presentsEpisodesByShow) * (isCompact ? MediaCarouselView.compactCellWidth / MediaCarouselView.baseCellWidth : 1)
+    }
+
+    private var showsByShow: Bool {
+        presentsEpisodesByShow && item.showPosterURL != nil
     }
 
     private var displayTitle: String {
         if appState.tvTopLevel == .season, item.kind == .season {
             return item.parentTitle ?? item.subtitle ?? item.title
+        }
+        if showsByShow, let show = item.attributes["grandparentTitle"], !show.isEmpty {
+            return show
         }
         return item.title
     }
@@ -35,6 +45,9 @@ struct PosterCell: View {
     private var displaySubtitle: String? {
         if appState.tvTopLevel == .season, item.kind == .season {
             return item.title
+        }
+        if showsByShow {
+            return [item.subtitle, item.title].compactMap { $0 }.joined(separator: " - ")
         }
         return item.subtitle
     }
@@ -46,12 +59,14 @@ struct PosterCell: View {
                     .overlay(alignment: .bottomTrailing) { downloadButton }
                     .overlay(alignment: .bottomLeading) { infoButton }
                     .overlay(alignment: .topTrailing) { openInWebAppButton }
+                    .overlay(alignment: .topTrailing) { watchedBadge }
             } else {
                 VStack(alignment: .leading, spacing: 4) {
                     poster
                         .overlay(alignment: .bottomTrailing) { downloadButton }
                         .overlay(alignment: .bottomLeading) { infoButton }
                         .overlay(alignment: .topTrailing) { openInWebAppButton }
+                        .overlay(alignment: .topTrailing) { watchedBadge }
                     MarqueeText(text: displayTitle, font: isCompact ? .system(size: 11) : .caption)
                     MarqueeText(text: displaySubtitle ?? " ", font: isCompact ? .system(size: 9) : .caption2)
                         .foregroundStyle(.secondary)
@@ -61,6 +76,14 @@ struct PosterCell: View {
             }
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            if !item.kind.isExpandable {
+                Button("Play from Beginning", systemImage: "arrow.counterclockwise") {
+                    appState.startOverItemID = item.id
+                    action()
+                }
+            }
+        }
         .scaleEffect(isHovering ? 1.04 : 1)
         .animation(.snappy(duration: 0.15), value: isHovering)
         .onHover { isHovering = $0 }
@@ -87,6 +110,35 @@ struct PosterCell: View {
             .font(.system(size: isCompact ? 10 : 14))
             .padding(isCompact ? 2 : 3)
             .help("Open in \(name)")
+        }
+    }
+
+    /// White on a dark disc, like the other poster controls, so it isn't
+    /// confused with the green Downloaded mark. Hidden while hovering, when
+    /// the Open in Plex/Jellyfin button takes its corner.
+    @ViewBuilder
+    private var watchedBadge: some View {
+        if item.isWatched == true, !isHovering {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(.white, .black.opacity(0.55))
+                .font(.system(size: isCompact ? 10 : 14))
+                .padding(isCompact ? 2 : 3)
+                .help("Watched")
+                .accessibilityLabel("Watched")
+        }
+    }
+
+    /// Thin bar along the bottom edge showing how far a partly watched item got.
+    @ViewBuilder
+    private var watchProgressBar: some View {
+        if let fraction = item.watchedFraction {
+            ProgressView(value: fraction)
+                .progressViewStyle(.linear)
+                .controlSize(.mini)
+                .padding(.horizontal, 6)
+                .padding(.bottom, 2)
+                .allowsHitTesting(false)
+                .accessibilityLabel("\(Int(fraction * 100))% watched")
         }
     }
 
@@ -161,6 +213,7 @@ struct PosterCell: View {
         .frame(width: cellWidth, alignment: .topLeading)
         .background(isHovering ? .tertiary : .quaternary,
                     in: RoundedRectangle(cornerRadius: 8))
+        .overlay(alignment: .bottom) { watchProgressBar }
         .overlay {
             if let progress = DownloadManager.shared.downloadProgress[item.id] {
                 Color.black.opacity(0.4)
@@ -188,7 +241,7 @@ struct PosterCell: View {
         ZStack {
             RoundedRectangle(cornerRadius: 8)
                 .fill(.quaternary)
-            if let url = item.posterURL {
+            if let url = showsByShow ? item.showPosterURL : item.posterURL {
                 ArtworkImage(url: url) {
                     ProgressView()
                         .controlSize(.small)
@@ -201,6 +254,7 @@ struct PosterCell: View {
         }
         .frame(width: cellWidth, height: cellHeight)
         .clipShape(.rect(cornerRadius: 8))
+        .overlay(alignment: .bottom) { watchProgressBar }
         .overlay {
             if let progress = DownloadManager.shared.downloadProgress[item.id] {
                 Color.black.opacity(0.65)

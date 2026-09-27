@@ -54,6 +54,7 @@ struct LibrariesSettingsView: View {
                     allKeys: jellyfinLibraries.map { $0.id }
                 )
             }
+            menuOrderSection
         }
         .formStyle(.grouped)
         // Re-runs when servers are added/removed in the Accounts tab, so the
@@ -61,6 +62,41 @@ struct LibrariesSettingsView: View {
         .task(id: appState.serverConfigurationVersion) { refresh() }
         .onChange(of: plexSelected) { appState.resetCatalog() }
         .onChange(of: jellyfinSelected) { appState.resetCatalog() }
+    }
+
+    /// Drag a row onto another to take its place. Rows in a grouped Form
+    /// don't support onMove on macOS, hence draggable/dropDestination; the
+    /// context menu is the keyboard and VoiceOver alternative.
+    private var menuOrderSection: some View {
+        Section("Menu Order") {
+            let sections = appState.orderableSections
+            ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
+                HStack {
+                    Label(section.title, systemImage: section.systemImage)
+                    Spacer()
+                    if !appState.enabledSections.contains(section) {
+                        Text("Hidden")
+                            .foregroundStyle(.secondary)
+                    }
+                    Image(systemName: "line.3.horizontal")
+                        .foregroundStyle(.tertiary)
+                        .accessibilityHidden(true)
+                }
+                .contentShape(Rectangle())
+                .draggable(section.id)
+                .dropDestination(for: String.self) { ids, _ in
+                    guard let from = sections.firstIndex(where: { $0.id == ids.first }), from != index else { return false }
+                    appState.moveSection(from: from, to: index)
+                    return true
+                }
+                .contextMenu {
+                    Button("Move Up") { appState.moveSection(from: index, to: index - 1) }
+                        .disabled(index == 0)
+                    Button("Move Down") { appState.moveSection(from: index, to: index + 1) }
+                        .disabled(index == sections.count - 1)
+                }
+            }
+        }
     }
 
     private var localSection: some View {

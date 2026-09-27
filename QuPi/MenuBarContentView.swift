@@ -2,13 +2,14 @@ import SwiftUI
 
 /// The dropdown shown when the menu bar icon is clicked: a row per enabled
 /// section, each expanding into a horizontal poster carousel with drill-down
-/// levels. Focusing the search field expands every section and filters all
-/// catalogs as you type.
+/// levels. Typing in the search field expands the sections with matches and
+/// filters all catalogs as you type.
 struct MenuBarContentView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.openWindow) private var openWindow
     @Environment(\.openSettings) private var openSettings
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appearsActive) private var appearsActive
 
     private let downloadManager = DownloadManager.shared
 
@@ -75,16 +76,34 @@ struct MenuBarContentView: View {
                 Divider()
             }
 
+            // Filtered and sorted once per redraw, shared by the match check,
+            // the count and the carousel.
             let sections = appState.enabledSections
-            ForEach(sections) { section in
-                self.section(for: section)
-                if section != sections.last {
+            let itemsBySection = Dictionary(uniqueKeysWithValues: sections.map { ($0, visibleItems(for: $0)) })
+            // While a query is typed, show only the sections with matches.
+            let shown = appState.isFiltering
+                ? sections.filter { itemsBySection[$0]??.isEmpty == false }
+                : sections
+            ForEach(shown) { section in
+                self.section(for: section, items: itemsBySection[section] ?? nil)
+                if section != shown.last {
                     Divider()
                 }
+            }
+            if appState.isFiltering {
+                searchStatus(hasResults: !shown.isEmpty)
             }
         }
         .frame(width: contentWidth)
         .fixedSize(horizontal: false, vertical: true)
+        // True each time the menu opens (onAppear can fire only once for a
+        // MenuBarExtra window).
+        .onChange(of: appearsActive, initial: true) { _, active in
+            guard active else { return }
+            appState.menuDidOpen()
+            // Ready to type; set on the next run loop turn, once the window is key.
+            Task { searchFocused = true }
+        }
         .onChange(of: searchFocused) {
             if searchFocused {
                 withAnimation(.snappy(duration: 0.2)) { appState.activateSearch() }
@@ -180,13 +199,31 @@ struct MenuBarContentView: View {
     // MARK: - Sections
 
     private func isExpanded(_ section: MenuSection) -> Bool {
-        appState.isSearchActive || appState.expandedSection == section
+        appState.isFiltering
+            || appState.expandedSection == section
+            || (section == .continueItems && appState.isContinueExpanded)
+    }
+
+    /// One row under the search results: a spinner while results may still
+    /// arrive, otherwise a single note when nothing matched.
+    @ViewBuilder
+    private func searchStatus(hasResults: Bool) -> some View {
+        Group {
+            if appState.isSearchPending {
+                ProgressView("Searching…")
+                    .controlSize(.small)
+            } else if !hasResults {
+                Text("No matches for \"\(appState.searchText)\"")
+            }
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
     }
 
     @ViewBuilder
-    private func section(for section: MenuSection) -> some View {
-        // Filtered and sorted once per redraw, shared by the count and the carousel.
-        let items = visibleItems(for: section)
+    private func section(for section: MenuSection, items: [MediaItem]?) -> some View {
         // The sort menu sits between the title and the count, so the row is
         // two buttons around it rather than one button containing a menu.
         HStack(spacing: 6) {
@@ -232,8 +269,8 @@ struct MenuBarContentView: View {
     }
 
     private func toggleRow(_ section: MenuSection) {
-        // Rows are static headers while a search is active.
-        guard !appState.isSearchActive else { return }
+        // Rows are static headers while search results are shown.
+        guard !appState.isFiltering else { return }
         withAnimation(.snappy(duration: 0.2)) {
             appState.toggleExpansion(of: section)
         }
@@ -306,6 +343,7 @@ struct MenuBarContentView: View {
                 navigationStep: playerMode == PlayerMode.inline.rawValue ? 1 : nil,
                 nowPlayingItem: (section.supportsInlineMusic && playerMode == PlayerMode.inline.rawValue) ? appState.currentItem : nil,
                 isPlaying: appState.isPlaying,
+                presentsEpisodesByShow: section == .continueItems,
                 onPlayPause: appState.togglePlayPause,
                 onPrevious: { appState.playInlineNeighbor(-1) },
                 onNext: { appState.playInlineNeighbor(1) }
@@ -315,15 +353,9 @@ struct MenuBarContentView: View {
             ForEach(appState.drillPath[section] ?? [], id: \.id) { parent in
                 drillLevel(for: parent, in: section)
             }
-        } else if appState.isSearchActive && !appState.searchText.isEmpty {
-            Text("No matches for \"\(appState.searchText)\"")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
         } else {
             Text(section == .continueItems
-                 ? (appState.isOfflineMode ? "No downloaded items in progress." : "Nothing in progress - items you stop partway through appear here.")
+                 ? (appState.isOfflineMode ? "No downloaded items in progress." : "Nothing in progress. Items you stop partway through, here or in Plex or Jellyfin, appear here.")
                  : "Nothing here yet.")
                 .font(.caption)
                 .foregroundStyle(.secondary)

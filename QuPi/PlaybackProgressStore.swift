@@ -1,6 +1,6 @@
 import Foundation
 
-/// One partially-played item, powering the Continue… section and
+/// One partially-played item, powering the Continue Watching section and
 /// resume-on-play.
 struct PlaybackProgress: Codable {
     var item: MediaItem
@@ -17,17 +17,22 @@ enum PlaybackProgressStore {
     private static let startedFraction = 0.05
     private static let finishedFraction = 0.92
 
-    static func all() -> [PlaybackProgress] {
+    /// Items last played before this drop out of Continue Watching.
+    static var cutoff: Date? {
         let timeout = UserDefaults.standard.string(forKey: SettingsKeys.continueTimeout)
             .flatMap(ContinueTimeout.init) ?? .forever
-        let cutoff = timeout.maxAge.map { Date.now.addingTimeInterval(-$0) }
+        return timeout.maxAge.map { Date.now.addingTimeInterval(-$0) }
+    }
+
+    static func all() -> [PlaybackProgress] {
+        let cutoff = Self.cutoff
         return load().values
             .filter { entry in cutoff.map { entry.updatedAt >= $0 } ?? true }
             .sorted { $0.updatedAt > $1.updatedAt }
     }
 
-    static func position(forItemID id: String) -> Double? {
-        load()[id]?.positionSeconds
+    static func entry(forItemID id: String) -> PlaybackProgress? {
+        load()[id]
     }
 
     /// Records progress, or clears the entry when playback is effectively

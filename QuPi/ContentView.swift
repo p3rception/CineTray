@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 /// QuPi: Menu bar media player.
 /// Dropdown shows poster carousels; selecting items opens a player window.
@@ -36,5 +37,26 @@ import SwiftUI
             SettingsView()
                 .environment(appState)
         }
+    }
+}
+
+/// QuPi is a menu bar app (LSUIElement), so its windows get no app menus
+/// and none of their shortcuts (Full Screen, Hide, Close). While a player
+/// or the Settings window is open it becomes a regular app with a Dock icon,
+/// and goes back to menu bar only when the last one closes.
+enum AppWindowActivation {
+    private static var openWindows = 0
+
+    static func windowOpened() {
+        openWindows += 1
+        guard openWindows == 1 else { return }
+        NSApplication.shared.setActivationPolicy(.regular)
+        NSApplication.shared.activate()
+    }
+
+    static func windowClosed() {
+        openWindows = max(openWindows - 1, 0)
+        guard openWindows == 0 else { return }
+        NSApplication.shared.setActivationPolicy(.accessory)
     }
 }

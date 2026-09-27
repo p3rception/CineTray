@@ -109,8 +109,10 @@ struct PlayerView: View {
                 dismissWindow()
             }
         }
+        .onAppear { AppWindowActivation.windowOpened() }
         .onDisappear {
             appState.stopPlayback(if: item)
+            AppWindowActivation.windowClosed()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("QP.MediaKeyNext"))) { _ in
             if appState.currentItem?.id == item.id { playNext() }

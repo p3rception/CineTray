@@ -36,7 +36,7 @@ struct PlaybackSettingsView: View {
                     }
                 }
             } header: {
-                SectionInfoHeader(title: "Playback", info: "In Sequence plays the next movie in the same series; By Director / By Lead Actor plays that person's next released movie (lead actor requires Plex or Jellyfin). Auto-Continue TV plays the next episode. Music \"Off\" still finishes the album in order; Shuffle by Artist continues with random tracks by the same artist. Continue Music chooses whether the Continue… section lists individual in-progress songs or collapses them into their album/playlist. Continue Timeout controls how long unfinished items stay in the Continue… section.")
+                SectionInfoHeader(title: "Playback", info: "In Sequence plays the next movie in the same series; By Director / By Lead Actor plays that person's next released movie (lead actor requires Plex or Jellyfin). Auto-Continue TV plays the next episode. Music \"Off\" still finishes the album in order; Shuffle by Artist continues with random tracks by the same artist. Continue Music chooses whether the Continue Watching section lists individual in-progress songs or collapses them into their album/playlist. Continue Timeout controls how long unfinished items stay in the Continue Watching section.")
             }
         }
         .formStyle(.grouped)

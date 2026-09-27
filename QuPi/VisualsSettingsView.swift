@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Appearance, the optional Playlists/Continue… sections, navigation (what
+/// Appearance, the optional Playlists/Continue Watching sections, navigation (what
 /// shows and music list at their top level) and sorting.
 struct VisualsSettingsView: View {
     @Environment(AppState.self) private var appState
@@ -8,7 +8,7 @@ struct VisualsSettingsView: View {
     @AppStorage(SettingsKeys.tvTopLevel) private var tvTopLevel = TVTopLevel.series.rawValue
     @AppStorage(SettingsKeys.musicTopLevel) private var musicTopLevel = MusicTopLevel.album.rawValue
     @AppStorage(SettingsKeys.sectionEnabled(.playlists)) private var sectionPlaylists = false
-    @AppStorage(SettingsKeys.sectionEnabled(.continueItems)) private var sectionContinue = false
+    @AppStorage(SettingsKeys.sectionEnabled(.continueItems)) private var sectionContinue = true
     @AppStorage(SettingsKeys.simpleVisuals) private var simpleVisuals = false
     @AppStorage(SettingsKeys.richMedia) private var richMedia = false
     @AppStorage(SettingsKeys.continueTimeout) private var continueTimeout = ContinueTimeout.forever.rawValue
@@ -43,9 +43,9 @@ struct VisualsSettingsView: View {
 
             Section {
                 Toggle("Playlists", isOn: $sectionPlaylists)
-                Toggle("Continue…", isOn: $sectionContinue)
+                Toggle("Continue Watching", isOn: $sectionContinue)
             } header: {
-                SectionInfoHeader(title: "Sections", info: "The menu shows one section per server library, named as on the server; choose which libraries to include in the Libraries tab. Playlists shows your Plex/Jellyfin playlists. Continue… lists anything you stopped partway through, and resumes it where you left off.")
+                SectionInfoHeader(title: "Sections", info: "The menu shows one section per server library, named as on the server; choose which libraries to include in the Libraries tab. Playlists shows your Plex/Jellyfin playlists. Continue Watching lists anything you stopped partway through, and resumes it where you left off.")
             }
 
             Section {

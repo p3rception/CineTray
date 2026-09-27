@@ -1,4 +1,5 @@
 import Foundation
+import Network
 import VideoToolbox
 
 final class PlexConfiguration {
@@ -10,13 +11,35 @@ final class PlexConfiguration {
     /// to route items back to the server they came from.
     var serverID: String
     var serverName: String
+    /// Every known address, in preference order. Unlike `serverURL` it never
+    /// changes, so a connection check always considers all of them.
+    let candidateURLs: [URL]
+    /// The shared connection check and the network generation it ran for.
+    /// See `PlexClient.ensureConnection`.
+    var connectionCheck: Task<URL?, Never>?
+    var connectionCheckGeneration = -1
 
     init(serverURL: URL, fallbackURLs: [URL]? = nil, token: String, serverID: String = "", serverName: String = "") {
         self.serverURL = serverURL
         self.fallbackURLs = fallbackURLs
+        var seen = Set<URL>()
+        self.candidateURLs = ([serverURL] + (fallbackURLs ?? [])).filter { seen.insert($0).inserted }
         self.token = token
         self.serverID = serverID
         self.serverName = serverName
+    }
+}
+
+/// Counts network changes (Wi-Fi to hotspot, VPN on or off), so the next
+/// Plex request after one re-checks which server address answers instead
+/// of waiting for a stale one to time out.
+final class NetworkChangeMonitor {
+    static let shared = NetworkChangeMonitor()
+
+    private(set) var generation = 0
+
+    private init() {
+        Task { for await _ in NWPathMonitor() { generation += 1 } }
     }
 }
 
@@ -143,41 +166,76 @@ struct PlexClient {
     // MARK: - Server requests
 
     private func fetchData(path: String, query: [URLQueryItem] = []) async throws -> (Data, URLResponse) {
-        let urls = [config.serverURL] + (config.fallbackURLs ?? [])
-        var lastError: Error?
-        for url in urls {
-            var components = URLComponents(
-                url: url.appending(path: path),
-                resolvingAgainstBaseURL: false
-            )!
-            components.queryItems = (components.queryItems ?? []) + query
-            var request = URLRequest(url: components.url!)
-            request.setValue("application/json", forHTTPHeaderField: "Accept")
-            request.setValue(config.token, forHTTPHeaderField: "X-Plex-Token")
-            request.setValue(Self.clientIdentifier, forHTTPHeaderField: "X-Plex-Client-Identifier")
-            request.setValue(Self.productName, forHTTPHeaderField: "X-Plex-Product")
-            
-            let result: (Data, URLResponse)
-            do {
-                result = try await URLSession.shared.data(for: request)
-            } catch {
-                // Unreachable at this address: try the next one.
-                lastError = error
-                continue
-            }
-            if url != config.serverURL {
-                // A fallback answered: try it first from now on.
-                let old = config.serverURL
-                config.serverURL = url
-                config.fallbackURLs = [old] + (config.fallbackURLs ?? []).filter { $0 != url && $0 != old }
-                PlexServerStore.promote(url, forServer: config.serverID)
-            }
-            // The server answered, so an HTTP error is final: the other
-            // addresses reach the same server.
-            try Self.validate(result.1)
-            return result
+        try await ensureConnection()
+        do {
+            return try await fetchData(from: config.serverURL, path: path, query: query)
+        } catch let error as URLError where error.code != .cancelled {
+            // The address stopped answering without a network change (server
+            // offline or moved): re-check, and retry if another one answers.
+            let failedURL = config.serverURL
+            try await ensureConnection(force: true)
+            guard config.serverURL != failedURL else { throw error }
+            return try await fetchData(from: config.serverURL, path: path, query: query)
         }
-        throw lastError ?? URLError(.badURL)
+    }
+
+    private func fetchData(from baseURL: URL, path: String, query: [URLQueryItem]) async throws -> (Data, URLResponse) {
+        var components = URLComponents(url: baseURL.appending(path: path), resolvingAgainstBaseURL: false)!
+        components.queryItems = (components.queryItems ?? []) + query
+        var request = URLRequest(url: components.url!)
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue(config.token, forHTTPHeaderField: "X-Plex-Token")
+        request.setValue(Self.clientIdentifier, forHTTPHeaderField: "X-Plex-Client-Identifier")
+        request.setValue(Self.productName, forHTTPHeaderField: "X-Plex-Product")
+        let result = try await URLSession.shared.data(for: request)
+        // The server answered, so an HTTP error is final: the other
+        // addresses reach the same server.
+        try Self.validate(result.1)
+        return result
+    }
+
+    /// Points `config.serverURL` at the first address that answers. Runs on
+    /// first use, after a network change, or when forced; concurrent requests
+    /// share one check. Trying addresses one by one meant waiting ~60 s per
+    /// unreachable LAN address when away from home.
+    private func ensureConnection(force: Bool = false) async throws {
+        let generation = NetworkChangeMonitor.shared.generation
+        if force || config.connectionCheck == nil || config.connectionCheckGeneration != generation {
+            config.connectionCheckGeneration = generation
+            config.connectionCheck = Task { [candidates = config.candidateURLs] in
+                await Self.firstReachableURL(among: candidates)
+            }
+        }
+        guard let url = await config.connectionCheck?.value else {
+            config.connectionCheck = nil // check again on the next request
+            throw URLError(.cannotConnectToHost)
+        }
+        if url != config.serverURL {
+            config.serverURL = url
+            PlexServerStore.promote(url, forServer: config.serverID)
+        }
+    }
+
+    /// Asks every address at once for /identity (no token needed, so nothing
+    /// sensitive is sent) with a 3 s timeout, and returns the first to answer.
+    private static func firstReachableURL(among urls: [URL]) async -> URL? {
+        await withTaskGroup(of: URL?.self) { group in
+            for url in urls {
+                group.addTask {
+                    let request = URLRequest(url: url.appending(path: "/identity"), timeoutInterval: 3)
+                    guard let (_, response) = try? await URLSession.shared.data(for: request),
+                          (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+                    return url
+                }
+            }
+            for await url in group {
+                if let url {
+                    group.cancelAll()
+                    return url
+                }
+            }
+            return nil
+        }
     }
 
     /// Turns non-2xx responses into readable errors instead of letting them
@@ -221,6 +279,7 @@ struct PlexClient {
         let index: Int?
         let parentIndex: Int?
         let leafCount: Int?
+        let viewedLeafCount: Int?
         let parentTitle: String?
         let parentRatingKey: String?
         let parentThumb: String?
@@ -234,6 +293,9 @@ struct PlexClient {
         let originallyAvailableAt: String?
         let addedAt: Int?
         let viewCount: Int?
+        let viewOffset: Int?
+        let duration: Int?
+        let lastViewedAt: Int?
         let librarySectionID: Int?
         let Director: [Tag]?
         let Role: [Tag]?
@@ -244,6 +306,30 @@ struct PlexClient {
     private struct MetadataResponse: Decodable {
         struct Container: Decodable { let Metadata: [Metadata]? }
         let MediaContainer: Container
+    }
+
+    /// Adds the watched state Plex reports: shows and seasons are watched once
+    /// every episode is; movies and episodes carry a resume point or a play
+    /// count. Music isn't tracked.
+    private static func withWatchState(_ item: MediaItem, from entry: Metadata) -> MediaItem {
+        var item = item
+        item.lastViewedAt = entry.lastViewedAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
+        switch entry.type {
+        case "show", "season":
+            if let leafCount = entry.leafCount, leafCount > 0 {
+                item.isWatched = entry.viewedLeafCount == leafCount
+            }
+        case "movie", "episode":
+            if let offset = entry.viewOffset, offset > 0, let duration = entry.duration, duration > 0 {
+                item.resumePositionSeconds = Double(offset) / 1000
+                item.watchedFraction = min(Double(offset) / Double(duration), 1)
+            } else {
+                item.isWatched = (entry.viewCount ?? 0) > 0
+            }
+        default:
+            break
+        }
+        return item
     }
 
     /// Plex numeric metadata types for /all queries.
@@ -260,7 +346,7 @@ struct PlexClient {
         let (data, _) = try await fetchData(path: "/library/sections/\(key)/all", query: [URLQueryItem(name: "type", value: typeQuery)])
         let metadata = try JSONDecoder().decode(MetadataResponse.self, from: data).MediaContainer.Metadata ?? []
         return metadata.map { entry in
-            MediaItem(
+            Self.withWatchState(MediaItem(
                 id: entry.ratingKey,
                 source: .plex,
                 type: type,
@@ -284,7 +370,7 @@ struct PlexClient {
                 ],
                 addedAt: entry.addedAt.map { Date(timeIntervalSince1970: TimeInterval($0)) },
                 playCount: entry.viewCount
-            )
+            ), from: entry)
         }
     }
 
@@ -297,58 +383,60 @@ struct PlexClient {
             : "/library/metadata/\(item.id)/children"
         let (data, _) = try await fetchData(path: path)
         let metadata = try JSONDecoder().decode(MetadataResponse.self, from: data).MediaContainer.Metadata ?? []
-        return metadata.compactMap { entry in
-            let kind: MediaKind? = switch entry.type {
-            case "movie": .movie
-            case "season": .season
-            case "episode": .episode
-            case "album": .album
-            case "track": .track
-            default: nil
-            }
-            guard let kind else { return nil }
-            // Playlists mix media types, so derive each child's type.
-            let childType: MediaType = switch kind {
-            case .movie: .movies
-            case .season, .episode: .tvShows
-            case .album, .track: .music
-            default: item.type
-            }
-            let subtitle: String? = switch kind {
-            case .season: entry.leafCount.map { "\($0) episodes" }
-            case .episode: entry.index.map { index in
-                entry.parentIndex.map { "S\($0)E\(index)" } ?? "Episode \(index)"
-            }
-            case .album: entry.year.map(String.init)
-            case .movie: entry.year.map(String.init)
-            default: entry.grandparentTitle
-            }
-            return MediaItem(
-                id: entry.ratingKey,
-                source: .plex,
-                type: childType,
-                kind: kind,
-                title: entry.title,
-                subtitle: subtitle,
-                posterURL: entry.thumb.map(imageURL(thumbPath:)) ?? item.posterURL,
-                summary: entry.summary,
-                parentID: item.id,
-                parentKind: item.kind,
-                parentTitle: item.title,
-                // Build parentPosterURL fresh using the current serverURL so it
-                // remains valid even if config.serverURL changed (fallback selected)
-                // since the parent item's posterURL was first constructed.
-                parentPosterURL: entry.parentThumb.map(imageURL(thumbPath:)) ?? item.posterURL,
-                attributes: [
-                    "originalPath": entry.Media?.first?.Part?.first?.file ?? "",
-                    "grandparentTitle": entry.grandparentTitle ?? "",
-                    "parentIndex": entry.parentIndex.map(String.init) ?? "",
-                    "grandparentRatingKey": entry.grandparentRatingKey ?? "",
-                    "grandparentPosterURL": entry.grandparentThumb.map(imageURL(thumbPath:))?.absoluteString ?? "",
-                    "year": entry.year.map(String.init) ?? "" // Recoverable offline
-                ]
-            )
+        return metadata.compactMap { childItem(from: $0, parent: item) }
+    }
+
+    private func childItem(from entry: Metadata, parent item: MediaItem) -> MediaItem? {
+        let kind: MediaKind? = switch entry.type {
+        case "movie": .movie
+        case "season": .season
+        case "episode": .episode
+        case "album": .album
+        case "track": .track
+        default: nil
         }
+        guard let kind else { return nil }
+        // Playlists mix media types, so derive each child's type.
+        let childType: MediaType = switch kind {
+        case .movie: .movies
+        case .season, .episode: .tvShows
+        case .album, .track: .music
+        default: item.type
+        }
+        let subtitle: String? = switch kind {
+        case .season: entry.leafCount.map { "\($0) episodes" }
+        case .episode: entry.index.map { index in
+            entry.parentIndex.map { "S\($0)E\(index)" } ?? "Episode \(index)"
+        }
+        case .album: entry.year.map(String.init)
+        case .movie: entry.year.map(String.init)
+        default: entry.grandparentTitle
+        }
+        return Self.withWatchState(MediaItem(
+            id: entry.ratingKey,
+            source: .plex,
+            type: childType,
+            kind: kind,
+            title: entry.title,
+            subtitle: subtitle,
+            posterURL: entry.thumb.map(imageURL(thumbPath:)) ?? item.posterURL,
+            summary: entry.summary,
+            parentID: item.id,
+            parentKind: item.kind,
+            parentTitle: item.title,
+            // Build parentPosterURL fresh using the current serverURL so it
+            // remains valid even if config.serverURL changed (fallback selected)
+            // since the parent item's posterURL was first constructed.
+            parentPosterURL: entry.parentThumb.map(imageURL(thumbPath:)) ?? item.posterURL,
+            attributes: [
+                "originalPath": entry.Media?.first?.Part?.first?.file ?? "",
+                "grandparentTitle": entry.grandparentTitle ?? "",
+                "parentIndex": entry.parentIndex.map(String.init) ?? "",
+                "grandparentRatingKey": entry.grandparentRatingKey ?? "",
+                "grandparentPosterURL": entry.grandparentThumb.map(imageURL(thumbPath:))?.absoluteString ?? "",
+                "year": entry.year.map(String.init) ?? "" // Recoverable offline
+            ]
+        ), from: entry)
     }
 
     /// The server's playlists (audio and video).
@@ -434,6 +522,42 @@ struct PlexClient {
         }
     }
 
+    // MARK: - Continue Watching
+
+    /// Plex's Continue Watching list (movies and episodes in progress, plus
+    /// the next episode of shows being watched), or On Deck on servers
+    /// without that hub. Limited to `libraryKeys` unless empty.
+    func continueWatching(inLibraries libraryKeys: Set<String>) async throws -> [MediaItem] {
+        let data: Data
+        do {
+            data = try await fetchData(path: "/hubs/continueWatching/items").0
+        } catch PlexError.http(404) {
+            data = try await fetchData(path: "/library/onDeck").0
+        }
+        let metadata = try JSONDecoder().decode(MetadataResponse.self, from: data).MediaContainer.Metadata ?? []
+        return metadata.compactMap { entry in
+            if !libraryKeys.isEmpty, let section = entry.librarySectionID, !libraryKeys.contains(String(section)) {
+                return nil
+            }
+            switch entry.type {
+            case "movie":
+                return movieItem(from: entry)
+            case "episode":
+                // Listed outside its season, so give it the season as parent,
+                // as children(of:) does: next-episode and downloads work the same.
+                guard let seasonKey = entry.parentRatingKey else { return nil }
+                let season = MediaItem(
+                    id: seasonKey, source: .plex, type: .tvShows, kind: .season,
+                    title: entry.parentTitle ?? "",
+                    posterURL: (entry.parentThumb ?? entry.grandparentThumb).map(imageURL(thumbPath:))
+                )
+                return childItem(from: entry, parent: season)
+            default:
+                return nil
+            }
+        }
+    }
+
     // MARK: - Auto-continue queries
 
     private func metadata(forRatingKey key: String) async throws -> Metadata? {
@@ -442,7 +566,7 @@ struct PlexClient {
     }
 
     private func movieItem(from entry: Metadata) -> MediaItem {
-        MediaItem(
+        Self.withWatchState(MediaItem(
             id: entry.ratingKey,
             source: .plex,
             type: .movies,
@@ -456,7 +580,7 @@ struct PlexClient {
                 "originalPath": entry.Media?.first?.Part?.first?.file ?? "",
                 "year": entry.year.map(String.init) ?? "" // Recoverable offline
             ]
-        )
+        ), from: entry)
     }
 
     /// Movies matching a library filter (collection/director/actor tag),
@@ -826,15 +950,14 @@ struct PlexClient {
                     if $0.isRelay != $1.isRelay { return !$0.isRelay }
                     return false
                 }
-                // For each connection emit the direct-IP URL before the plex.direct URI
-                // so that local plain-HTTP connections are tried first and relay last.
-                // Always add both http and https direct-IP variants so the app works
-                // regardless of the server's "Secure connections" setting.
+                // For each connection emit the direct-IP URL before the plex.direct URI,
+                // with relay last. Every request carries the Plex token, so plain HTTP
+                // is allowed only for local connections, and even there after https.
                 var seen = Set<String>()
                 var validURLs: [URL] = []
                 for connection in sorted {
                     if !connection.isRelay, !connection.address.isEmpty {
-                        for scheme in ["http", "https"] {
+                        for scheme in connection.local ? ["https", "http"] : ["https"] {
                             if let url = URL(string: "\(scheme)://\(connection.address):\(connection.port)"),
                                seen.insert(url.absoluteString).inserted {
                                 validURLs.append(url)
@@ -842,6 +965,7 @@ struct PlexClient {
                         }
                     }
                     if let uriURL = URL(string: connection.uri),
+                       connection.local || uriURL.scheme?.lowercased() == "https",
                        seen.insert(uriURL.absoluteString).inserted {
                         validURLs.append(uriURL)
                     }
@@ -946,5 +1070,9 @@ struct PlexMediaProvider: MediaProvider {
 
     func randomTrack(sameArtistAs item: MediaItem) async throws -> MediaItem? {
         try await client.randomTrack(sameArtistAs: item).map(tagged)
+    }
+
+    func continueWatching() async throws -> [MediaItem] {
+        try await client.continueWatching(inLibraries: selectedLibraryKeys).map(tagged)
     }
 }
