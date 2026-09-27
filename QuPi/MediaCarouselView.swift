@@ -42,7 +42,7 @@ struct MediaCarouselView: View {
     /// text lines beneath it; short cells are vertically centered in this space.
     private var maxCellHeight: CGFloat {
         if simpleVisuals {
-            return isCompact ? 50 : 58
+            return isCompact ? 54 : 62
         }
         
         let maxPoster = items.map { $0.posterHeight(byShow: presentsEpisodesByShow) }.max() ?? 110

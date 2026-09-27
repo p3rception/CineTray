@@ -88,6 +88,7 @@ struct PosterCell: View {
         .animation(.snappy(duration: 0.15), value: isHovering)
         .onHover { isHovering = $0 }
         .help(item.title)
+        .accessibilityValue(item.watchedFraction.map { "\(Int($0 * 100))% watched" } ?? "")
         .accessibilityActions {
             if let name = item.source.webAppName {
                 Button("Open in \(name)") { appState.openInWebApp(item) }
@@ -138,7 +139,9 @@ struct PosterCell: View {
                 .padding(.horizontal, 6)
                 .padding(.bottom, 2)
                 .allowsHitTesting(false)
-                .accessibilityLabel("\(Int(fraction * 100))% watched")
+                // An accessible ProgressView inside the Button's label replaces the
+                // button for VoiceOver, so the fraction is the button's value instead.
+                .accessibilityHidden(true)
         }
     }
 
@@ -209,7 +212,8 @@ struct PosterCell: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
         }
-        .padding(6)
+        .padding([.top, .horizontal], 6)
+        .padding(.bottom, 10) // room for the watch progress bar
         .frame(width: cellWidth, alignment: .topLeading)
         .background(isHovering ? .tertiary : .quaternary,
                     in: RoundedRectangle(cornerRadius: 8))

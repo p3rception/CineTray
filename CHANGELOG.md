@@ -3,6 +3,13 @@
 Changes in this fork compared to [KuDoZ007/QP](https://github.com/KuDoZ007/QP).
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-09-28
+
+### Fixed
+
+- In Simple Visuals, the progress bar no longer covers the year or episode line of items you've started.
+- VoiceOver can open posters of items you've started, such as everything in Continue Watching, and reads how much you've watched.
+
 ## 2026-09-27
 
 ### Added
