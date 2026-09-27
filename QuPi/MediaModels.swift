@@ -360,7 +360,7 @@ struct MediaItem: Identifiable, Hashable, Codable {
         subtitle.flatMap { Int($0) }
     }
 
-    /// Year for sorting — falls back to the releaseDate attribute when
+    /// Year for sorting - falls back to the releaseDate attribute when
     /// the subtitle is not a plain year (e.g. for music or TV seasons).
     var sortableYear: Int? {
         year ?? Int(attributes["releaseDate"]?.prefix(4) ?? "")
@@ -466,7 +466,7 @@ extension MediaProvider {
 }
 
 /// Returns true when AVFoundation can decode the file at `url` without
-/// transcoding. Network URLs (HLS streams) always pass — the server already
+/// transcoding. Network URLs (HLS streams) always pass - the server already
 /// produces a compatible format. Local files are checked by container extension;
 /// anything not in the allowlist (e.g. .mkv, .avi) requires the SwiftVLC engine.
 func isAVFoundationPlayable(_ url: URL) -> Bool {

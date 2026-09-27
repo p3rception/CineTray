@@ -107,7 +107,7 @@ struct AccountsSettingsView: View {
         Button("Find Servers") { findPlexServers() }
             .disabled(plexAccountToken.isEmpty)
         if plexAccountToken.isEmpty {
-            Text("Sign In with Plex first — finding servers needs a signed-in account.")
+            Text("Sign In with Plex first - finding servers needs a signed-in account.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }
@@ -179,7 +179,7 @@ struct AccountsSettingsView: View {
                         return
                     }
                 }
-                plexStatus = "Sign-in timed out — try again."
+                plexStatus = "Sign-in timed out - try again."
             } catch is CancellationError {
             } catch {
                 plexStatus = "Sign-in failed: \(error.localizedDescription)"
@@ -286,7 +286,7 @@ struct AccountsSettingsView: View {
                     serverName: server.name
                 )
                 let libraries = try await PlexClient(config: config).libraries()
-                plexServerStatuses[server.id] = "Connected — \(libraries.count) libraries found."
+                plexServerStatuses[server.id] = "Connected - \(libraries.count) libraries found."
             } catch {
                 plexServerStatuses[server.id] = "Connection failed: \(error.localizedDescription)"
             }
@@ -451,7 +451,7 @@ struct AccountsSettingsView: View {
                 }
             }
             if !traktAccessToken.isEmpty {
-                Text("Connected — movie playback will be scrobbled.")
+                Text("Connected - movie playback will be scrobbled.")
                     .font(.callout)
                     .foregroundStyle(.green)
             }
@@ -499,7 +499,7 @@ struct AccountsSettingsView: View {
                 }
             }
             if lastfmSessionKey != nil {
-                Text("Connected — finished music playback will be scrobbled.")
+                Text("Connected - finished music playback will be scrobbled.")
                     .font(.callout)
                     .foregroundStyle(.green)
             }
@@ -667,7 +667,7 @@ private struct CopyableCodeRow: View {
             }
             .buttonStyle(.plain)
             .help("Click to copy")
-            Text(copied ? "— copied!" : "at \(destination)")
+            Text(copied ? "- copied!" : "at \(destination)")
                 .foregroundStyle(copied ? .green : .primary)
         }
         .font(.callout)

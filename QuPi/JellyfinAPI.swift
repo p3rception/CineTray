@@ -587,7 +587,7 @@ struct JellyfinClient {
         )!
         // Providing codec capabilities encourages Jellyfin to direct-stream (remux) rather than
         // transcode. Direct-stream produces a VOD-type HLS manifest with #EXT-X-ENDLIST, which
-        // gives AVFoundation a fully populated seekableTimeRanges — required for the system PiP
+        // gives AVFoundation a fully populated seekableTimeRanges - required for the system PiP
         // scrubber to be interactive.
         components.queryItems = [
             URLQueryItem(name: "api_key", value: config.token),

@@ -30,7 +30,7 @@ struct PlayerView: View {
     }
 
     private var windowTitle: String {
-        item.subtitle.map { "\(item.title) — \($0)" } ?? item.title
+        item.subtitle.map { "\(item.title) - \($0)" } ?? item.title
     }
 
     var body: some View {
@@ -323,7 +323,7 @@ struct PlayerView: View {
     }
 
     /// Polls the VLC engine's decoded video size to lock the window to the
-    /// native aspect ratio — the VLC equivalent of `observeVideoAspectRatio(of:)`.
+    /// native aspect ratio - the VLC equivalent of `observeVideoAspectRatio(of:)`.
     private func observeVLCVideoAspectRatio(of bridge: VLCPlayerBridge) async {
         while !Task.isCancelled {
             if let size = bridge.videoSize, size.width > 0, size.height > 0 {
@@ -390,7 +390,7 @@ struct PlayerView: View {
 // MARK: - AVKit player view
 
 /// AVKit video view with a controllable controls style, so the scrubber can
-/// be dropped at small window sizes — SwiftUI's `VideoPlayer` offers no
+/// be dropped at small window sizes - SwiftUI's `VideoPlayer` offers no
 /// control over its overlay controls.
 private struct VideoPlayerRepresentable: NSViewRepresentable {
     let player: AVPlayer
@@ -844,7 +844,7 @@ private class ToolbarVisibilityView: NSView {
         }
     }
 
-    /// Tiny (PiP-style) mode: the titlebar — traffic lights included —
+    /// Tiny (PiP-style) mode: the titlebar - traffic lights included -
     /// stays hidden outright while the SwiftUI overlay supplies its own
     /// close/pin controls. The hover state machine keeps running so the
     /// overlay still fades via onChromeVisibilityChange.
@@ -948,7 +948,7 @@ private class ToolbarVisibilityView: NSView {
     /// Fades the titlebar container (toolbar, title, and traffic lights in
     /// one view) rather than toggling toolbar visibility or the style mask:
     /// those change the content geometry, which re-triggers the mouse
-    /// tracking and resizes the window — the source of the chrome flicker
+    /// tracking and resizes the window - the source of the chrome flicker
     /// and the letterbox space that drifted in at small sizes.
     private func setChromeHidden(_ hidden: Bool, animated: Bool) {
         guard let window = self.window, !window.styleMask.contains(.fullScreen) else { return }

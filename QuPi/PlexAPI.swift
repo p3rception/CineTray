@@ -265,7 +265,7 @@ struct PlexClient {
                 source: .plex,
                 type: type,
                 kind: kind,
-                // Season top level shows "Show — Season N" context via subtitle.
+                // Season top level shows "Show - Season N" context via subtitle.
                 title: entry.title,
                 subtitle: entry.parentTitle ?? entry.grandparentTitle ?? entry.year.map(String.init),
                 posterURL: entry.thumb.map(imageURL(thumbPath:)),
@@ -489,7 +489,7 @@ struct PlexClient {
             if let collection = meta.Collection?.first?.id {
                 candidates = try await movies(inSection: section, filter: URLQueryItem(name: "collection", value: String(collection)))
             } else {
-                // No Plex collection — fall back to the franchise title heuristic.
+                // No Plex collection - fall back to the franchise title heuristic.
                 let all = try await movies(inSection: section, filter: URLQueryItem(name: "sort", value: "titleSort"))
                 let base = franchiseBaseTitle(item.title)
                 candidates = all.filter { franchiseBaseTitle($0.title) == base }
@@ -557,7 +557,7 @@ struct PlexClient {
         return codecs
     }()
     private static let directPlayAudioCodecs: Set<String> = ["aac", "mp3", "ac3", "eac3", "alac", "flac", "pcm"]
-    /// Containers AVFoundation can stream over HTTP — notably not mkv.
+    /// Containers AVFoundation can stream over HTTP - notably not mkv.
     private static let directPlayVideoContainers: Set<String> = ["mp4", "mov", "m4v"]
     private static let directPlayAudioContainers: Set<String> = ["mp3", "mp4", "m4a", "flac", "aiff", "wav", "caf"]
 
@@ -683,7 +683,7 @@ struct PlexClient {
             URLQueryItem(
                 name: "X-Plex-Client-Profile-Extra",
                 // fMP4 segments (container=mp4): AVFoundation only renders
-                // HEVC/AV1 video in HLS from fMP4, not mpegts — with mpegts
+                // HEVC/AV1 video in HLS from fMP4, not mpegts - with mpegts
                 // the audio plays but the video track never appears.
                 value: "add-transcode-target(type=videoProfile&context=streaming&protocol=hls&container=mp4&videoCodec=\(videoCodecs)&audioCodec=aac,mp3)"
             ),
@@ -700,7 +700,7 @@ struct PlexClient {
 
     /// Universal audio transcode to MP3, the fallback for track codecs
     /// AVFoundation can't play. The explicit music transcode target tells
-    /// the server what to produce — without it, an unrecognized client
+    /// the server what to produce - without it, an unrecognized client
     /// gets an error instead of a stream.
     func audioStreamURL(ratingKey: String) -> URL {
         var components = URLComponents(

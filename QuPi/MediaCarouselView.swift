@@ -9,7 +9,7 @@ struct MediaCarouselView: View {
     static let spacing: CGFloat = 10
     static let hoverInset: CGFloat = 6
 
-    /// Width for a given number of visible cells — used by MenuBarContentView
+    /// Width for a given number of visible cells - used by MenuBarContentView
     /// to size the overall dropdown width reactively.
     static func carouselWidth(for count: Int) -> CGFloat {
         baseCellWidth * CGFloat(count) + spacing * CGFloat(count - 1)
@@ -66,8 +66,8 @@ struct MediaCarouselView: View {
     /// Finds the exact item matching the currently playing track, or its parent (album/playlist).
     private var overlayItemID: String? {
         guard let nowPlaying = nowPlayingItem else { return nil }
-        // Match the playing track directly, or — in the grouped Continue…
-        // section — the album/playlist cell that contains it.
+        // Match the playing track directly, or - in the grouped Continue…
+        // section - the album/playlist cell that contains it.
         let candidateIDs = [nowPlaying.id, nowPlaying.parentID].compactMap { $0 }
         return items.first(where: { candidateIDs.contains($0.id) })?.id
     }

@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Full-width bottom transport bar for the VLC video player at normal (non-PiP)
 /// window sizes. Provides skip ±10 s, play/pause, and a seekable scrubber with
-/// elapsed/remaining labels — the functional equivalent of AVKit's inline bar,
+/// elapsed/remaining labels - the functional equivalent of AVKit's inline bar,
 /// styled with Liquid Glass to match the rest of the player chrome.
 struct VideoTransportBar: View {
     let isPlaying: Bool

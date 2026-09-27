@@ -38,7 +38,7 @@ struct VisualsSettingsView: View {
                 }
                 .pickerStyle(.segmented)
             } header: {
-                SectionInfoHeader(title: "Appearance", info: "Simple Visuals skips artwork entirely and shows compact text boxes instead. Rich Media adds an info button (bottom-left of posters) that shows descriptions, bios, and synopses on demand — hover tooltips will no longer show them automatically. Player UI Size scales player controls. Music Player switches between Inline or Popout.")
+                SectionInfoHeader(title: "Appearance", info: "Simple Visuals skips artwork entirely and shows compact text boxes instead. Rich Media adds an info button (bottom-left of posters) that shows descriptions, bios, and synopses on demand - hover tooltips will no longer show them automatically. Player UI Size scales player controls. Music Player switches between Inline or Popout.")
             }
 
             Section {

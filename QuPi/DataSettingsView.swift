@@ -26,7 +26,7 @@ struct DataSettingsView: View {
                     musicLevelRow
                 }
             } header: {
-                SectionInfoHeader(title: "Downloads", info: "With downloads enabled, playable items in the dropdown get a small download button. Use the checkboxes to also show the download button at higher levels — tapping a series or album downloads everything inside it. Each media type saves into its own folder, capped at its storage amount.")
+                SectionInfoHeader(title: "Downloads", info: "With downloads enabled, playable items in the dropdown get a small download button. Use the checkboxes to also show the download button at higher levels - tapping a series or album downloads everything inside it. Each media type saves into its own folder, capped at its storage amount.")
             }
             Section {
                 Toggle("Cache Artwork Locally", isOn: $cacheArtwork)

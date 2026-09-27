@@ -34,7 +34,7 @@ struct LibrariesSettingsView: View {
                 librarySection(
                     title: plexConfigurations.count == 1
                         ? "Plex Libraries"
-                        : "Plex — \(configuration.serverName)",
+                        : "Plex - \(configuration.serverName)",
                     // Selections are stored scoped as "serverID:key" so the
                     // same section number on two servers can't collide.
                     entries: (plexLibraries[configuration.serverID] ?? []).map {

@@ -554,8 +554,8 @@ final class AppState {
         }
     }
 
-    /// The items to show for a section: the full catalog normally, or —
-    /// while searching — direct title/subtitle matches merged with the
+    /// The items to show for a section: the full catalog normally, or -
+    /// while searching - direct title/subtitle matches merged with the
     /// ancestors of deep matches. Nil when the catalog hasn't loaded yet.
     /// Items are ordered by the current sort preference for the section.
     func displayedItems(for section: MenuSection) -> [MediaItem]? {
@@ -742,7 +742,7 @@ final class AppState {
         return fetched
     }
 
-    /// The remaining items after `item` in its container — the music
+    /// The remaining items after `item` in its container - the music
     /// window's "Up Next" queue.
     func upcomingQueue(after item: MediaItem) async -> [MediaItem] {
         guard let siblings = await siblings(of: item),
@@ -1124,7 +1124,7 @@ final class AppState {
         guard generation == playbackGeneration else { return }
         let bridge = VLCPlayerBridge()
         vlcBridge = bridge
-        // Store the URL for deferred play — VLCVideoPlayerView.onAppear calls
+        // Store the URL for deferred play - VLCVideoPlayerView.onAppear calls
         // playPending() once its NSView is attached to the window hierarchy.
         // Calling play() before VideoView appears causes libVLC's video output
         // module to crash with "cannot create video output window without NSApplication".
@@ -1255,7 +1255,7 @@ final class AppState {
         inlinePlaylist = nil
     }
 
-    /// Stops playback only if `item` still owns the engine — a stale window
+    /// Stops playback only if `item` still owns the engine - a stale window
     /// closing must not kill a session another player has since started.
     func stopPlayback(if item: MediaItem) {
         guard currentItem?.id == item.id else { return }

@@ -323,7 +323,7 @@ struct MenuBarContentView: View {
                 .padding(.vertical, 12)
         } else {
             Text(section == .continueItems
-                 ? (appState.isOfflineMode ? "No downloaded items in progress." : "Nothing in progress — items you stop partway through appear here.")
+                 ? (appState.isOfflineMode ? "No downloaded items in progress." : "Nothing in progress - items you stop partway through appear here.")
                  : "Nothing here yet.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -358,7 +358,7 @@ struct MenuBarContentView: View {
         if appState.tvTopLevel == .season, parent.kind == .season {
             let seriesName = parent.parentTitle ?? parent.subtitle
             if let seriesName {
-                return "\(seriesName) — \(parent.title)"
+                return "\(seriesName) - \(parent.title)"
             }
         }
         return parent.title
