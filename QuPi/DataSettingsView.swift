@@ -4,41 +4,61 @@ import SwiftUI
 /// artwork cache.
 struct DataSettingsView: View {
     @AppStorage(SettingsKeys.downloadsEnabled) private var downloadsEnabled = false
-    @AppStorage(SettingsKeys.downloadIndicatorsEnabled) private var downloadIndicators = false
     @AppStorage(SettingsKeys.cacheArtwork) private var cacheArtwork = true
 
     // Refresh trigger for folder paths and usage after choosing folders.
     @State private var folderRefresh = 0
     @State private var cacheSizeDescription = ""
+    @State private var confirmingDelete: MediaType?
 
     var body: some View {
         Form {
             Section {
                 Toggle("Enable Downloads", isOn: $downloadsEnabled)
-                ForEach(MediaType.allCases) { type in
-                    downloadRow(for: type)
+            } header: {
+                SectionInfoHeader(title: "Downloads", info: "With downloads enabled, playable items in the dropdown get a small download button. Each media type saves into its own folder, capped at its storage limit.")
+            }
+
+            ForEach(MediaType.allCases) { type in
+                downloadSection(for: type)
+            }
+
+            Section {
+                LabeledContent("Movies") {
+                    Toggle("Movie", isOn: levelBinding(.movie))
                 }
-                Toggle("Download Indicators", isOn: $downloadIndicators)
-                    .disabled(!downloadsEnabled)
-                if downloadIndicators {
-                    moviesLevelRow
-                    tvLevelRow
-                    musicLevelRow
+                LabeledContent("Shows") {
+                    HStack {
+                        Toggle("Series", isOn: levelBinding(.series))
+                        Toggle("Season", isOn: levelBinding(.season))
+                        Toggle("Episode", isOn: levelBinding(.episode))
+                    }
+                }
+                LabeledContent("Music") {
+                    HStack {
+                        Toggle("Playlist", isOn: levelBinding(.playlist))
+                        Toggle("Artist", isOn: levelBinding(.artist))
+                        Toggle("Album", isOn: levelBinding(.album))
+                        Toggle("Song", isOn: levelBinding(.song))
+                    }
                 }
             } header: {
-                SectionInfoHeader(title: "Downloads", info: "With downloads enabled, playable items in the dropdown get a small download button. Use the checkboxes to also show the download button at higher levels - tapping a series or album downloads everything inside it. Each media type saves into its own folder, capped at its storage amount.")
+                SectionInfoHeader(title: "Show Download Button On", info: "Downloading a series, season, artist, album or playlist downloads everything in it.")
             }
+            .toggleStyle(.checkbox)
+            .disabled(!downloadsEnabled)
+
             Section {
                 Toggle("Cache Artwork Locally", isOn: $cacheArtwork)
-                HStack {
-                    Button("Clear Artwork Cache") {
-                        ArtworkCache.clear()
-                        DownloadManager.clearDownloadedArtwork()
-                        updateCacheSize()
-                    }
-                    if !cacheSizeDescription.isEmpty {
+                LabeledContent("Artwork Cache") {
+                    HStack {
                         Text(cacheSizeDescription)
                             .foregroundStyle(.secondary)
+                        Button("Clear") {
+                            ArtworkCache.clear()
+                            DownloadManager.clearDownloadedArtwork()
+                            updateCacheSize()
+                        }
                     }
                 }
             } header: {
@@ -47,35 +67,50 @@ struct DataSettingsView: View {
         }
         .formStyle(.grouped)
         .task { updateCacheSize() }
+        .confirmationDialog(
+            "Delete all downloaded \(confirmingDelete?.title.lowercased() ?? "")?",
+            isPresented: Binding(get: { confirmingDelete != nil }, set: { if !$0 { confirmingDelete = nil } }),
+            presenting: confirmingDelete
+        ) { type in
+            Button("Delete Downloads", role: .destructive) {
+                DownloadManager.deleteDownloads(for: type)
+                folderRefresh += 1
+            }
+        } message: { _ in
+            Text("The downloaded files are removed from the folder. You can download them again at any time.")
+        }
     }
 
-    private func downloadRow(for type: MediaType) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 8) {
-                Label(type.title, systemImage: type.systemImage)
-                    .frame(width: 110, alignment: .leading)
-                Spacer()
-                TextField("Max", value: limitBinding(for: type), format: .number)
-                    .labelsHidden()
-                    .frame(width: 60)
-                    .multilineTextAlignment(.trailing)
-                Text("GB")
-                    .foregroundStyle(.secondary)
-                Button("Update Location") { chooseFolder(for: type) }
-                Button("Delete Downloads") {
-                    DownloadManager.deleteDownloads(for: type)
-                    folderRefresh += 1
+    private func downloadSection(for type: MediaType) -> some View {
+        Section {
+            LabeledContent("Folder") {
+                HStack {
+                    Text(DownloadManager.folderPath(for: type).map { ($0 as NSString).abbreviatingWithTildeInPath } ?? "Not set")
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Button("Choose…") { chooseFolder(for: type) }
                 }
             }
-            let description = folderDescription(for: type)
-            if !description.isEmpty {
-                Text(description)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .id(folderRefresh)
+            LabeledContent("Storage Limit") {
+                HStack(spacing: 4) {
+                    TextField("Storage Limit", value: limitBinding(for: type), format: .number)
+                        .labelsHidden()
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 60)
+                    Text("GB")
+                        .foregroundStyle(.secondary)
+                }
             }
+            LabeledContent("Used", value: usageDescription(for: type))
+            Button("Delete Downloads…", role: .destructive) {
+                confirmingDelete = type
+            }
+        } header: {
+            Label(type.title, systemImage: type.systemImage)
         }
+        // Changes after choosing a folder or deleting, so path and usage re-read.
+        .id("\(type.rawValue)-\(folderRefresh)")
         .task(id: folderRefresh) {
             if DownloadManager.resolvedFolder(for: type) == nil {
                 adoptLibraryFolder(for: type)
@@ -84,13 +119,13 @@ struct DataSettingsView: View {
         .disabled(!downloadsEnabled)
     }
 
-    private func folderDescription(for type: MediaType) -> String {
-        guard let path = DownloadManager.folderPath(for: type) else { return "" }
+    private func usageDescription(for type: MediaType) -> String {
+        guard DownloadManager.folderPath(for: type) != nil else { return "-" }
         let details = DownloadManager.folderUsageDetails(for: type)
-        let localStr = ByteCountFormatter.string(fromByteCount: details.localBytes, countStyle: .file)
-        let downStr = ByteCountFormatter.string(fromByteCount: details.downloadedBytes, countStyle: .file)
-        let totalStr = ByteCountFormatter.string(fromByteCount: details.localBytes + details.downloadedBytes, countStyle: .file)
-        return "\((path as NSString).abbreviatingWithTildeInPath) (\(localStr) local / \(downStr) downloaded / Total = \(totalStr) stored)"
+        let downloaded = ByteCountFormatter.string(fromByteCount: details.downloadedBytes, countStyle: .file)
+        guard details.localBytes > 0 else { return downloaded }
+        let local = ByteCountFormatter.string(fromByteCount: details.localBytes, countStyle: .file)
+        return "\(downloaded) downloaded, \(local) of your own files"
     }
 
     private func chooseFolder(for type: MediaType) {
@@ -118,41 +153,6 @@ struct DataSettingsView: View {
         } set: { newValue in
             UserDefaults.standard.set(max(newValue, 0), forKey: SettingsKeys.downloadLimitGB(type))
         }
-    }
-
-    private var moviesLevelRow: some View {
-        VStack(alignment: .leading) {
-            Text("Movies")
-            VStack(alignment: .leading, spacing: 8) {
-                Toggle("Movie", isOn: levelBinding(.movie))
-            }
-        }
-        .disabled(!downloadsEnabled)
-    }
-
-    private var tvLevelRow: some View {
-        VStack(alignment: .leading) {
-            Text("Shows")
-            VStack(alignment: .leading, spacing: 8) {
-                Toggle("Series", isOn: levelBinding(.series))
-                Toggle("Season", isOn: levelBinding(.season))
-                Toggle("Episode", isOn: levelBinding(.episode))
-            }
-        }
-        .disabled(!downloadsEnabled)
-    }
-
-    private var musicLevelRow: some View {
-        VStack(alignment: .leading) {
-            Text("Music")
-            VStack(alignment: .leading, spacing: 8) {
-                Toggle("Playlist", isOn: levelBinding(.playlist))
-                Toggle("Artist", isOn: levelBinding(.artist))
-                Toggle("Album", isOn: levelBinding(.album))
-                Toggle("Song", isOn: levelBinding(.song))
-            }
-        }
-        .disabled(!downloadsEnabled)
     }
 
     private func levelBinding(_ level: DownloadLevel) -> Binding<Bool> {

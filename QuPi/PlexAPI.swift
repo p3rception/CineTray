@@ -909,6 +909,20 @@ struct PlexClient {
         return try JSONDecoder().decode(PIN.self, from: data)
     }
 
+    /// The plex.tv account a token belongs to, shown in Settings > Accounts.
+    struct Account: Decodable {
+        let username: String
+        let email: String?
+    }
+
+    static func account(token: String) async throws -> Account {
+        var request = plexTVRequest(path: "/api/v2/user", method: "GET")
+        request.setValue(token, forHTTPHeaderField: "X-Plex-Token")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response)
+        return try JSONDecoder().decode(Account.self, from: data)
+    }
+
     /// Lists servers visible to a plex.tv account token. Each resource
     /// carries its own access token (the right token for shared servers),
     /// so discovered servers can be connected without any manual entry.

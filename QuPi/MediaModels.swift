@@ -610,8 +610,6 @@ nonisolated enum SettingsKeys {
         "libraryFolderPath_\(type.rawValue)"
     }
 
-    static let downloadIndicatorsEnabled = "downloadIndicatorsEnabled"
-
     static let movieLocalFirst = "movieLocalFirst"
     static let tvLocalFirst = "tvLocalFirst"
     static let musicLocalFirst = "musicLocalFirst"

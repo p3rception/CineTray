@@ -3,7 +3,7 @@ import AppKit
 import ServiceManagement
 
 /// General app preferences. Currently exposes launch-at-login, backed by the
-/// modern `SMAppService` login-item API, and a button to grant local network access.
+/// modern `SMAppService` login-item API, media keys and local network access.
 struct GeneralSettingsView: View {
     @State private var launchAtLogin = false
     @State private var requiresApproval = false
@@ -13,7 +13,7 @@ struct GeneralSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Load on Startup", isOn: $launchAtLogin)
+                Toggle("Open at Login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, isOn in
                         updateLoginItem(enabled: isOn)
                     }
@@ -28,10 +28,19 @@ struct GeneralSettingsView: View {
 
             Section {
                 Toggle("Use Mac Media Keys", isOn: $useMediaKeys)
-                Button("Grant Network Access", systemImage: "network") {
-                    openLocalNetworkSettings()
+                LabeledContent("Local Network") {
+                    if networkMonitor.status == .granted {
+                        Label {
+                            Text("Allowed")
+                        } icon: {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                        }
+                        .foregroundStyle(.secondary)
+                    } else {
+                        Button("Open Privacy Settings…") { openLocalNetworkSettings() }
+                    }
                 }
-                .disabled(networkMonitor.status == .granted)
             } header: {
                 SectionInfoHeader(
                     title: "Access",

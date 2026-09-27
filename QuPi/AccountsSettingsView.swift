@@ -45,6 +45,8 @@ struct AccountsSettingsView: View {
     @State private var plexSignInTask: Task<Void, Never>?
     @State private var traktSignInTask: Task<Void, Never>?
     @State private var lastfmSignInTask: Task<Void, Never>?
+    @State private var plexAccount: PlexClient.Account?
+    @State private var showingPlexSignOut = false
 
     var body: some View {
         Form {
@@ -66,12 +68,16 @@ struct AccountsSettingsView: View {
 
     private var plexSection: some View {
         Section("Plex") {
-            Button(pinCode.isEmpty ? "Sign In with Plex…" : "Waiting for link…") {
-                signInWithPlex()
-            }
-            .disabled(plexSignInTask != nil)
-            if !pinCode.isEmpty {
-                CopyableCodeRow(code: pinCode, destination: "plex.tv/link")
+            if plexAccountToken.isEmpty {
+                Button(pinCode.isEmpty ? "Sign In with Plex…" : "Waiting for link…") {
+                    signInWithPlex()
+                }
+                .disabled(plexSignInTask != nil)
+                if !pinCode.isEmpty {
+                    CopyableCodeRow(code: pinCode, destination: "plex.tv/link")
+                }
+            } else {
+                plexAccountRow
             }
             statusText(plexStatus)
             ForEach(plexServers) { server in
@@ -81,6 +87,63 @@ struct AccountsSettingsView: View {
                 plexAdvancedContent
             }
         }
+        .task(id: plexAccountToken) { await loadPlexAccount() }
+        .confirmationDialog("Sign out of Plex?", isPresented: $showingPlexSignOut) {
+            Button("Sign Out", role: .destructive) { signOutOfPlex() }
+        } message: {
+            Text("Your Plex servers will be removed from QuPi. You can sign in again at any time.")
+        }
+    }
+
+    private var plexAccountRow: some View {
+        LabeledContent {
+            HStack {
+                Label {
+                    Text("Signed In")
+                } icon: {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                }
+                .foregroundStyle(.secondary)
+                Button("Sign Out…") { showingPlexSignOut = true }
+            }
+        } label: {
+            Text(plexAccount?.username ?? "Plex Account")
+            if let email = plexAccount?.email {
+                Text(email)
+            }
+        }
+    }
+
+    private func loadPlexAccount() async {
+        guard !plexAccountToken.isEmpty else {
+            plexAccount = nil
+            return
+        }
+        do {
+            plexAccount = try await PlexClient.account(token: plexAccountToken)
+        } catch PlexError.unauthorized {
+            plexStatus = "Your Plex sign-in has expired. Sign out and sign in again."
+        } catch {
+            // Offline or plex.tv unreachable: the row keeps its generic label.
+        }
+    }
+
+    /// Forgets the plex.tv account and every server connected through it.
+    private func signOutOfPlex() {
+        plexSignInTask?.cancel()
+        for server in plexServers {
+            PlexServerStore.setToken(nil, for: server.id)
+        }
+        plexServers = []
+        plexServerTokens = [:]
+        plexServerStatuses = [:]
+        discoveredPlexServers = []
+        PlexServerStore.save([])
+        plexAccountToken = ""
+        KeychainStore.set(nil, for: KeychainKeys.plexAccountToken)
+        plexStatus = ""
+        appState.plexServersChanged()
     }
 
     private func connectedPlexServerRow(_ server: PlexServer) -> some View {
@@ -286,7 +349,7 @@ struct AccountsSettingsView: View {
                     serverName: server.name
                 )
                 let libraries = try await PlexClient(config: config).libraries()
-                plexServerStatuses[server.id] = "Connected - \(libraries.count) libraries found."
+                plexServerStatuses[server.id] = "Connected via \(config.serverURL.host() ?? server.urlString) - \(libraries.count) libraries found."
             } catch {
                 plexServerStatuses[server.id] = "Connection failed: \(error.localizedDescription)"
             }

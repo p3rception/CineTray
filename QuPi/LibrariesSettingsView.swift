@@ -129,10 +129,7 @@ struct LibrariesSettingsView: View {
                 // Use a type-specific ID so SwiftUI can distinguish the three rows.
                 .id("\(type.rawValue)-\(localRefresh)")
             }
-        } header: {
-            HStack {
-                SectionInfoHeader(title: "Local Library", info: "Choose a folder for each media type to make local files available in the menu bar. Press Refresh to index new files and fetch metadata from Last.fm, Trakt, and TMDb.")
-                Spacer()
+            LabeledContent("Index New Files") {
                 if isRefreshing {
                     ProgressView()
                         .controlSize(.small)
@@ -145,9 +142,10 @@ struct LibrariesSettingsView: View {
                             isRefreshing = false
                         }
                     }
-                    .controlSize(.small)
                 }
             }
+        } header: {
+            SectionInfoHeader(title: "Local Library", info: "Choose a folder for each media type to make local files available in the menu bar. Press Refresh to index new files and fetch metadata from Last.fm, Trakt, and TMDb.")
         }
     }
 
@@ -209,13 +207,11 @@ struct LibrariesSettingsView: View {
                 Text(status.isEmpty ? "No libraries loaded yet." : status)
                     .foregroundStyle(.secondary)
             }
-        } header: {
-            HStack {
-                SectionInfoHeader(title: title, info: "Selected libraries appear in the menu bar dropdown. With none selected, all libraries are included.")
-                Spacer()
-                Button("Refresh") { refresh() }
-                    .controlSize(.small)
+            LabeledContent("Library List") {
+                Button("Reload") { refresh() }
             }
+        } header: {
+            SectionInfoHeader(title: title, info: "Selected libraries appear in the menu bar dropdown. With none selected, all libraries are included.")
         }
     }
 

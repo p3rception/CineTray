@@ -51,7 +51,10 @@ enum AppWindowActivation {
         openWindows += 1
         guard openWindows == 1 else { return }
         NSApplication.shared.setActivationPolicy(.regular)
-        NSApplication.shared.activate()
+        // The policy change deactivates QuPi until it is processed, so
+        // activating right away leaves the window inactive (gray switches,
+        // no keyboard focus). Activate on the next run loop turn instead.
+        Task { NSApplication.shared.activate() }
     }
 
     static func windowClosed() {

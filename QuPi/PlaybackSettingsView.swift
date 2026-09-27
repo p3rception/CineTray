@@ -12,31 +12,45 @@ struct PlaybackSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Picker("Auto-Continue Movie", selection: $movieAutoContinue) {
-                    Text("Off").tag(MovieAutoContinue.off.rawValue)
-                    Text("In Sequence").tag(MovieAutoContinue.inSequence.rawValue)
-                    Text("By Director").tag(MovieAutoContinue.byDirector.rawValue)
-                    Text("By Lead Actor").tag(MovieAutoContinue.byLeadActor.rawValue)
+                Picker("When a Movie Ends", selection: $movieAutoContinue) {
+                    Text("Stop").tag(MovieAutoContinue.off.rawValue)
+                    Text("Next in Series").tag(MovieAutoContinue.inSequence.rawValue)
+                    Text("Same Director").tag(MovieAutoContinue.byDirector.rawValue)
+                    Text("Same Lead Actor").tag(MovieAutoContinue.byLeadActor.rawValue)
                 }
-                Toggle("Auto-Continue TV", isOn: $tvAutoContinue)
-                Picker("Auto-Continue Music", selection: $musicAutoContinue) {
-                    Text("Off").tag(MusicAutoContinue.off.rawValue)
-                    Text("By Release Date").tag(MusicAutoContinue.inSequence.rawValue)
-                    Text("By Genre").tag(MusicAutoContinue.shuffleByGenre.rawValue)
+            } header: {
+                SectionInfoHeader(title: "Movies", info: "Next in Series plays the next movie in the same series. Same Director and Same Lead Actor play that person's next released movie (lead actor needs Plex or Jellyfin).")
+            }
+
+            Section("Shows") {
+                Toggle("Play Next Episode", isOn: $tvAutoContinue)
+            }
+
+            Section {
+                // .off and .inSequence both finish the album in order (see
+                // AppState.autoContinueItem). The raw values stay so saved
+                // settings still decode.
+                Picker("When a Song Ends", selection: $musicAutoContinue) {
+                    Text("Finish Album").tag(MusicAutoContinue.off.rawValue)
+                    Text("In Order").tag(MusicAutoContinue.inSequence.rawValue)
+                    Text("Shuffle by Artist").tag(MusicAutoContinue.shuffleByGenre.rawValue)
                 }
-                .pickerStyle(.segmented)
-                Picker("Continue Music", selection: $continueMusic) {
-                    Text("By Album / Playlist").tag(ContinueMusicGrouping.byAlbumPlaylist.rawValue)
+            } header: {
+                SectionInfoHeader(title: "Music", info: "Finish Album and In Order keep playing the album or playlist in order. Shuffle by Artist continues with random songs by the same artist.")
+            }
+
+            Section {
+                Picker("Group Music", selection: $continueMusic) {
+                    Text("By Album or Playlist").tag(ContinueMusicGrouping.byAlbumPlaylist.rawValue)
                     Text("By Song").tag(ContinueMusicGrouping.bySong.rawValue)
                 }
-                .pickerStyle(.segmented)
-                Picker("Continue Timeout", selection: $continueTimeout) {
+                Picker("Keep Items For", selection: $continueTimeout) {
                     ForEach(ContinueTimeout.allCases, id: \.rawValue) { timeout in
                         Text(timeout.title).tag(timeout.rawValue)
                     }
                 }
             } header: {
-                SectionInfoHeader(title: "Playback", info: "In Sequence plays the next movie in the same series; By Director / By Lead Actor plays that person's next released movie (lead actor requires Plex or Jellyfin). Auto-Continue TV plays the next episode. Music \"Off\" still finishes the album in order; Shuffle by Artist continues with random tracks by the same artist. Continue Music chooses whether the Continue Watching section lists individual in-progress songs or collapses them into their album/playlist. Continue Timeout controls how long unfinished items stay in the Continue Watching section.")
+                SectionInfoHeader(title: "Continue Watching", info: "Group Music shows unfinished songs individually, or as their album or playlist. Keep Items For sets how long something you haven't finished stays in Continue Watching.")
             }
         }
         .formStyle(.grouped)

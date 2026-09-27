@@ -19,10 +19,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The search field is ready for typing as soon as the menu opens.
 - Opening the menu refreshes Continue Watching, and libraries loaded more than two minutes earlier refresh in the background, so changes made elsewhere show up without restarting QuPi.
 - Plex connects faster after a network change. All of a server's addresses are checked at once, 3 seconds at most, on first use, after the network changes and when the current address stops answering. Switching to a hotspot or VPN connects in seconds instead of about three minutes.
+- Settings are reorganized along the lines of macOS System Settings. Buttons moved out of section headers into rows, and each tab is split into smaller sections:
+  - General: "Load on Startup" is now "Open at Login", and a Local Network row shows "Allowed" or, when access is missing, a button that opens Privacy settings.
+  - Accounts: once you're signed in to Plex, the account (username and email) with "Signed In" and a Sign Out… button replaces the "Sign In with Plex…" button. Test Connection says which address answered.
+  - Playback: Movies, Shows, Music and Continue Watching sections with plain menus, such as "When a Movie Ends: Next in Series / Same Director / Same Lead Actor", instead of long segmented controls.
+  - Visuals: Menu, Player, Sections and Navigation sections, plus a sorting section per media type (Sort By, Order, Downloaded First) instead of a crowded row per type. "Local First" is now "Downloaded First".
+  - Data: a section per media type with its folder, storage limit and usage. "Show Download Button On" checkboxes replace the "Download Indicators" switch, which only revealed them.
+  - The Settings window's height can be adjusted; the width stays fixed.
 - Jellyfin videos in mp4 or mov files with H.264, HEVC (hvc1) or AV1 video and a compatible audio track play the original file directly, so playback starts in well under a second instead of waiting a few seconds for the server to prepare a stream. Other files still go through the server.
 
 ### Fixed
 
+- Delete Downloads in Settings > Data deleted a media type's downloads immediately. It now asks first.
+- The music "By Genre" option actually shuffled by artist. It is now called Shuffle by Artist.
 - The Plex token could be sent unencrypted over the internet. For remote servers found through your plex.tv account, QuPi tried plain HTTP before HTTPS, and every request carries the token. Remote addresses now use HTTPS only, and local ones try HTTPS first. Servers connected before this change keep their saved addresses until you connect them again in Settings > Accounts.
 - Jellyfin HEVC videos (for example mkv files, or mp4 files tagged hev1) played audio only, with a gray QuickTime placeholder instead of the picture. The server now sends them in fragmented MP4 segments, which macOS can display. VP9 videos are converted by the server instead of being sent in a format macOS can't play.
 
