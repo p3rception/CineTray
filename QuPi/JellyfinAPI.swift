@@ -552,12 +552,12 @@ struct JellyfinClient {
     func resolveStreamURL(for item: MediaItem) async throws -> URL {
         switch item.kind {
         case .movie, .episode:
-            return videoStreamURL(itemID: item.id)
+            return await videoStreamURL(itemID: item.id)
         case .track:
             return audioStreamURL(itemID: item.id)
         case .show, .season:
             let episodeID = try await firstChildID(parentID: item.id, itemType: "Episode")
-            return videoStreamURL(itemID: episodeID ?? item.id)
+            return await videoStreamURL(itemID: episodeID ?? item.id)
         case .artist, .album, .playlist:
             let trackID = try await firstChildID(parentID: item.id, itemType: "Audio")
             return audioStreamURL(itemID: trackID ?? item.id)
@@ -580,11 +580,28 @@ struct JellyfinClient {
         return try JSONDecoder().decode(Response.self, from: data).Items.first?.Id
     }
 
-    private func videoStreamURL(itemID: String) -> URL {
+    /// Direct-plays the original file when AVFoundation can open it as is
+    /// (starts in a fraction of a second, no server work); anything else
+    /// goes through the HLS remux/transcode, which takes a few seconds.
+    private func videoStreamURL(itemID: String) async -> URL {
+        if let source = try? await mediaSource(itemID: itemID), Self.canDirectPlay(source) {
+            var components = URLComponents(
+                url: config.serverURL.appending(path: "/Videos/\(itemID)/stream"),
+                resolvingAgainstBaseURL: false
+            )!
+            components.queryItems = [
+                URLQueryItem(name: "static", value: "true"),
+                URLQueryItem(name: "MediaSourceId", value: source.Id),
+                URLQueryItem(name: "api_key", value: config.token),
+            ]
+            return components.url!
+        }
         var components = URLComponents(
             url: config.serverURL.appending(path: "/Videos/\(itemID)/master.m3u8"),
             resolvingAgainstBaseURL: false
         )!
+        var videoCodecs = "h264,hevc"
+        if PlexClient.supportsAV1 { videoCodecs += ",av1" }
         // Providing codec capabilities encourages Jellyfin to direct-stream (remux) rather than
         // transcode. Direct-stream produces a VOD-type HLS manifest with #EXT-X-ENDLIST, which
         // gives AVFoundation a fully populated seekableTimeRanges - required for the system PiP
@@ -593,12 +610,50 @@ struct JellyfinClient {
             URLQueryItem(name: "api_key", value: config.token),
             URLQueryItem(name: "MediaSourceId", value: itemID),
             URLQueryItem(name: "DeviceId", value: Self.deviceID),
-            URLQueryItem(name: "VideoCodec", value: "h264,hevc,av1,vp9"),
-            URLQueryItem(name: "AudioCodec", value: "aac,mp3,ac3,eac3,alac,flac,pcm"),
+            URLQueryItem(name: "VideoCodec", value: videoCodecs),
+            URLQueryItem(name: "AudioCodec", value: "aac,ac3,eac3"),
+            // fMP4 segments: AVFoundation only renders HEVC/AV1 video in HLS
+            // from fMP4, not mpegts - with mpegts the audio plays but the
+            // video track never appears. The server also retags hev1 as hvc1.
+            URLQueryItem(name: "SegmentContainer", value: "mp4"),
             URLQueryItem(name: "EnableDirectPlay", value: "false"),
             URLQueryItem(name: "EnableDirectStream", value: "true"),
         ]
         return components.url!
+    }
+
+    private struct PlaybackSource: Decodable {
+        struct Stream: Decodable {
+            let `Type`: String
+            let Codec: String?
+            let CodecTag: String?
+        }
+        let Id: String
+        let Container: String?
+        let MediaStreams: [Stream]?
+    }
+
+    private func mediaSource(itemID: String) async throws -> PlaybackSource? {
+        struct Item: Decodable { let MediaSources: [PlaybackSource]? }
+        let (data, _) = try await URLSession.shared.data(for: request(path: "/Users/\(config.userID)/Items/\(itemID)"))
+        return try JSONDecoder().decode(Item.self, from: data).MediaSources?.first
+    }
+
+    /// AVFoundation plays HEVC in mp4/mov only when tagged hvc1; hev1 files
+    /// play audio only, so they go through HLS, where the server retags them.
+    private static func canDirectPlay(_ source: PlaybackSource) -> Bool {
+        let containers = Set((source.Container ?? "").lowercased().split(separator: ",").map(String.init))
+        guard !containers.isDisjoint(with: ["mp4", "mov", "m4v"]),
+              let video = source.MediaStreams?.first(where: { $0.Type == "Video" }) else { return false }
+        let videoOK = switch video.Codec?.lowercased() {
+        case "h264": true
+        case "hevc": video.CodecTag?.lowercased() == "hvc1"
+        case "av1": PlexClient.supportsAV1
+        default: false
+        }
+        // ponytail: checks the first audio track only, which is what AVPlayer picks by default.
+        let audio = source.MediaStreams?.first(where: { $0.Type == "Audio" })?.Codec?.lowercased()
+        return videoOK && audio.map { ["aac", "mp3", "ac3", "eac3", "alac", "flac"].contains($0) } ?? true
     }
 
     private func audioStreamURL(itemID: String) -> URL {

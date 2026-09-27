@@ -3,6 +3,16 @@
 Changes in this fork compared to [KuDoZ007/QP](https://github.com/KuDoZ007/QP).
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-09-27
+
+### Changed
+
+- Jellyfin videos in mp4 or mov files with H.264, HEVC (hvc1) or AV1 video and a compatible audio track play the original file directly, so playback starts in well under a second instead of waiting a few seconds for the server to prepare a stream. Other files still go through the server.
+
+### Fixed
+
+- Jellyfin HEVC videos (for example mkv files, or mp4 files tagged hev1) played audio only, with a gray QuickTime placeholder instead of the picture. The server now sends them in fragmented MP4 segments, which macOS can display. VP9 videos are converted by the server instead of being sent in a format macOS can't play.
+
 ## 2026-09-26
 
 ### Added

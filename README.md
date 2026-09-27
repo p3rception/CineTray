@@ -8,8 +8,8 @@ This is a fork of [KuDoZ007/QP](https://github.com/KuDoZ007/QP). The main differ
 *   **Open in Plex or Jellyfin.** Hover a poster and click the arrow at its top right (or use the player's toolbar button) to open that item in the server's web app: browse in QuPi, watch in Plex or Jellyfin.
 *   **Easier sign-in.** Jellyfin Quick Connect (approve a code from another signed-in device, no password). Server addresses work without `http://` or `https://`; the app tries HTTPS first, then HTTP. The TMDb API key field checks the key as you type.
 *   **Security.** Plex tokens are no longer saved in plain text inside poster URLs, the TMDb key is stored in the Keychain, and `Secrets.swift` is no longer committed (the upstream `.gitignore` pointed to the wrong path).
-*   **Faster.** Server settings and download indexes stay in memory instead of being re-read from the Keychain and disk on every redraw, sources load in parallel, and a Plex address that works is remembered.
-*   **Fixes.** Offline Mode works with downloads alone, and Plex errors are readable.
+*   **Faster.** Server settings and download indexes stay in memory instead of being re-read from the Keychain and disk on every redraw, sources load in parallel, a Plex address that works is remembered, and Jellyfin plays compatible files directly, so videos start in under a second.
+*   **Fixes.** Offline Mode works with downloads alone, Plex errors are readable, and Jellyfin HEVC videos show the picture instead of playing audio only.
 *   **Leaner.** The unfinished transcoding feature and other unused code are removed (about 1,450 lines), so FFmpeg is no longer needed.
 *   **Builds without Xcode.** `./build.sh` builds, signs and launches the app using only the Command Line Tools.
 
