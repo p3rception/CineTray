@@ -21,6 +21,8 @@ This is a fork of [KuDoZ007/QP](https://github.com/KuDoZ007/QP). The main differ
 
 See [CHANGELOG.md](CHANGELOG.md) for the full list.
 
+Continue Watching, watched indicators and parts of the Settings reorganization are based on [#1](https://github.com/p3rception/QP/pull/1) by [@iosue-iulianus](https://github.com/iosue-iulianus).
+
 ### Building this fork
 
 Requirements: macOS 26 or later, plus either the Command Line Tools (`xcode-select --install`) or Xcode 26.4 or later. The SwiftVLC package requires Swift 6.3.
