@@ -111,40 +111,29 @@ struct PlayerView: View {
 
     // MARK: - Video player
 
-    /// Strips of the video area reserved for AVKit's built-in overlay
-    /// controls (volume/AirPlay at the top, transport bar at the bottom):
-    /// the click-capture overlay must not cover them or they become
-    /// unclickable.
-    private static let avKitTopControlsHeight: CGFloat = 80
-    private static let avKitBottomBarHeight: CGFloat = 52
-
-    /// Window size below which AVKit's fixed-size inline transport bar is
-    /// swapped for the PiP-style controls. The switch happens once the
-    /// window shrinks past whichever threshold is crossed later while
-    /// resizing down (width for landscape videos, height for portrait),
-    /// hence both conditions must hold.
+    /// Window size below which AVKit's controls are swapped for the
+    /// PiP-style ones. The switch happens once the window shrinks past
+    /// whichever threshold is crossed later while resizing down (width for
+    /// landscape videos, height for portrait), hence both conditions must
+    /// hold; below the minimum width AVKit's floating bar no longer fits.
     private static let pipControlsMaxWidth: CGFloat = 600
     private static let pipControlsMaxHeight: CGFloat = 480
+    /// AVKit's floating control bar is 457 pt wide on macOS 26.
+    private static let floatingBarMinWidth: CGFloat = 480
 
     private func videoPlayerView(player: AVPlayer) -> some View {
         videoChrome(
+            // Floating, not inline: the inline style pins fullscreen, PiP
+            // and volume to the view's top corners (ignoring the safe area),
+            // which puts them under the titlebar that floats over the video.
             VideoPlayerRepresentable(
                 player: player,
-                controlsStyle: usePiPControls ? .none : .inline,
-                videoGravity: selectedCrop == .original ? .resizeAspect : .resizeAspectFill
+                controlsStyle: usePiPControls ? .none : .floating,
+                videoGravity: selectedCrop == .original ? .resizeAspect : .resizeAspectFill,
+                onSingleClick: appState.togglePlayPause
             )
             .overlay {
-                GeometryReader { geo in
-                    VideoClickCapture(onSingleClick: appState.togglePlayPause)
-                        .frame(
-                            width: geo.size.width,
-                            height: max(0, geo.size.height - Self.avKitTopControlsHeight - Self.avKitBottomBarHeight)
-                        )
-                        .offset(y: Self.avKitTopControlsHeight)
-                }
-            }
-            .overlay {
-                // AVKit draws its own inline transport bar at normal sizes.
+                // AVKit draws its own floating control bar at normal sizes.
                 if usePiPControls { pipControls }
             }
             .task(id: ObjectIdentifier(player)) {
@@ -193,8 +182,8 @@ struct PlayerView: View {
             .onGeometryChange(for: CGSize.self) { proxy in
                 proxy.size
             } action: { size in
-                usePiPControls = size.width < Self.pipControlsMaxWidth
-                    && size.height < Self.pipControlsMaxHeight
+                usePiPControls = size.width < Self.floatingBarMinWidth
+                    || (size.width < Self.pipControlsMaxWidth && size.height < Self.pipControlsMaxHeight)
             }
             // A token floor only: the real minimum comes from the
             // ratio-conforming contentMinSize in applyAspectRatio. A larger
@@ -369,6 +358,11 @@ private struct VideoPlayerRepresentable: NSViewRepresentable {
     let player: AVPlayer
     let controlsStyle: AVPlayerViewControlsStyle
     var videoGravity: AVLayerVideoGravity = .resizeAspect
+    let onSingleClick: () -> Void
+
+    func makeCoordinator() -> VideoClickHandler {
+        VideoClickHandler(onSingleClick: onSingleClick)
+    }
 
     func makeNSView(context: Context) -> AVPlayerView {
         let view = AVPlayerView()
@@ -377,10 +371,20 @@ private struct VideoPlayerRepresentable: NSViewRepresentable {
         view.videoGravity = videoGravity
         view.showsFullScreenToggleButton = true
         view.allowsPictureInPicturePlayback = true
+        // AVKit layers contentOverlayView between the video and its
+        // controls, so this gets clicks on the video while the floating bar
+        // (which the user can drag anywhere) keeps its own.
+        if let overlay = view.contentOverlayView {
+            let clickView = ClickCaptureView(frame: overlay.bounds)
+            clickView.autoresizingMask = [.width, .height]
+            overlay.addSubview(clickView)
+            context.coordinator.install(on: clickView)
+        }
         return view
     }
 
     func updateNSView(_ nsView: AVPlayerView, context: Context) {
+        context.coordinator.onSingleClick = onSingleClick
         if nsView.player !== player {
             nsView.player = player
         }
@@ -976,62 +980,62 @@ private class ToolbarVisibilityView: NSView {
     }
 }
 
-/// Transparent overlay covering the video area (not the control bar) that maps
-/// single clicks to play/pause and double clicks to fullscreen toggle.
+/// Transparent overlay over the VLC video that maps single clicks to
+/// play/pause and double clicks to fullscreen toggle.
 private struct VideoClickCapture: NSViewRepresentable {
     let onSingleClick: () -> Void
 
-    func makeCoordinator() -> Coordinator { Coordinator(onSingleClick: onSingleClick) }
+    func makeCoordinator() -> VideoClickHandler {
+        VideoClickHandler(onSingleClick: onSingleClick)
+    }
 
     func makeNSView(context: Context) -> ClickCaptureView {
         let view = ClickCaptureView()
-        let coordinator = context.coordinator
-
-        let doubleTap = NSClickGestureRecognizer(
-            target: coordinator,
-            action: #selector(Coordinator.handleDouble(_:))
-        )
-        doubleTap.numberOfClicksRequired = 2
-        doubleTap.delegate = coordinator
-        view.addGestureRecognizer(doubleTap)
-
-        let singleTap = NSClickGestureRecognizer(
-            target: coordinator,
-            action: #selector(Coordinator.handleSingle(_:))
-        )
-        singleTap.numberOfClicksRequired = 1
-        singleTap.delegate = coordinator
-        view.addGestureRecognizer(singleTap)
-
-        coordinator.singleTap = singleTap
-        coordinator.doubleTap = doubleTap
-
+        context.coordinator.install(on: view)
         return view
     }
 
     func updateNSView(_ nsView: ClickCaptureView, context: Context) {
         context.coordinator.onSingleClick = onSingleClick
     }
+}
 
-    final class Coordinator: NSObject, NSGestureRecognizerDelegate {
-        var onSingleClick: () -> Void
-        weak var singleTap: NSClickGestureRecognizer?
-        weak var doubleTap: NSClickGestureRecognizer?
+/// Single click toggles play/pause, double click toggles fullscreen.
+private final class VideoClickHandler: NSObject, NSGestureRecognizerDelegate {
+    var onSingleClick: () -> Void
+    private weak var singleTap: NSClickGestureRecognizer?
+    private weak var doubleTap: NSClickGestureRecognizer?
 
-        init(onSingleClick: @escaping () -> Void) { self.onSingleClick = onSingleClick }
+    init(onSingleClick: @escaping () -> Void) {
+        self.onSingleClick = onSingleClick
+    }
 
-        @objc func handleSingle(_ r: NSClickGestureRecognizer) { onSingleClick() }
+    func install(on view: NSView) {
+        let doubleTap = NSClickGestureRecognizer(target: self, action: #selector(handleDouble(_:)))
+        doubleTap.numberOfClicksRequired = 2
+        doubleTap.delegate = self
+        view.addGestureRecognizer(doubleTap)
 
-        @objc func handleDouble(_ r: NSClickGestureRecognizer) {
-            r.view?.window?.toggleFullScreen(nil)
-        }
+        let singleTap = NSClickGestureRecognizer(target: self, action: #selector(handleSingle(_:)))
+        singleTap.numberOfClicksRequired = 1
+        singleTap.delegate = self
+        view.addGestureRecognizer(singleTap)
 
-        func gestureRecognizer(
-            _ gestureRecognizer: NSGestureRecognizer,
-            shouldRequireFailureOf other: NSGestureRecognizer
-        ) -> Bool {
-            gestureRecognizer === singleTap && other === doubleTap
-        }
+        self.singleTap = singleTap
+        self.doubleTap = doubleTap
+    }
+
+    @objc private func handleSingle(_ r: NSClickGestureRecognizer) { onSingleClick() }
+
+    @objc private func handleDouble(_ r: NSClickGestureRecognizer) {
+        r.view?.window?.toggleFullScreen(nil)
+    }
+
+    func gestureRecognizer(
+        _ gestureRecognizer: NSGestureRecognizer,
+        shouldRequireFailureOf other: NSGestureRecognizer
+    ) -> Bool {
+        gestureRecognizer === singleTap && other === doubleTap
     }
 }
 

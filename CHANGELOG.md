@@ -40,6 +40,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- In the video player, AVKit's fullscreen, picture-in-picture and volume controls overlapped the window's close/minimize/zoom buttons and the crop and pin buttons. The player now uses AVKit's floating control bar, which stays clear of the title bar and can be dragged anywhere; clicking the video still pauses and double-clicking still toggles fullscreen.
 - Server addresses typed without `http://` or `https://` (for example `jellyfin.example.com`) now work. The app tries HTTPS first, then HTTP. Jellyfin saves the address that worked; a manually added Plex server keeps HTTP as a fallback. Before, Jellyfin signed in over HTTP only, which fails on servers that redirect to HTTPS, and saved the address without a scheme, which broke every later request.
 - The Plex token was saved in plain text inside poster URLs, in the Continue list (UserDefaults) and in each download folder's `.qp-downloads.json`. Poster URLs no longer contain it; it is sent as a request header instead, and tokens saved by earlier runs are removed on launch.
 - Plex errors are now readable. A rejected token or a server error used to appear as a confusing "data couldn't be read" message because the HTTP status was never checked.
