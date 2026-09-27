@@ -10,8 +10,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Continue Watching (renamed from "Continue…") includes the server's own list (Plex Continue Watching, Jellyfin Resume and Next Up), so things started on another device and the next episode of shows you're watching show up next to what you started in QuPi, most recently played first. Episodes show their show's poster and name, with the episode underneath. The section is on and open by default, first in the menu, and opens and closes independently of the library sections.
 - Movies and episodes resume where you stopped, in QuPi or in Plex or Jellyfin on another device, whichever was more recent. Before, only music resumed. Right-click a poster and choose Play from Beginning to start over.
 - Plex and Jellyfin posters show a checkmark for watched movies and episodes, and for shows and seasons once every episode is watched, plus a progress bar for anything in progress. They update a few seconds after playback stops.
-- Menu Order in Settings > Libraries: drag sections into any order, or Control-click one to move it up or down.
+- Menu Order in Settings > Libraries: drag sections into any order, or Control-click one to move it up or down. Sections turned off in Settings > Visuals are listed as Hidden and keep their place.
 - While a player or the Settings window is open, QuPi has a Dock icon and a menu bar, so the usual shortcuts work (Control-Command-F for Full Screen, Command-H, Command-W).
+- `AGENTS.md` with contribution rules for people and coding agents.
 
 ### Changed
 
@@ -21,10 +22,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Plex connects faster after a network change. All of a server's addresses are checked at once, 3 seconds at most, on first use, after the network changes and when the current address stops answering. Switching to a hotspot or VPN connects in seconds instead of about three minutes.
 - Settings are reorganized along the lines of macOS System Settings. Buttons moved out of section headers into rows, and each tab is split into smaller sections:
   - General: "Load on Startup" is now "Open at Login", and a Local Network row shows "Allowed" or, when access is missing, a button that opens Privacy settings.
-  - Accounts: once you're signed in to Plex, the account (username and email) with "Signed In" and a Sign Out… button replaces the "Sign In with Plex…" button. Test Connection says which address answered.
-  - Playback: Movies, Shows, Music and Continue Watching sections with plain menus, such as "When a Movie Ends: Next in Series / Same Director / Same Lead Actor", instead of long segmented controls.
+  - Accounts: once you're signed in to Plex, the account (username and email) with "Signed In" and a Sign Out… button replaces the "Sign In with Plex…" button. Signing out asks first, then removes the account and its servers from QuPi. An expired sign-in shows a message. Test Connection says which address answered.
+  - Libraries: Refresh (index new files in your library folders) and Reload (the server's library list) are rows instead of buttons in the section headers.
+  - Playback: Movies, Shows, Music and Continue Watching sections with plain menus instead of long segmented controls: "When a Movie Ends" (Stop, Next in Series, Same Director, Same Lead Actor), "Play Next Episode", "When a Song Ends" (Finish Album, In Order, Shuffle by Artist), and "Group Music" and "Keep Items For" (formerly Continue Music and Continue Timeout).
   - Visuals: Menu, Player, Sections and Navigation sections, plus a sorting section per media type (Sort By, Order, Downloaded First) instead of a crowded row per type. "Local First" is now "Downloaded First".
-  - Data: a section per media type with its folder, storage limit and usage. "Show Download Button On" checkboxes replace the "Download Indicators" switch, which only revealed them.
+  - Data: a section per media type with its folder, storage limit, usage and a Delete Downloads… button. "Show Download Button On" checkboxes replace the "Download Indicators" switch, which only revealed them. The artwork cache shows its size next to a Clear button.
   - The Settings window's height can be adjusted; the width stays fixed.
 - Jellyfin videos in mp4 or mov files with H.264, HEVC (hvc1) or AV1 video and a compatible audio track play the original file directly, so playback starts in well under a second instead of waiting a few seconds for the server to prepare a stream. Other files still go through the server.
 
