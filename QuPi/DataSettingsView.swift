@@ -95,9 +95,9 @@ struct DataSettingsView: View {
             LabeledContent("Storage Limit") {
                 HStack(spacing: 4) {
                     TextField("Storage Limit", value: limitBinding(for: type), format: .number)
-                        .labelsHidden()
                         .multilineTextAlignment(.trailing)
                         .frame(width: 60)
+                        .underlinedField()
                     Text("GB")
                         .foregroundStyle(.secondary)
                 }

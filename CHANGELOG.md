@@ -33,6 +33,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Text fields in Settings (server URLs, username, password, tokens, API key, storage limit) are underlined. Empty ones looked like plain labels.
 - Delete Downloads in Settings > Data deleted a media type's downloads immediately. It now asks first.
 - The music "By Genre" option actually shuffled by artist. It is now called Shuffle by Artist.
 - The Plex token could be sent unencrypted over the internet. For remote servers found through your plex.tv account, QuPi tried plain HTTP before HTTPS, and every request carries the token. Remote addresses now use HTTPS only, and local ones try HTTPS first. Servers connected before this change keep their saved addresses until you connect them again in Settings > Accounts.

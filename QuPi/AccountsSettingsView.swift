@@ -199,7 +199,9 @@ struct AccountsSettingsView: View {
         }
         ForEach(plexServers) { server in
             VStack(alignment: .leading, spacing: 4) {
-                SecureField("\(server.name) Token", text: tokenBinding(for: server.id))
+                LabeledContent("\(server.name) Token") {
+                    SecureField("\(server.name) Token", text: tokenBinding(for: server.id)).underlinedField()
+                }
                 HStack {
                     Button("Test Connection") { testPlexConnection(server) }
                         .controlSize(.small)
@@ -208,12 +210,15 @@ struct AccountsSettingsView: View {
                 }
             }
         }
-        HStack {
-            TextField("Server URL", text: $manualPlexServerURL)
-                .autocorrectionDisabled()
-            Button("Add Manually") { addManualPlexServer() }
-                .controlSize(.small)
-                .disabled(manualPlexServerURL.isEmpty)
+        LabeledContent("Server URL") {
+            HStack {
+                TextField("Server URL", text: $manualPlexServerURL)
+                    .autocorrectionDisabled()
+                    .underlinedField()
+                Button("Add Manually") { addManualPlexServer() }
+                    .controlSize(.small)
+                    .disabled(manualPlexServerURL.isEmpty)
+            }
         }
     }
 
@@ -366,9 +371,9 @@ struct AccountsSettingsView: View {
 
     private var jellyfinSection: some View {
         Section("Jellyfin") {
-            TextField("Server URL", text: $jellyfinServerURL)
-            TextField("Username", text: $jellyfinUsername)
-            SecureField("Password", text: $jellyfinPassword)
+            LabeledContent("Server URL") { TextField("Server URL", text: $jellyfinServerURL).underlinedField() }
+            LabeledContent("Username") { TextField("Username", text: $jellyfinUsername).underlinedField() }
+            LabeledContent("Password") { SecureField("Password", text: $jellyfinPassword).underlinedField() }
             HStack {
                 Button("Sign In") { signInToJellyfin() }
                     .disabled(jellyfinServerURL.isEmpty || jellyfinUsername.isEmpty)
@@ -505,9 +510,9 @@ struct AccountsSettingsView: View {
 
     private var navidromeSection: some View {
         Section("Navidrome") {
-            TextField("Server URL", text: $navidromeServerURL)
-            TextField("Username", text: $navidromeUsername)
-            SecureField("Password", text: $navidromePassword)
+            LabeledContent("Server URL") { TextField("Server URL", text: $navidromeServerURL).underlinedField() }
+            LabeledContent("Username") { TextField("Username", text: $navidromeUsername).underlinedField() }
+            LabeledContent("Password") { SecureField("Password", text: $navidromePassword).underlinedField() }
             HStack {
                 Button("Sign In") { signInToNavidrome() }
                     .disabled(navidromeServerURL.isEmpty || navidromeUsername.isEmpty || navidromePassword.isEmpty)
@@ -670,13 +675,16 @@ struct AccountsSettingsView: View {
 
     private var tmdbSection: some View {
         Section("The Movie Database") {
-            TextField("API Key (v3)", text: $tmdbAPIKey)
-                .onChange(of: tmdbAPIKey) {
-                    // Saved on every edit so closing Settings never loses it;
-                    // an empty field removes the Keychain item.
-                    KeychainStore.set(tmdbAPIKey, for: KeychainKeys.tmdbAPIKey)
-                }
-                .task(id: tmdbAPIKey) { await checkTMDbKey() }
+            LabeledContent("API Key (v3)") {
+                TextField("API Key (v3)", text: $tmdbAPIKey)
+                    .underlinedField()
+                    .onChange(of: tmdbAPIKey) {
+                        // Saved on every edit so closing Settings never loses it;
+                        // an empty field removes the Keychain item.
+                        KeychainStore.set(tmdbAPIKey, for: KeychainKeys.tmdbAPIKey)
+                    }
+                    .task(id: tmdbAPIKey) { await checkTMDbKey() }
+            }
             tmdbKeyStatusLabel
                 .font(.callout)
             Text("Used to fetch posters and metadata when refreshing your Local Library. Get a free API key at themoviedb.org/settings/api.")

@@ -35,6 +35,18 @@ struct SettingsView: View {
     }
 }
 
+extension View {
+    /// Grouped forms draw text fields without a border, so an empty one looks
+    /// like a plain label. A hairline under the input marks it as editable.
+    /// Put the field in a LabeledContent; its own label is only for VoiceOver.
+    func underlinedField() -> some View {
+        labelsHidden()
+            .textFieldStyle(.plain)
+            .padding(.bottom, 3)
+            .overlay(alignment: .bottom) { Rectangle().fill(.tertiary).frame(height: 1) }
+    }
+}
+
 /// The Settings scene's window ignores .windowResizability, so this reaches
 /// the hosting NSWindow and makes it resizable; the frame above keeps the
 /// width fixed.
