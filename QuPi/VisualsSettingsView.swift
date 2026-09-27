@@ -1,12 +1,11 @@
 import SwiftUI
 
 /// Menu and player appearance, the optional Playlists/Continue Watching sections, navigation (what
-/// shows and music list at their top level) and sorting.
+/// shows list at their top level) and sorting.
 struct VisualsSettingsView: View {
     @Environment(AppState.self) private var appState
     @AppStorage("carouselVisibleCount") private var visibleCount = 3
     @AppStorage(SettingsKeys.tvTopLevel) private var tvTopLevel = TVTopLevel.series.rawValue
-    @AppStorage(SettingsKeys.musicTopLevel) private var musicTopLevel = MusicTopLevel.album.rawValue
     @AppStorage(SettingsKeys.sectionEnabled(.playlists)) private var sectionPlaylists = false
     @AppStorage(SettingsKeys.sectionEnabled(.continueItems)) private var sectionContinue = true
     @AppStorage(SettingsKeys.simpleVisuals) private var simpleVisuals = false
@@ -47,9 +46,9 @@ struct VisualsSettingsView: View {
 
             Section {
                 Toggle("Continue Watching", isOn: $sectionContinue)
-                Toggle("Playlists", isOn: $sectionPlaylists)
+                Toggle("Video Playlists", isOn: $sectionPlaylists)
             } header: {
-                SectionInfoHeader(title: "Sections", info: "The menu shows one section per server library, named as on the server; choose which libraries to include, and the order of all sections, in the Libraries tab. Playlists shows your Plex/Jellyfin playlists. Continue Watching lists anything you stopped partway through, and resumes it where you left off.")
+                SectionInfoHeader(title: "Sections", info: "The menu shows one section per server library, named as on the server; choose which libraries to include, and the order of all sections, in the Libraries tab. Video Playlists shows your Plex and Jellyfin video playlists; music playlists are always in the Music pane. Continue Watching lists anything you stopped partway through, and resumes it where you left off.")
             }
 
             Section {
@@ -58,13 +57,8 @@ struct VisualsSettingsView: View {
                     Text("Season").tag(TVTopLevel.season.rawValue)
                 }
                 .pickerStyle(.segmented)
-                Picker("Music Top Level", selection: $musicTopLevel) {
-                    Text("Artist").tag(MusicTopLevel.artist.rawValue)
-                    Text("Album").tag(MusicTopLevel.album.rawValue)
-                }
-                .pickerStyle(.segmented)
             } header: {
-                SectionInfoHeader(title: "Navigation", info: "Series lists shows that drill into seasons, then episodes; Season lists every season directly. Artist lists artists that drill into albums, then tracks; Album lists albums directly.")
+                SectionInfoHeader(title: "Navigation", info: "Series lists shows that drill into seasons, then episodes; Season lists every season directly.")
             }
             sortSection("Movie Sorting", type: .movies, sort: $appState.movieSortRaw,
                         direction: $appState.movieSortDirectionRaw, localFirst: $appState.movieLocalFirst)
@@ -75,7 +69,6 @@ struct VisualsSettingsView: View {
         }
         .formStyle(.grouped)
         .onChange(of: tvTopLevel) { appState.resetCatalog() }
-        .onChange(of: musicTopLevel) { appState.resetCatalog() }
     }
 
     /// Sort field, order and Downloaded First for one media type. Order

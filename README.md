@@ -5,6 +5,7 @@ This is a fork of [KuDoZ007/QP](https://github.com/KuDoZ007/QP). The main differ
 *   **Runs on macOS 26 (Tahoe).** Upstream needs macOS 27 because it used two SwiftUI APIs that only exist there (`AsyncImage(request:)` and `.asyncImageURLSession(_:)`). Posters now load through a small `ArtworkImage` view that works on both.
 *   **Navidrome.** Music from a Navidrome server, next to Plex, Jellyfin and your own folders.
 *   **Your libraries, your names.** The menu shows one section per server library, named as on the server (for example Movies, Shows and YouTube), instead of fixed Movies / TV Shows / Music sections. Choose which libraries appear in Settings > Libraries. "TV Shows" is called "Shows" throughout.
+*   **Video and Music panes.** Click the menu title to switch between video and music. The Music pane has Artists, Albums and Playlists sections.
 *   **Sorting.** Movies and shows are sorted by date added, newest first, by default. A small sort button on each open section changes the field and order without opening Settings. Drag the menu's sections into any order in Settings > Libraries.
 *   **Continue Watching.** Merges the server's own list (Plex Continue Watching, Jellyfin Resume and Next Up) with what you started in QuPi. Movies and episodes resume where you stopped, on any device, and posters show watched checkmarks and progress bars.
 *   **Better search.** Ignores spacing, punctuation and accents ("madmen" finds "Mad Men") and shows only the sections with matches.

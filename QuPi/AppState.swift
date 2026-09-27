@@ -34,7 +34,7 @@ final class AppState {
         
         Task {
             await ensureLibrarySections()
-            if providers.isEmpty {
+            if providers().isEmpty {
                 UserDefaults.standard.set("accounts", forKey: "selectedSettingsTab")
                 NSApplication.shared.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
             }
@@ -78,6 +78,13 @@ final class AppState {
         if jellyfinConfiguration != nil { names.append("Jellyfin") }
         if navidromeConfiguration != nil { names.append("Navidrome") }
         return names.isEmpty ? "No sources" : names.joined(separator: " + ")
+    }
+
+    /// The header label for one pane of the menu: only the servers with
+    /// music (or video) libraries, e.g. "Navidrome" for the Music pane.
+    func sourcesDescription(music: Bool) -> String {
+        guard !isOfflineMode, let names = serverNamesByPane[music], !names.isEmpty else { return sourcesDescription }
+        return names.joined(separator: " + ")
     }
 
     // MARK: - Backend configuration
@@ -172,10 +179,6 @@ final class AppState {
         UserDefaults.standard.string(forKey: SettingsKeys.tvTopLevel).flatMap(TVTopLevel.init) ?? .series
     }
 
-    var musicTopLevel: MusicTopLevel {
-        UserDefaults.standard.string(forKey: SettingsKeys.musicTopLevel).flatMap(MusicTopLevel.init) ?? .album
-    }
-
     var movieAutoContinue: MovieAutoContinue {
         UserDefaults.standard.string(forKey: SettingsKeys.movieAutoContinue).flatMap(MovieAutoContinue.init) ?? .off
     }
@@ -231,7 +234,8 @@ final class AppState {
 
     /// The sections shown in the dropdown, in the order chosen in Settings >
     /// Libraries: by default Continue Watching (on unless turned off), one per
-    /// library, then Playlists (off unless turned on).
+    /// library, then the video Playlists (off unless turned on) and the music
+    /// Playlists (on when there is a music library).
     var enabledSections: [MenuSection] {
         orderableSections.filter { section in
             switch section {
@@ -240,6 +244,8 @@ final class AppState {
                     && UserDefaults.standard.object(forKey: SettingsKeys.sectionEnabled(section)) as? Bool ?? true
             case .playlists:
                 UserDefaults.standard.bool(forKey: SettingsKeys.sectionEnabled(section))
+            case .musicPlaylists:
+                librarySections?.contains { $0.mediaType == .music } == true
             default:
                 true
             }
@@ -255,7 +261,7 @@ final class AppState {
 
     /// Every section that can appear in the menu, shown or not, in menu order.
     var orderableSections: [MenuSection] {
-        let sections = [.continueItems] + (librarySections ?? []) + [.playlists]
+        let sections = [.continueItems] + (librarySections ?? []) + [.playlists, .musicPlaylists]
         let rank = Dictionary(sectionOrder.enumerated().map { ($1, $0) }, uniquingKeysWith: min)
         // Stable sort: unranked sections keep their default order, after the ranked ones.
         return sections.enumerated()
@@ -277,6 +283,9 @@ final class AppState {
     /// One section per library name and type across all providers, in
     /// provider order. Nil while loading.
     private(set) var librarySections: [MenuSection]?
+    /// The servers behind the music (true) and the video (false) libraries,
+    /// in provider order.
+    private(set) var serverNamesByPane: [Bool: [String]] = [:]
     /// Shown instead of sections when no provider could list its libraries.
     private(set) var librarySectionsError: String?
     /// The provider libraries behind each library section.
@@ -295,20 +304,30 @@ final class AppState {
 
     private func loadLibrarySections() async {
         let generation = librarySectionsGeneration
-        let sources = providers
+        let sources = providers()
         let results = await concurrently(sources) { provider in try await provider.libraries() }
         guard generation == librarySectionsGeneration else { return }
 
         var sections: [MenuSection] = []
         var mapping: [MenuSection.ID: [(providerID: String, library: MediaLibrary)]] = [:]
         var failures: [String] = []
+        var serverNames: [Bool: [String]] = [:]
+        let musicLibraryNames = Set(results.flatMap { (try? $0.get()) ?? [] }.filter { $0.type == .music }.map { $0.name.lowercased() })
         for (provider, result) in zip(sources, results) {
             switch result {
             case .success(let libraries):
                 for library in libraries {
-                    let section = MenuSection.library(named: library.name, type: library.type)
-                    if mapping[section.id] == nil { sections.append(section) }
-                    mapping[section.id, default: []].append((provider.id, library))
+                    let isMusic = library.type == .music
+                    if let name = provider.source.webAppName, serverNames[isMusic]?.contains(name) != true {
+                        serverNames[isMusic, default: []].append(name)
+                    }
+                    let rows = isMusic
+                        ? MusicTopLevel.allCases.map { MenuSection.musicLibrary(named: library.name, topLevel: $0, showsName: musicLibraryNames.count > 1) }
+                        : [MenuSection.library(named: library.name, type: library.type)]
+                    for section in rows {
+                        if mapping[section.id] == nil { sections.append(section) }
+                        mapping[section.id, default: []].append((provider.id, library))
+                    }
                 }
             case .failure(let error):
                 failures.append("\(provider.source.rawValue): \(error.localizedDescription)")
@@ -316,6 +335,7 @@ final class AppState {
         }
         sectionLibraries = mapping
         librarySections = sections
+        serverNamesByPane = serverNames
         librarySectionsError = sections.isEmpty && !failures.isEmpty ? failures.joined(separator: " • ") : nil
         librarySectionsTask = nil
 
@@ -345,7 +365,9 @@ final class AppState {
         }
     }
 
-    private var providers: [any MediaProvider] {
+    /// `musicTopLevel` only matters for listing and searching a music
+    /// section; everything else (children, streams, playlists) ignores it.
+    private func providers(musicTopLevel: MusicTopLevel = .album) -> [any MediaProvider] {
         if isOfflineMode {
             let local = LocalMediaProvider(tvTopLevel: tvTopLevel, musicTopLevel: musicTopLevel, includeDownloads: true)
             return local.hasContent ? [local] : []
@@ -381,7 +403,7 @@ final class AppState {
 
     /// Resolves an item's provider using its server ID, or falls back to the first matching source.
     private func provider(for item: MediaItem) -> (any MediaProvider)? {
-        let candidates = providers.filter { $0.source == item.source }
+        let candidates = providers().filter { $0.source == item.source }
         if item.source == .plex,
            let serverID = item.attributes[PlexMediaProvider.serverIDAttribute],
            let match = candidates.first(where: { ($0 as? PlexMediaProvider)?.serverID == serverID }) {
@@ -479,7 +501,7 @@ final class AppState {
     private func refreshServerContinueItems() async {
         guard !isOfflineMode else { return }
         let started = Date.now
-        let results = await concurrently(providers) { try await $0.continueWatching() }
+        let results = await concurrently(providers()) { try await $0.continueWatching() }
         serverContinueItems = results.flatMap { (try? $0.get()) ?? [] }
         serverContinueFetchedAt = results.allSatisfy { (try? $0.get()) != nil } ? started : nil
     }
@@ -548,18 +570,18 @@ final class AppState {
         let sources: [(provider: any MediaProvider, library: MediaLibrary?)]
         if section.mediaType != nil {
             await ensureLibrarySections()
-            let available = providers
+            let available = providers(musicTopLevel: section.musicTopLevel ?? .album)
             sources = (sectionLibraries[section.id] ?? []).compactMap { entry in
                 available.first { $0.id == entry.providerID }.map { ($0, entry.library) }
             }
         } else {
-            sources = providers.map { ($0, nil) }
+            sources = providers().map { ($0, nil) }
         }
         let results = await concurrently(sources) { source in
             if let library = source.library {
                 return try await source.provider.items(inLibrary: library)
             }
-            return try await source.provider.playlists()
+            return try await source.provider.playlists().filter { ($0.type == .music) == (section == .musicPlaylists) }
         }
 
         var serverItems: [MediaItem] = []
@@ -719,25 +741,28 @@ final class AppState {
             var newItems: [MenuSection: [MediaItem]] = [:]
             var newChildren: [String: [MediaItem]] = [:]
             let sections = enabledSections.filter { $0.mediaType != nil }
-            // Search once per media type, then place each match in the
-            // library section whose items contain its top-level ancestor.
-            for mediaType in MediaType.allCases where sections.contains(where: { $0.mediaType == mediaType }) {
-                let candidates = sections.filter { $0.mediaType == mediaType }.map { section in
-                    (section, Set(itemsBySection[section]?.map(\.id) ?? []))
-                }
-                var chains: [[MediaItem]] = []
-                for provider in providers {
-                    chains += (try? await provider.deepSearch(query, type: mediaType)) ?? []
-                }
-                for chain in chains {
-                    guard let top = chain.first,
-                          let section = candidates.first(where: { $0.1.contains(top.id) })?.0 else { continue }
-                    if !(newItems[section] ?? []).contains(where: { $0.id == top.id }) {
-                        newItems[section, default: []].append(top)
+            // Search once per media type (music once per top level, since the
+            // chains start at the artist or the album), then place each match
+            // in the library section whose items contain its top-level ancestor.
+            for mediaType in MediaType.allCases {
+                for topLevel in Set(sections.filter { $0.mediaType == mediaType }.map(\.musicTopLevel)) {
+                    let candidates = sections.filter { $0.mediaType == mediaType && $0.musicTopLevel == topLevel }.map { section in
+                        (section, Set(itemsBySection[section]?.map(\.id) ?? []))
                     }
-                    for (parent, child) in zip(chain, chain.dropFirst())
-                    where !(newChildren[parent.id] ?? []).contains(where: { $0.id == child.id }) {
-                        newChildren[parent.id, default: []].append(child)
+                    var chains: [[MediaItem]] = []
+                    for provider in providers(musicTopLevel: topLevel ?? .album) {
+                        chains += (try? await provider.deepSearch(query, type: mediaType)) ?? []
+                    }
+                    for chain in chains {
+                        guard let top = chain.first,
+                              let section = candidates.first(where: { $0.1.contains(top.id) })?.0 else { continue }
+                        if !(newItems[section] ?? []).contains(where: { $0.id == top.id }) {
+                            newItems[section, default: []].append(top)
+                        }
+                        for (parent, child) in zip(chain, chain.dropFirst())
+                        where !(newChildren[parent.id] ?? []).contains(where: { $0.id == child.id }) {
+                            newChildren[parent.id, default: []].append(child)
+                        }
                     }
                 }
             }

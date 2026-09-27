@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Video and Music panes. With both video and music libraries, the menu shows one kind at a time: click the title at the top (Video or Music) to switch. The line under it names the servers for that pane. The Music pane lists Artists, Albums and your music playlists as separate sections, and Continue Listening shows the music you stopped partway through. While you search, matches from both panes are shown. This replaces the Music Top Level setting, and the Playlists switch in Settings > Visuals is now Video Playlists.
 - Navidrome support. Sign in under Settings > Accounts with your server address, username and password to browse artists, albums and playlists, search, play, download and open items in the Navidrome web app. Plays count on the server, and Navidrome shows what you're listening to. Ogg, Opus and other formats macOS can't play are converted to MP3 by the server. QuPi keeps a token in the Keychain, not your password.
 - Continue Watching (renamed from "Continue…") includes the server's own list (Plex Continue Watching, Jellyfin Resume and Next Up), so things started on another device and the next episode of shows you're watching show up next to what you started in QuPi, most recently played first. Episodes show their show's poster and name, with the episode underneath. The section is on and open by default, first in the menu, and opens and closes independently of the library sections.
 - Movies and episodes resume where you stopped, in QuPi or in Plex or Jellyfin on another device, whichever was more recent. Before, only music resumed. Right-click a poster and choose Play from Beginning to start over.
@@ -33,6 +34,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Jellyfin video playlists were listed as music.
 - Text fields in Settings (server URLs, username, password, tokens, API key, storage limit) are underlined. Empty ones looked like plain labels.
 - Delete Downloads in Settings > Data deleted a media type's downloads immediately. It now asks first.
 - The music "By Genre" option actually shuffled by artist. It is now called Shuffle by Artist.

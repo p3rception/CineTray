@@ -208,6 +208,8 @@ struct JellyfinClient {
         let Id: String
         let Name: String
         let itemType: String?
+        /// "Audio" or "Video"; tells music playlists from video ones.
+        let mediaKind: String?
         let ProductionYear: Int?
         let IndexNumber: Int?
         let ParentIndexNumber: Int?
@@ -231,6 +233,7 @@ struct JellyfinClient {
             case SeriesName, SeriesId, SeasonId, SeasonName, AlbumId, Album, PremiereDate
             case DateCreated, UserData, People, ArtistItems, Path
             case itemType = "Type"
+            case mediaKind = "MediaType"
         }
     }
 
@@ -367,7 +370,7 @@ struct JellyfinClient {
             MediaItem(
                 id: entry.Id,
                 source: .jellyfin,
-                type: .music,
+                type: entry.mediaKind == "Video" ? .movies : .music,
                 kind: .playlist,
                 title: entry.Name,
                 subtitle: nil,

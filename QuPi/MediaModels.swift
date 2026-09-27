@@ -37,7 +37,8 @@ struct MediaLibrary: Hashable {
 
 /// A row in the menu bar dropdown: one per library, using the server's own
 /// library name (libraries with the same name and type on different servers
-/// share a row), plus the fixed Playlists and Continue Watching rows.
+/// share a row), plus the fixed Playlists and Continue Watching rows. Music
+/// libraries get two rows, Artists and Albums.
 struct MenuSection: Hashable, Identifiable {
     enum Kind: Hashable {
         case library(MediaType)
@@ -48,13 +49,28 @@ struct MenuSection: Hashable, Identifiable {
     let id: String
     let title: String
     let kind: Kind
+    /// What a music library row lists; nil for every other row.
+    var musicTopLevel: MusicTopLevel?
 
+    /// Video playlists; music ones are in `musicPlaylists`.
     static let playlists = MenuSection(id: "playlists", title: "Playlists", kind: .playlists)
+    static let musicPlaylists = MenuSection(id: "musicPlaylists", title: "Playlists", kind: .playlists)
     static let continueItems = MenuSection(id: "continueItems", title: "Continue Watching", kind: .continueItems)
 
     /// The row for libraries called `name` that hold `type`.
     static func library(named name: String, type: MediaType) -> MenuSection {
         MenuSection(id: "library|\(type.rawValue)|\(name.lowercased())", title: name, kind: .library(type))
+    }
+
+    /// A music library row listing `topLevel`. With a single music library
+    /// the row is just "Artists" or "Albums".
+    static func musicLibrary(named name: String, topLevel: MusicTopLevel, showsName: Bool) -> MenuSection {
+        MenuSection(
+            id: "library|\(MediaType.music.rawValue)|\(name.lowercased())|\(topLevel.rawValue)",
+            title: showsName ? "\(name) \(topLevel.title)" : topLevel.title,
+            kind: .library(.music),
+            musicTopLevel: topLevel
+        )
     }
 
     var mediaType: MediaType? {
@@ -64,10 +80,20 @@ struct MenuSection: Hashable, Identifiable {
         }
     }
 
+    /// Shown in the Music pane of the menu rather than the Video pane.
+    var isMusic: Bool {
+        mediaType == .music || self == .musicPlaylists
+    }
+
     var systemImage: String {
         switch kind {
-        case .library(let type): type.systemImage
-        case .playlists: "music.note.list"
+        case .library(let type):
+            switch musicTopLevel {
+            case .artist: "music.mic"
+            case .album: "square.stack"
+            case nil: type.systemImage
+            }
+        case .playlists: self == .musicPlaylists ? "music.note.list" : "list.and.film"
         case .continueItems: "clock.arrow.circlepath"
         }
     }
@@ -189,10 +215,17 @@ enum TVTopLevel: String, CaseIterable {
     case season
 }
 
-/// What the Music section lists at its top level.
+/// What a music section lists at its top level.
 enum MusicTopLevel: String, CaseIterable {
     case artist
     case album
+
+    var title: String {
+        switch self {
+        case .artist: "Artists"
+        case .album: "Albums"
+        }
+    }
 }
 
 /// How to pick the next movie when one finishes.
@@ -563,7 +596,8 @@ nonisolated enum SettingsKeys {
     static let navidromeSalt = "navidromeSalt"
 
     static let tvTopLevel = "tvTopLevel"
-    static let musicTopLevel = "musicTopLevel"
+    /// Whether the menu shows the Music pane instead of the Video pane.
+    static let menuShowsMusic = "menuShowsMusic"
     static let movieAutoContinue = "movieAutoContinue"
     static let tvAutoContinue = "tvAutoContinue"
     static let musicAutoContinue = "musicAutoContinue"

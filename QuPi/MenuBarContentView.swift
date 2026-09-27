@@ -16,6 +16,7 @@ struct MenuBarContentView: View {
     @FocusState private var searchFocused: Bool
     @AppStorage("carouselVisibleCount") private var carouselVisibleCount = 3
     @AppStorage(SettingsKeys.playerMode) private var playerMode = PlayerMode.popout.rawValue
+    @AppStorage(SettingsKeys.menuShowsMusic) private var showsMusic = false
 
     private var contentWidth: CGFloat {
         MediaCarouselView.carouselWidth(for: carouselVisibleCount) + 24
@@ -78,7 +79,10 @@ struct MenuBarContentView: View {
 
             // Filtered and sorted once per redraw, shared by the match check,
             // the count and the carousel.
-            let sections = appState.enabledSections
+            let pane = musicPane
+            let sections = appState.enabledSections.filter { section in
+                pane.map { section == .continueItems || section.isMusic == $0 } ?? true
+            }
             let itemsBySection = Dictionary(uniqueKeysWithValues: sections.map { ($0, visibleItems(for: $0)) })
             // While a query is typed, show only the sections with matches.
             let shown = appState.isFiltering
@@ -115,14 +119,31 @@ struct MenuBarContentView: View {
 
     // MARK: - Header
 
+    /// True when there are both video and music libraries, so the menu splits
+    /// them into a Video and a Music pane.
+    private var hasPanes: Bool {
+        let libraries = appState.librarySections ?? []
+        return libraries.contains { $0.mediaType == .music } && libraries.contains { $0.mediaType != .music }
+    }
+
+    /// Whether the Music pane is shown, or nil when every section is: there
+    /// are no panes, or a search shows matches from both.
+    private var musicPane: Bool? {
+        hasPanes && !appState.isFiltering ? showsMusic : nil
+    }
+
     private var header: some View {
         HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 1) {
-                Label("QuPi", systemImage: "play.square.stack")
-                    .font(.headline)
-                Text(appState.sourcesDescription)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            if hasPanes {
+                paneSwitch
+            } else {
+                VStack(alignment: .leading, spacing: 1) {
+                    Label("QuPi", systemImage: "play.square.stack")
+                        .font(.headline)
+                    Text(appState.sourcesDescription)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             searchField
             Button("Offline Mode", systemImage: "airplane") {
@@ -149,6 +170,32 @@ struct MenuBarContentView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+
+    /// The header title names the pane shown; clicking it switches to the other.
+    private var paneSwitch: some View {
+        Button {
+            withAnimation(.snappy(duration: 0.2)) { showsMusic.toggle() }
+        } label: {
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 3) {
+                    Label(showsMusic ? "Music" : "Video", systemImage: showsMusic ? "music.note" : "film")
+                        .font(.headline)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                Text(appState.sourcesDescription(music: showsMusic))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(appState.isFiltering)
+        .help(showsMusic ? "Show Video" : "Show Music")
+        .accessibilityLabel(showsMusic ? "Music" : "Video")
+        .accessibilityHint(showsMusic ? "Switches to Video" : "Switches to Music")
     }
 
     private var searchField: some View {
@@ -191,8 +238,11 @@ struct MenuBarContentView: View {
     
     /// Filters items for a section, taking offline mode into account.
     private func visibleItems(for section: MenuSection) -> [MediaItem]? {
-        appState.displayedItems(for: section)?.filter { item in
-            section != .continueItems || !appState.isOfflineMode || downloadManager.isDownloaded(item)
+        let pane = musicPane
+        return appState.displayedItems(for: section)?.filter { item in
+            guard section == .continueItems else { return true }
+            return (!appState.isOfflineMode || downloadManager.isDownloaded(item))
+                && pane.map { (item.type == .music) == $0 } ?? true
         }
     }
 
@@ -231,7 +281,7 @@ struct MenuBarContentView: View {
                 HStack {
                     Image(systemName: section.systemImage)
                         .frame(width: 20)
-                    Text(section.title)
+                    Text(section == .continueItems && musicPane == true ? "Continue Listening" : section.title)
                     Spacer()
                 }
                 .contentShape(Rectangle())
