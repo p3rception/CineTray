@@ -2,7 +2,7 @@ import SwiftUI
 import AuthenticationServices
 
 /// Sign-in for the media servers (Plex PIN flow, Jellyfin username/password
-/// or Quick Connect)
+/// or Quick Connect, Navidrome username/password)
 /// and the scrobblers (Trakt OAuth, Last.fm web auth). Secrets are kept in the
 /// Keychain; only non-secret settings use UserDefaults.
 struct AccountsSettingsView: View {
@@ -12,6 +12,9 @@ struct AccountsSettingsView: View {
     @AppStorage(SettingsKeys.jellyfinServerURL) private var jellyfinServerURL = ""
     @AppStorage(SettingsKeys.jellyfinUsername) private var jellyfinUsername = ""
     @AppStorage(SettingsKeys.jellyfinUserID) private var jellyfinUserID = ""
+    @AppStorage(SettingsKeys.navidromeServerURL) private var navidromeServerURL = ""
+    @AppStorage(SettingsKeys.navidromeUsername) private var navidromeUsername = ""
+    @AppStorage(SettingsKeys.navidromeSalt) private var navidromeSalt = ""
 
     // Connected Plex servers; tokens live in the Keychain, one per server.
     @State private var plexServers = PlexServerStore.load()
@@ -27,6 +30,8 @@ struct AccountsSettingsView: View {
 
     // Transient sign-in state.
     @State private var jellyfinPassword = ""
+    @State private var navidromePassword = ""
+    @State private var navidromeStatus = ""
     @State private var pinCode = ""
     @State private var plexStatus = ""
     @State private var plexAdvancedExpanded = false
@@ -52,6 +57,7 @@ struct AccountsSettingsView: View {
         Form {
             plexSection
             jellyfinSection
+            navidromeSection
             // traktSection
             // lastfmSection
             tmdbSection
@@ -493,6 +499,72 @@ struct AccountsSettingsView: View {
         jellyfinPassword = ""
         jellyfinStatus = ""
         appState.resetCatalog()
+    }
+
+    // MARK: - Navidrome
+
+    private var navidromeSection: some View {
+        Section("Navidrome") {
+            TextField("Server URL", text: $navidromeServerURL)
+            TextField("Username", text: $navidromeUsername)
+            SecureField("Password", text: $navidromePassword)
+            HStack {
+                Button("Sign In") { signInToNavidrome() }
+                    .disabled(navidromeServerURL.isEmpty || navidromeUsername.isEmpty || navidromePassword.isEmpty)
+                if !navidromeSalt.isEmpty {
+                    Button("Sign Out") {
+                        KeychainStore.set(nil, for: KeychainKeys.navidromeToken)
+                        navidromeSalt = ""
+                        navidromeStatus = "Signed out."
+                        appState.resetCatalog()
+                    }
+                }
+            }
+            if !navidromeSalt.isEmpty {
+                Text("Signed in as \(navidromeUsername).")
+                    .font(.callout)
+                    .foregroundStyle(.green)
+            }
+            statusText(navidromeStatus)
+        }
+    }
+
+    /// Checks the credentials against each candidate address (HTTPS first),
+    /// then keeps the address that worked and the token, never the password.
+    private func signInToNavidrome() {
+        navidromeStatus = "Signing in…"
+        Task {
+            let candidates = serverURLCandidates(navidromeServerURL)
+            guard !candidates.isEmpty else {
+                navidromeStatus = "Invalid server URL."
+                return
+            }
+            let username = navidromeUsername.trimmingCharacters(in: .whitespaces)
+            let credentials = NavidromeClient.credentials(password: navidromePassword)
+            var lastError: Error?
+            for url in candidates {
+                let configuration = NavidromeConfiguration(serverURL: url, username: username, token: credentials.token, salt: credentials.salt)
+                do {
+                    try await NavidromeClient(config: configuration).ping()
+                } catch let error as NavidromeClient.ServerError {
+                    // The server answered, so the other scheme won't help.
+                    navidromeStatus = "Sign-in failed: \(error.localizedDescription)"
+                    return
+                } catch {
+                    lastError = error
+                    continue
+                }
+                navidromeServerURL = url.absoluteString
+                navidromeUsername = username
+                KeychainStore.set(credentials.token, for: KeychainKeys.navidromeToken)
+                navidromeSalt = credentials.salt
+                navidromePassword = ""
+                navidromeStatus = ""
+                appState.resetCatalog()
+                return
+            }
+            navidromeStatus = "Sign-in failed: \(lastError?.localizedDescription ?? "server not reachable.")"
+        }
     }
 
     // MARK: - Trakt

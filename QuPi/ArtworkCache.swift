@@ -40,12 +40,25 @@ nonisolated enum ArtworkCache {
         plexTokens.withLock { $0 = tokens }
     }
 
+    /// Navidrome server address and the credentials Subsonic expects in the
+    /// query string. Cover art URLs are stored without them.
+    private static let navidromeAuth = Mutex<(address: String, query: [URLQueryItem])?>(nil)
+
+    static func setNavidromeAuth(_ auth: (address: String, query: [URLQueryItem])?) {
+        navidromeAuth.withLock { $0 = auth }
+    }
+
     static func addressKey(_ url: URL) -> String {
         "\(url.host() ?? ""):\(url.port ?? 0)"
     }
 
-    /// A request for artwork at `url`, authenticated when it's on a Plex server.
+    /// A request for artwork at `url`, authenticated when it's on a Plex or
+    /// Navidrome server.
     static func request(for url: URL) -> URLRequest {
+        var url = url
+        if let auth = navidromeAuth.withLock({ $0 }), auth.address == addressKey(url), url.path().contains("/rest/") {
+            url.append(queryItems: auth.query)
+        }
         var request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad)
         if let token = plexTokens.withLock({ $0[addressKey(url)] }) {
             request.setValue(token, forHTTPHeaderField: "X-Plex-Token")

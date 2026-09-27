@@ -5,7 +5,7 @@ import MediaPlayer
 import AppKit
 
 /// Shared app state managing UI sections, drill-down paths, and catalogs.
-/// Merges Plex, Jellyfin and local library providers.
+/// Merges Plex, Jellyfin, Navidrome and local library providers.
 @MainActor
 @Observable
 final class AppState {
@@ -76,6 +76,7 @@ final class AppState {
         var names: [String] = []
         if !plexConfigurations.isEmpty { names.append("Plex") }
         if jellyfinConfiguration != nil { names.append("Jellyfin") }
+        if navidromeConfiguration != nil { names.append("Navidrome") }
         return names.isEmpty ? "No sources" : names.joined(separator: " + ")
     }
 
@@ -86,16 +87,17 @@ final class AppState {
     /// and menu redraw. Cleared by resetCatalog(), which every account
     /// change calls. Keeping the PlexConfiguration objects also keeps a
     /// working fallback URL for the rest of the session.
-    @ObservationIgnored private var cachedSources: (plex: [PlexConfiguration], jellyfin: JellyfinConfiguration?)?
+    @ObservationIgnored private var cachedSources: (plex: [PlexConfiguration], jellyfin: JellyfinConfiguration?, navidrome: NavidromeConfiguration?)?
 
-    private var sources: (plex: [PlexConfiguration], jellyfin: JellyfinConfiguration?) {
+    private var sources: (plex: [PlexConfiguration], jellyfin: JellyfinConfiguration?, navidrome: NavidromeConfiguration?) {
         if let cachedSources { return cachedSources }
-        let loaded = (plex: Self.loadPlexConfigurations(), jellyfin: Self.loadJellyfinConfiguration())
+        let loaded = (plex: Self.loadPlexConfigurations(), jellyfin: Self.loadJellyfinConfiguration(), navidrome: Self.loadNavidromeConfiguration())
         cachedSources = loaded
         let tokens = loaded.plex.flatMap { configuration in
             ([configuration.serverURL] + (configuration.fallbackURLs ?? [])).map { (ArtworkCache.addressKey($0), configuration.token) }
         }
         ArtworkCache.setPlexTokens(Dictionary(tokens, uniquingKeysWith: { first, _ in first }))
+        ArtworkCache.setNavidromeAuth(loaded.navidrome.map { (ArtworkCache.addressKey($0.serverURL), $0.authQuery) })
         return loaded
     }
 
@@ -104,6 +106,8 @@ final class AppState {
     var plexConfigurations: [PlexConfiguration] { sources.plex }
 
     var jellyfinConfiguration: JellyfinConfiguration? { sources.jellyfin }
+
+    var navidromeConfiguration: NavidromeConfiguration? { sources.navidrome }
 
     private static func loadPlexConfigurations() -> [PlexConfiguration] {
         PlexServerStore.load().compactMap { server in
@@ -133,6 +137,17 @@ final class AppState {
             return nil
         }
         return JellyfinConfiguration(serverURL: url, token: token, userID: userID)
+    }
+
+    private static func loadNavidromeConfiguration() -> NavidromeConfiguration? {
+        let defaults = UserDefaults.standard
+        guard let url = defaults.string(forKey: SettingsKeys.navidromeServerURL).flatMap(URL.init(string:)),
+              let username = defaults.string(forKey: SettingsKeys.navidromeUsername), !username.isEmpty,
+              let salt = defaults.string(forKey: SettingsKeys.navidromeSalt), !salt.isEmpty,
+              let token = KeychainStore.string(for: KeychainKeys.navidromeToken), !token.isEmpty else {
+            return nil
+        }
+        return NavidromeConfiguration(serverURL: url, username: username, token: token, salt: salt)
     }
 
     private func selectedLibraries(forKey key: String) -> Set<String> {
@@ -221,7 +236,7 @@ final class AppState {
         orderableSections.filter { section in
             switch section {
             case .continueItems:
-                (isOfflineMode || !plexConfigurations.isEmpty || jellyfinConfiguration != nil)
+                (isOfflineMode || !plexConfigurations.isEmpty || jellyfinConfiguration != nil || navidromeConfiguration != nil)
                     && UserDefaults.standard.object(forKey: SettingsKeys.sectionEnabled(section)) as? Bool ?? true
             case .playlists:
                 UserDefaults.standard.bool(forKey: SettingsKeys.sectionEnabled(section))
@@ -351,6 +366,9 @@ final class AppState {
                 tvTopLevel: tvTopLevel,
                 musicTopLevel: musicTopLevel
             ))
+        }
+        if let configuration = navidromeConfiguration {
+            result.append(NavidromeMediaProvider(client: NavidromeClient(config: configuration), musicTopLevel: musicTopLevel))
         }
         // Local provider runs last so de-duplication in load() can filter its
         // items against server results (server poster wins when both exist).
@@ -1012,6 +1030,15 @@ final class AppState {
                         itemID: item.id,
                         state: state,
                         positionSeconds: positionSeconds
+                    )
+                }
+            case .navidrome:
+                if let configuration = navidromeConfiguration {
+                    try? await NavidromeClient(config: configuration).reportPlayback(
+                        itemID: item.id,
+                        state: state,
+                        positionSeconds: positionSeconds,
+                        durationSeconds: durationSeconds
                     )
                 }
             case .sample, .local:

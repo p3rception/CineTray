@@ -98,6 +98,7 @@ enum MediaSource: String, Codable, Hashable {
     case sample
     case plex
     case jellyfin
+    case navidrome
     /// Locally downloaded content, served by LocalMediaProvider.
     case local
 
@@ -106,6 +107,7 @@ enum MediaSource: String, Codable, Hashable {
         switch self {
         case .plex: "Plex"
         case .jellyfin: "Jellyfin"
+        case .navidrome: "Navidrome"
         case .local, .sample: nil
         }
     }
@@ -555,6 +557,10 @@ nonisolated enum SettingsKeys {
     static let jellyfinUserID = "jellyfinUserID"
     static let jellyfinUsername = "jellyfinUsername"
     static let jellyfinSelectedLibraries = "jellyfinSelectedLibraries"
+    static let navidromeServerURL = "navidromeServerURL"
+    static let navidromeUsername = "navidromeUsername"
+    /// Not secret: it only goes with the token in the Keychain.
+    static let navidromeSalt = "navidromeSalt"
 
     static let tvTopLevel = "tvTopLevel"
     static let musicTopLevel = "musicTopLevel"
@@ -626,6 +632,7 @@ enum KeychainKeys {
         "plexToken_\(serverID)"
     }
     static let jellyfinToken = "jellyfinToken"
+    static let navidromeToken = "navidromeToken"
     static let traktAccessToken = "traktAccessToken"
     static let traktRefreshToken = "traktRefreshToken"
     static let lastfmSessionKey = "lastfmSessionKey"
