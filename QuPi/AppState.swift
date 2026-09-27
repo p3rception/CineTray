@@ -674,6 +674,12 @@ final class AppState {
         return try await provider.streamURL(for: item)
     }
 
+    /// The item's page in its server's web app (Plex Web or Jellyfin), or
+    /// nil for local items or when the server can't be reached.
+    func webURL(for item: MediaItem) async -> URL? {
+        try? await provider(for: item)?.webURL(for: item)
+    }
+
     func downloadURL(for item: MediaItem) async throws -> URL {
         guard let provider = provider(for: item) else {
             throw URLError(.resourceUnavailable)

@@ -56,7 +56,10 @@ struct PlayerView: View {
                         onPick: { picked in item = picked }
                     )
                     .frame(minWidth: 300, minHeight: 480)
-                    .toolbar { pinToolbarItem }
+                    .toolbar {
+                        openInServerToolbarItem
+                        pinToolbarItem
+                    }
                 } else if let player = appState.player {
                     videoPlayerView(player: player)
                 } else if let bridge = appState.vlcBridge {
@@ -228,9 +231,44 @@ struct PlayerView: View {
                         .help("Crop the video to a fixed aspect ratio")
                     }
                     .sharedBackgroundVisibility(.hidden)
+                    openInServerToolbarItem
                     pinToolbarItem
                 }
             }
+    }
+
+    /// The web app the playing item can be opened in, if any.
+    private var serverName: String? {
+        switch item.source {
+        case .plex: "Plex"
+        case .jellyfin: "Jellyfin"
+        case .local, .sample: nil
+        }
+    }
+
+    /// Opens the playing item's page in Plex Web or Jellyfin.
+    @ToolbarContentBuilder
+    private var openInServerToolbarItem: some ToolbarContent {
+        if let serverName {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    Task {
+                        if let url = await appState.webURL(for: item) {
+                            NSWorkspace.shared.open(url)
+                        } else {
+                            NSSound.beep()
+                        }
+                    }
+                } label: {
+                    Image(systemName: "arrow.up.forward.app")
+                        .font(.system(size: 9))
+                }
+                .controlSize(.small)
+                .help("Open in \(serverName)")
+                .accessibilityLabel("Open in \(serverName)")
+            }
+            .sharedBackgroundVisibility(.hidden)
+        }
     }
 
     private var pinToolbarItem: some ToolbarContent {

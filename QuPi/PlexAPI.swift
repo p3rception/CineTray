@@ -561,6 +561,23 @@ struct PlexClient {
     private static let directPlayVideoContainers: Set<String> = ["mp4", "mov", "m4v"]
     private static let directPlayAudioContainers: Set<String> = ["mp3", "mp4", "m4a", "flac", "aiff", "wav", "caf"]
 
+    /// The item's page in the Plex Web app hosted by the server itself, so it
+    /// also works for servers that aren't signed in to plex.tv. The link
+    /// needs the server's machine identifier, which manually added servers
+    /// don't store, so it is asked for here.
+    func webURL(ratingKey: String) async throws -> URL {
+        struct Identity: Decodable {
+            struct Container: Decodable { let machineIdentifier: String }
+            let MediaContainer: Container
+        }
+        let (data, _) = try await fetchData(path: "/identity")
+        let machineID = try JSONDecoder().decode(Identity.self, from: data).MediaContainer.machineIdentifier
+        var components = URLComponents(url: config.serverURL.appending(path: "/web/index.html"), resolvingAgainstBaseURL: false)!
+        components.fragment = "!/server/\(machineID)/details?key=%2Flibrary%2Fmetadata%2F\(ratingKey)"
+        guard let url = components.url else { throw URLError(.badURL) }
+        return url
+    }
+
     /// Original-file download URL: resolves the part key from metadata and
     /// appends `download=1` so the server treats it as an attachment.
     func downloadFileURL(ratingKey: String) async -> URL? {
@@ -921,6 +938,10 @@ struct PlexMediaProvider: MediaProvider {
 
     func nextMovie(after item: MediaItem, by criterion: MovieAutoContinue) async throws -> MediaItem? {
         try await client.nextMovie(after: item, by: criterion).map(tagged)
+    }
+
+    func webURL(for item: MediaItem) async throws -> URL? {
+        try await client.webURL(ratingKey: item.id)
     }
 
     func randomTrack(sameArtistAs item: MediaItem) async throws -> MediaItem? {

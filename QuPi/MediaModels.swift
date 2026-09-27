@@ -452,6 +452,8 @@ protocol MediaProvider {
     func nextMovie(after item: MediaItem, by criterion: MovieAutoContinue) async throws -> MediaItem?
     /// A random other track by the same artist, for shuffle auto-continue.
     func randomTrack(sameArtistAs item: MediaItem) async throws -> MediaItem?
+    /// The item's page in the server's own web app, or nil when there is none.
+    func webURL(for item: MediaItem) async throws -> URL?
 }
 
 extension MediaProvider {
@@ -460,6 +462,7 @@ extension MediaProvider {
     func downloadURL(for item: MediaItem) async throws -> URL { throw URLError(.unsupportedURL) }
     func nextMovie(after item: MediaItem, by criterion: MovieAutoContinue) async throws -> MediaItem? { nil }
     func randomTrack(sameArtistAs item: MediaItem) async throws -> MediaItem? { nil }
+    func webURL(for item: MediaItem) async throws -> URL? { nil }
 }
 
 /// Returns true when AVFoundation can decode the file at `url` without

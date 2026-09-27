@@ -529,6 +529,13 @@ struct JellyfinClient {
     }
 
     /// Original-file download URL using Jellyfin's dedicated download endpoint.
+    /// The item's details page in the Jellyfin web app.
+    func webURL(itemID: String) -> URL? {
+        var components = URLComponents(url: config.serverURL.appending(path: "/web/"), resolvingAgainstBaseURL: false)
+        components?.fragment = "/details?id=\(itemID)"
+        return components?.url
+    }
+
     func downloadURL(itemID: String) -> URL {
         var components = URLComponents(
             url: config.serverURL.appending(path: "/Items/\(itemID)/Download"),
@@ -690,5 +697,9 @@ struct JellyfinMediaProvider: MediaProvider {
 
     func randomTrack(sameArtistAs item: MediaItem) async throws -> MediaItem? {
         try await client.randomTrack(sameArtistAs: item)
+    }
+
+    func webURL(for item: MediaItem) async throws -> URL? {
+        client.webURL(itemID: item.id)
     }
 }
