@@ -449,6 +449,7 @@ struct JellyfinClient {
         // Both endpoints take a single ParentId, so ask once per library.
         for parentID in libraryIDs.isEmpty ? [nil] : libraryIDs.map(Optional.init) {
             let parent = parentID.map { [URLQueryItem(name: "ParentId", value: $0)] } ?? []
+            let fields = URLQueryItem(name: "Fields", value: "Overview")
             for (path, query) in [
                 ("/Users/\(config.userID)/Items/Resume", [URLQueryItem(name: "MediaTypes", value: "Video")]),
                 // In-progress episodes already come from Resume.
@@ -458,7 +459,7 @@ struct JellyfinClient {
                     URLQueryItem(name: "Limit", value: "20"),
                 ]),
             ] {
-                let (data, _) = try await URLSession.shared.data(for: request(path: path, query: query + parent))
+                let (data, _) = try await URLSession.shared.data(for: request(path: path, query: query + parent + [fields]))
                 entries += try JSONDecoder().decode(ItemsResponse.self, from: data).Items
             }
         }
