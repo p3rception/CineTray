@@ -57,14 +57,14 @@ struct PosterCell: View {
             if simpleVisuals {
                 compactBox
                     .overlay(alignment: .bottomTrailing) { downloadButton }
-                    .overlay(alignment: .bottomLeading) { infoButton }
+                    .overlay(alignment: .topLeading) { infoButton }
                     .overlay(alignment: .topTrailing) { openInWebAppButton }
                     .overlay(alignment: .topTrailing) { watchedBadge }
             } else {
                 VStack(alignment: .leading, spacing: 4) {
                     poster
                         .overlay(alignment: .bottomTrailing) { downloadButton }
-                        .overlay(alignment: .bottomLeading) { infoButton }
+                        .overlay(alignment: .topLeading) { infoButton }
                         .overlay(alignment: .topTrailing) { openInWebAppButton }
                         .overlay(alignment: .topTrailing) { watchedBadge }
                     MarqueeText(text: displayTitle, font: isCompact ? .system(size: 11) : .caption)
