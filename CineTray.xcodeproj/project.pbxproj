@@ -11,27 +11,27 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		000000000000000000000120 /* QP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = QP.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		000000000000000000000120 /* CineTray.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CineTray.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D2B33E52301475B10070F726 /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		D2DAEB6630145DB4007A6FC3 /* Exceptions for "QuPi" folder in "QP" target */ = {
+		D2DAEB6630145DB4007A6FC3 /* Exceptions for "CineTray" folder in "CineTray" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 000000000000000100000000 /* QP */;
+			target = 000000000000000100000000 /* CineTray */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		000000000000000000000010 /* QuPi */ = {
+		000000000000000000000010 /* CineTray */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				D2DAEB6630145DB4007A6FC3 /* Exceptions for "QuPi" folder in "QP" target */,
+				D2DAEB6630145DB4007A6FC3 /* Exceptions for "CineTray" folder in "CineTray" target */,
 			);
-			path = QuPi;
+			path = CineTray;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -49,7 +49,7 @@
 		000000000000000000000001 = {
 			isa = PBXGroup;
 			children = (
-				000000000000000000000010 /* QuPi */,
+				000000000000000000000010 /* CineTray */,
 				D2B33E52301475B10070F726 /* CLAUDE.md */,
 				000000000000000000000020 /* Products */,
 			);
@@ -58,7 +58,7 @@
 		000000000000000000000020 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				000000000000000000000120 /* QP.app */,
+				000000000000000000000120 /* CineTray.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -66,9 +66,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		000000000000000100000000 /* QP */ = {
+		000000000000000100000000 /* CineTray */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 000000000000000110000000 /* Build configuration list for PBXNativeTarget "QP" */;
+			buildConfigurationList = 000000000000000110000000 /* Build configuration list for PBXNativeTarget "CineTray" */;
 			buildPhases = (
 				000000000000000120000000 /* Sources */,
 				000000000000000130000000 /* Frameworks */,
@@ -77,14 +77,14 @@
 			buildRules = (
 			);
 			fileSystemSynchronizedGroups = (
-				000000000000000000000010 /* QuPi */,
+				000000000000000000000010 /* CineTray */,
 			);
-			name = QP;
+			name = CineTray;
 			packageProductDependencies = (
 				D2DAEB613013BD43007A6FC3 /* SwiftVLC */,
 			);
 			productName = MyApp;
-			productReference = 000000000000000000000120 /* QP.app */;
+			productReference = 000000000000000000000120 /* CineTray.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -102,7 +102,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 000000000000000010000000 /* Build configuration list for PBXProject "QuPi" */;
+			buildConfigurationList = 000000000000000010000000 /* Build configuration list for PBXProject "CineTray" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -119,7 +119,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				000000000000000100000000 /* QP */,
+				000000000000000100000000 /* CineTray */,
 			);
 		};
 /* End PBXProject section */
@@ -141,7 +141,7 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		000000000000000011000000 /* Debug configuration for PBXProject "QuPi" */ = {
+		000000000000000011000000 /* Debug configuration for PBXProject "CineTray" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -211,7 +211,7 @@
 			};
 			name = Debug;
 		};
-		000000000000000012000000 /* Release configuration for PBXProject "QuPi" */ = {
+		000000000000000012000000 /* Release configuration for PBXProject "CineTray" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -273,7 +273,7 @@
 			};
 			name = Release;
 		};
-		000000000000000111000000 /* Debug configuration for PBXNativeTarget "QP" */ = {
+		000000000000000111000000 /* Debug configuration for PBXNativeTarget "CineTray" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
@@ -283,9 +283,9 @@
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = QuPi/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = QP;
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "QuPi uses your local network to discover and connect to Plex and Jellyfin media servers.";
+				INFOPLIST_FILE = CineTray/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = CineTray;
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "CineTray uses your local network to discover and connect to Plex and Jellyfin media servers.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -299,7 +299,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = QuPi;
+				PRODUCT_BUNDLE_IDENTIFIER = CineTray;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
@@ -314,7 +314,7 @@
 			};
 			name = Debug;
 		};
-		000000000000000112000000 /* Release configuration for PBXNativeTarget "QP" */ = {
+		000000000000000112000000 /* Release configuration for PBXNativeTarget "CineTray" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
@@ -324,9 +324,9 @@
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = QuPi/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = QP;
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "QuPi uses your local network to discover and connect to Plex and Jellyfin media servers.";
+				INFOPLIST_FILE = CineTray/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = CineTray;
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "CineTray uses your local network to discover and connect to Plex and Jellyfin media servers.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -340,7 +340,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = QuPi;
+				PRODUCT_BUNDLE_IDENTIFIER = CineTray;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
@@ -358,19 +358,19 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		000000000000000010000000 /* Build configuration list for PBXProject "QuPi" */ = {
+		000000000000000010000000 /* Build configuration list for PBXProject "CineTray" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				000000000000000011000000 /* Debug configuration for PBXProject "QuPi" */,
-				000000000000000012000000 /* Release configuration for PBXProject "QuPi" */,
+				000000000000000011000000 /* Debug configuration for PBXProject "CineTray" */,
+				000000000000000012000000 /* Release configuration for PBXProject "CineTray" */,
 			);
 			defaultConfigurationName = Release;
 		};
-		000000000000000110000000 /* Build configuration list for PBXNativeTarget "QP" */ = {
+		000000000000000110000000 /* Build configuration list for PBXNativeTarget "CineTray" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				000000000000000111000000 /* Debug configuration for PBXNativeTarget "QP" */,
-				000000000000000112000000 /* Release configuration for PBXNativeTarget "QP" */,
+				000000000000000111000000 /* Debug configuration for PBXNativeTarget "CineTray" */,
+				000000000000000112000000 /* Release configuration for PBXNativeTarget "CineTray" */,
 			);
 			defaultConfigurationName = Release;
 		};

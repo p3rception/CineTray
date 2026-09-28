@@ -8,9 +8,9 @@ Contribution rules for all changes: @AGENTS.md
 
 Two build paths. Both must keep working.
 
-- **Install:** `make` runs `./build.sh build` and copies `dist/QuPi.app` to `/Applications`. This is the path the README gives users.
-- **SwiftPM (no Xcode needed):** `./build.sh` builds, bundles `dist/QuPi.app`, ad-hoc signs and launches it. `./build.sh build` skips the launch. Compile only: `swift build -c release --disable-keychain`.
-- **Xcode:** `QuPi.xcodeproj`. When Xcode MCP tools are available, prefer `BuildProject`, `XcodeRefreshCodeIssuesInFile` and `GetBuildLog`. Project paths are `QuPi/<File>.swift`. `XcodeUpdate` does not always flush to disk; verify with a filesystem `Read` and fall back to `Edit`.
+- **Install:** `make` runs `./build.sh build` and copies `dist/CineTray.app` to `/Applications`. This is the path the README gives users.
+- **SwiftPM (no Xcode needed):** `./build.sh` builds, bundles `dist/CineTray.app`, ad-hoc signs and launches it. `./build.sh build` skips the launch. Compile only: `swift build -c release --disable-keychain`.
+- **Xcode:** `CineTray.xcodeproj`. When Xcode MCP tools are available, prefer `BuildProject`, `XcodeRefreshCodeIssuesInFile` and `GetBuildLog`. Project paths are `CineTray/<File>.swift`. `XcodeUpdate` does not always flush to disk; verify with a filesystem `Read` and fall back to `Edit`.
 
 Build settings live in two places and must stay in sync: `Package.swift` (`swiftSettings`) and the target in `project.pbxproj`. Both use Swift 5 language mode, default actor isolation `MainActor`, and the upcoming features `InferIsolatedConformances`, `NonisolatedNonsendingByDefault`, `MemberImportVisibility` and bare-slash regex literals.
 
@@ -21,7 +21,7 @@ There is no test target and no linter.
 - Deployment target is **macOS 26**. Do not use APIs introduced in macOS 27 (for example `AsyncImage(request:)` or `.asyncImageURLSession(_:)`). Load artwork with `ArtworkImage` (`ArtworkCache.swift`).
 - The app is macOS-only (`SUPPORTED_PLATFORMS = macosx`). Do not add iOS code paths.
 - `#Preview` blocks must be wrapped in `#if !SWIFT_PACKAGE`, because the Command Line Tools lack the previews macro plugin.
-- `QuPi/Secrets.swift` (Trakt and Last.fm credentials) is gitignored. Never commit it or print its values. The README has a template.
+- `CineTray/Secrets.swift` (Trakt and Last.fm credentials) is gitignored. Never commit it or print its values. The README has a template.
 
 ## Concurrency
 
@@ -29,7 +29,7 @@ Everything is `MainActor` by default. Work that must run off the main thread (im
 
 ## Architecture
 
-QuPi is a macOS menu bar app. `ContentView.swift` declares:
+CineTray is a macOS menu bar app. `ContentView.swift` declares:
 - A `MenuBarExtra` (dropdown UI via `MenuBarContentView`)
 - Two `WindowGroup` scenes keyed on `MediaItem`: `"video-player"` (780x460) and `"music-player"` (340x660)
 - A `Settings` scene hosting `SettingsView`
@@ -75,7 +75,7 @@ MediaType (movies / tvShows / music)
 ### Downloads and local library
 
 `DownloadManager.shared` handles two kinds of folders per media type, each stored as a security-scoped bookmark:
-- **Download folder** (`downloadFolderBookmark_*`): files downloaded from servers, indexed in `.qp-downloads.json` inside the folder.
+- **Download folder** (`downloadFolderBookmark_*`): files downloaded from servers, indexed in `.cinetray-downloads.json` inside the folder.
 - **Library folder** (`libraryFolderBookmark_*`): the user's own media, scanned by `LocalLibraryScanner` and enriched with artwork by `AppState.refreshLocalLibrary()` (Last.fm, Trakt, TMDb).
 
 `DownloadManager.localURL(for:)` is checked first by `AppState.streamURL`, so downloaded items play from disk.
@@ -101,5 +101,5 @@ MediaType (movies / tvShows / music)
 - All `@Observable` classes are `@MainActor`.
 - New settings keys go in `SettingsKeys` or `KeychainKeys`, never as inline string literals.
 - Never put tokens in URLs that get saved (poster URLs end up in UserDefaults and download indexes). Load Plex artwork through `ArtworkCache.request(for:)`, which adds the token as a header.
-- The app name is **QuPi**. Avoid "QuickPlex" in user-facing strings and comments.
+- The app name is **CineTray**. Avoid "QuickPlex" in user-facing strings and comments.
 - Every user-visible change updates `CHANGELOG.md` and, when it changes what the fork offers or how to build it, the "About this fork" section of `README.md`, in the same commit.

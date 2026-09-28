@@ -21,8 +21,8 @@ struct GeneralSettingsView: View {
                 SectionInfoHeader(
                     title: "General",
                     info: requiresApproval
-                        ? "QuPi is registered but needs approval in System Settings › General › Login Items before it can launch at startup."
-                        : "Launch QuPi automatically when you log in."
+                        ? "CineTray is registered but needs approval in System Settings › General › Login Items before it can launch at startup."
+                        : "Launch CineTray automatically when you log in."
                 )
             }
 
@@ -45,8 +45,8 @@ struct GeneralSettingsView: View {
                 SectionInfoHeader(
                     title: "Access",
                     info: networkMonitor.status == .granted
-                        ? "QuPi has local network access and can discover servers on your network. Media keys let you play/pause and skip tracks globally."
-                        : "Grant QuPi access to find and connect to Plex and Jellyfin servers on your local network."
+                        ? "CineTray has local network access and can discover servers on your network. Media keys let you play/pause and skip tracks globally."
+                        : "Grant CineTray access to find and connect to Plex and Jellyfin servers on your local network."
                 )
             }
         }

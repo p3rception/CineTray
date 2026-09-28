@@ -65,7 +65,7 @@ final class AppState {
         if inlinePlaylist != nil {
             playInlineNeighbor(offset)
         } else {
-            let name = offset > 0 ? "QP.MediaKeyNext" : "QP.MediaKeyPrevious"
+            let name = offset > 0 ? "CineTray.MediaKeyNext" : "CineTray.MediaKeyPrevious"
             NotificationCenter.default.post(name: NSNotification.Name(name), object: nil)
         }
     }
@@ -492,7 +492,7 @@ final class AppState {
     /// if a server failed.
     private var serverContinueFetchedAt: Date?
 
-    /// The servers' Continue Watching lists merged with QuPi's progress
+    /// The servers' Continue Watching lists merged with CineTray's progress
     /// store, most recently played first. A server item in the local store
     /// that its server no longer lists (finished or removed elsewhere) is
     /// dropped, unless it was played after the list was fetched. Items the
@@ -929,13 +929,13 @@ final class AppState {
         }
     }
 
-    /// The app chosen in Settings > Playback for video, or nil for QuPi's own player.
+    /// The app chosen in Settings > Playback for video, or nil for CineTray's own player.
     var externalVideoPlayer: URL? {
         UserDefaults.standard.string(forKey: SettingsKeys.videoPlayerApp).flatMap { $0.isEmpty ? nil : URL(filePath: $0) }
     }
 
     /// Hands the item's stream to another app. That app starts from the
-    /// beginning and QuPi can't follow it, so there is no resume, progress,
+    /// beginning and CineTray can't follow it, so there is no resume, progress,
     /// scrobbling or auto-continue.
     func play(_ item: MediaItem, in app: URL) {
         Task {
@@ -956,7 +956,7 @@ final class AppState {
     /// playlist rather than that URL in their recent items. Only the latest
     /// playlist is kept.
     private static func playlist(for item: MediaItem, streaming url: URL) throws -> URL {
-        let folder = URL.temporaryDirectory.appending(path: "QuPi Playback")
+        let folder = URL.temporaryDirectory.appending(path: "CineTray Playback")
         if FileManager.default.fileExists(atPath: folder.path) {
             try FileManager.default.removeItem(at: folder)
         }
@@ -995,7 +995,7 @@ final class AppState {
 
     /// Returns all playable (non-expandable) descendants of a container, each paired
     /// with its ancestor chain (outermost container first). Used by DownloadManager
-    /// to build hierarchical file paths that mirror the Plex/QP library hierarchy.
+    /// to build hierarchical file paths that mirror the Plex/CineTray library hierarchy.
     func downloadLeaves(of item: MediaItem, ancestors: [MediaItem] = []) async -> [(item: MediaItem, ancestors: [MediaItem])] {
         guard item.kind.isExpandable else { return [(item, ancestors)] }
         guard let provider = provider(for: item) else { return [] }
@@ -1277,7 +1277,7 @@ final class AppState {
     private var endObservationTask: Task<Void, Never>?
     /// Notification posted by the SwiftVLC event watcher when playback ends
     /// naturally; PlayerView.watchForPlaybackEnd listens for it.
-    static let vlcPlaybackEndedNotification = NSNotification.Name("QP.VLCPlaybackEnded")
+    static let vlcPlaybackEndedNotification = NSNotification.Name("CineTray.VLCPlaybackEnded")
 
     /// True when either engine is active and ready for transport controls.
     var hasActivePlayer: Bool { player != nil || vlcBridge != nil }
@@ -1286,7 +1286,7 @@ final class AppState {
     /// resume point.
     var startOverItemID: String?
 
-    /// Where to start `item`: the more recent of QuPi's saved position and
+    /// Where to start `item`: the more recent of CineTray's saved position and
     /// the server's resume point (which may come from another device).
     private func resumePosition(for item: MediaItem) -> Double? {
         let local = PlaybackProgressStore.entry(forItemID: item.id)

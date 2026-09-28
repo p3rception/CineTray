@@ -104,7 +104,7 @@ struct AccountsSettingsView: View {
         .confirmationDialog("Sign out of Plex?", isPresented: $showingPlexSignOut) {
             Button("Sign Out", role: .destructive) { signOutOfPlex() }
         } message: {
-            Text("Your Plex servers will be removed from QuPi. You can sign in again at any time.")
+            Text("Your Plex servers will be removed from CineTray. You can sign in again at any time.")
         }
     }
 
@@ -681,7 +681,7 @@ struct AccountsSettingsView: View {
         traktSignInTask = Task {
             defer { traktSignInTask = nil }
             do {
-                let callbackURL = try await webAuth(url: TraktClient.authorizeURL, callbackScheme: "qupi")
+                let callbackURL = try await webAuth(url: TraktClient.authorizeURL, callbackScheme: "cinetray")
                 guard let code = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false)?
                     .queryItems?.first(where: { $0.name == "code" })?.value else {
                     traktStatus = "Sign-in failed: no authorization code in callback."
@@ -732,7 +732,7 @@ struct AccountsSettingsView: View {
                 let token = try await LastFMClient.requestToken()
                 let callbackURL = try await webAuth(
                     url: LastFMClient.authorizeURL(token: token),
-                    callbackScheme: "qupi"
+                    callbackScheme: "cinetray"
                 )
                 // Last.fm echoes the token in the callback; prefer the returned
                 // value but fall back to the original if absent.

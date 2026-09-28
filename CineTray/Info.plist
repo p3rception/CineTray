@@ -13,7 +13,7 @@
 			<string>auth</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>qupi</string>
+				<string>cinetray</string>
 			</array>
 		</dict>
 	</array>

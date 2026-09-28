@@ -114,10 +114,10 @@ struct PlayerView: View {
             appState.stopPlayback(if: item)
             AppWindowActivation.windowClosed()
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("QP.MediaKeyNext"))) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CineTray.MediaKeyNext"))) { _ in
             if appState.currentItem?.id == item.id { playNext() }
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("QP.MediaKeyPrevious"))) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CineTray.MediaKeyPrevious"))) { _ in
             if appState.currentItem?.id == item.id {
                 appState.seek(to: 0) // Basic previous logic for windowed mode
             }

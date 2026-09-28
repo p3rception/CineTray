@@ -1,26 +1,26 @@
 #!/usr/bin/env bash
-# Builds QuPi with SwiftPM (no Xcode needed), wraps it in dist/QuPi.app,
+# Builds CineTray with SwiftPM (no Xcode needed), wraps it in dist/CineTray.app,
 # signs it and launches it. Usage: ./build.sh [run|build]
 set -euo pipefail
 cd "$(dirname "$0")"
 
-APP=dist/QuPi.app
-BUNDLE_ID=QuPi   # same as the Xcode build, so settings and Keychain items are shared
+APP=dist/CineTray.app
+BUNDLE_ID=CineTray   # same as the Xcode build, so settings and Keychain items are shared
 
-pkill -x QuPi 2>/dev/null || true
+pkill -x CineTray 2>/dev/null || true
 
 # Placeholders are enough to build; scrobbling needs real values (see README).
-[ -f QuPi/Secrets.swift ] || cat > QuPi/Secrets.swift <<'EOF'
+[ -f CineTray/Secrets.swift ] || cat > CineTray/Secrets.swift <<'EOF'
 enum TraktSecrets {
     static let clientID     = "YOUR_TRAKT_CLIENT_ID"
     static let clientSecret = "YOUR_TRAKT_CLIENT_SECRET"
-    static let redirectURI  = "qupi://trakt-auth"
+    static let redirectURI  = "cinetray://trakt-auth"
 }
 
 enum LastFMSecrets {
     static let apiKey       = "YOUR_LASTFM_API_KEY"
     static let sharedSecret = "YOUR_LASTFM_SHARED_SECRET"
-    static let callbackURL  = "qupi://lastfm-auth"
+    static let callbackURL  = "cinetray://lastfm-auth"
 }
 EOF
 
@@ -28,24 +28,24 @@ swift build -c release --disable-keychain
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp .build/arm64-apple-macosx/release/QuPi "$APP/Contents/MacOS/QuPi"
-cp QuPi/AppIcon.icns "$APP/Contents/Resources/"
+cp .build/arm64-apple-macosx/release/CineTray "$APP/Contents/MacOS/CineTray"
+cp CineTray/AppIcon.icns "$APP/Contents/Resources/"
 
-# Start from QuPi/Info.plist (URL scheme, ATS, Bonjour) and add the keys
+# Start from CineTray/Info.plist (URL scheme, ATS, Bonjour) and add the keys
 # Xcode would normally generate.
 PLIST="$APP/Contents/Info.plist"
-cp QuPi/Info.plist "$PLIST"
+cp CineTray/Info.plist "$PLIST"
 set_key() { plutil -replace "$1" "-$2" "$3" "$PLIST"; }
-set_key CFBundleExecutable string QuPi
+set_key CFBundleExecutable string CineTray
 set_key CFBundleIdentifier string "$BUNDLE_ID"
-set_key CFBundleName string QuPi
+set_key CFBundleName string CineTray
 set_key CFBundlePackageType string APPL
 set_key CFBundleShortVersionString string 1.0
 set_key CFBundleVersion string 1
 set_key LSMinimumSystemVersion string 26.0
 set_key NSPrincipalClass string NSApplication
 set_key NSHighResolutionCapable bool YES
-set_key NSLocalNetworkUsageDescription string "QuPi uses your local network to discover and connect to Plex and Jellyfin media servers."
+set_key NSLocalNetworkUsageDescription string "CineTray uses your local network to discover and connect to Plex and Jellyfin media servers."
 
 # Signs with an Apple Development certificate when one exists, otherwise
 # ad-hoc. ponytail: ad-hoc changes identity each build, so macOS asks again

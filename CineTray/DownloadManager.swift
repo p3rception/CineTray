@@ -12,7 +12,7 @@ struct DownloadIndexEntry: Codable {
 /// Downloads media to the per-type folders chosen in Settings → Data,
 /// enforcing the per-type storage allocation. Folder access persists across
 /// launches via security-scoped bookmarks. A JSON index sidecar
-/// (`.qp-downloads.json`) tracks what has been downloaded so the app can
+/// (`.cinetray-downloads.json`) tracks what has been downloaded so the app can
 /// serve it as a local library and prefer local files for playback.
 @Observable
 final class DownloadManager {
@@ -296,7 +296,7 @@ final class DownloadManager {
     }
 
     private static func indexURL(in folder: URL) -> URL {
-        folder.appending(path: ".qp-downloads.json")
+        folder.appending(path: ".cinetray-downloads.json")
     }
 
     /// Parsed indexes by folder path. The app is the only writer of these

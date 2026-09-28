@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 
-/// QuPi: Menu bar media player.
+/// CineTray: Menu bar media player.
 /// Dropdown shows poster carousels; selecting items opens a player window.
 @main struct MyApp: App {
     @State private var appState = AppState()
@@ -47,7 +47,7 @@ import AppKit
     }
 }
 
-/// QuPi is a menu bar app (.accessory), so its windows get no app menus
+/// CineTray is a menu bar app (.accessory), so its windows get no app menus
 /// and none of their shortcuts (Full Screen, Hide, Close). While a player
 /// or the Settings window is open it becomes a regular app with a Dock icon,
 /// and goes back to menu bar only when the last one closes.
@@ -58,7 +58,7 @@ enum AppWindowActivation {
         openWindows += 1
         guard openWindows == 1 else { return }
         NSApplication.shared.setActivationPolicy(.regular)
-        // The policy change deactivates QuPi until it is processed, so
+        // The policy change deactivates CineTray until it is processed, so
         // activating right away leaves the window inactive (gray switches,
         // no keyboard focus). Activate on the next run loop turn instead.
         Task { NSApplication.shared.activate() }

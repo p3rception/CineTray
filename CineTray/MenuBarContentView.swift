@@ -134,7 +134,7 @@ struct MenuBarContentView: View {
                 paneSwitch
             } else {
                 VStack(alignment: .leading, spacing: 1) {
-                    Label("QuPi", systemImage: "play.square.stack")
+                    Label("CineTray", systemImage: "play.square.stack")
                         .font(.headline)
                     Text(appState.sourcesDescription)
                         .font(.caption)
@@ -157,12 +157,12 @@ struct MenuBarContentView: View {
             .buttonStyle(.plain)
             .labelStyle(.iconOnly)
             .help("Settings")
-            Button("Quit QuPi", systemImage: "power") {
+            Button("Quit CineTray", systemImage: "power") {
                 NSApplication.shared.terminate(nil)
             }
             .buttonStyle(.plain)
             .labelStyle(.iconOnly)
-            .help("Quit QuPi")
+            .help("Quit CineTray")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)

@@ -15,7 +15,7 @@ struct NavidromeConfiguration {
             URLQueryItem(name: "t", value: token),
             URLQueryItem(name: "s", value: salt),
             URLQueryItem(name: "v", value: "1.16.1"),
-            URLQueryItem(name: "c", value: "QuPi"),
+            URLQueryItem(name: "c", value: "CineTray"),
             URLQueryItem(name: "f", value: "json"),
         ]
     }

@@ -17,17 +17,17 @@ struct PlaybackSettingsView: View {
             Section {
                 LabeledContent("Play Video In") {
                     HStack {
-                        Text(videoPlayerApp.isEmpty ? "QuPi" : FileManager.default.displayName(atPath: videoPlayerApp))
+                        Text(videoPlayerApp.isEmpty ? "CineTray" : FileManager.default.displayName(atPath: videoPlayerApp))
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                         Button("Choose…", action: chooseVideoPlayer)
                         if !videoPlayerApp.isEmpty {
-                            Button("Use QuPi") { videoPlayerApp = "" }
+                            Button("Use CineTray") { videoPlayerApp = "" }
                         }
                     }
                 }
             } header: {
-                SectionInfoHeader(title: "Video", info: "Another app plays from the beginning, and QuPi can't resume, save progress, scrobble or play the next item for it. Music always plays in QuPi.")
+                SectionInfoHeader(title: "Video", info: "Another app plays from the beginning, and CineTray can't resume, save progress, scrobble or play the next item for it. Music always plays in CineTray.")
             }
 
             Section {

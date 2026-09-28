@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Rules for anyone contributing to QuPi, human or AI agent. If you use a coding
+Rules for anyone contributing to CineTray, human or AI agent. If you use a coding
 agent, point it at this file and at `CLAUDE.md` (build commands, platform
 constraints, architecture) before it writes anything.
 
@@ -94,13 +94,13 @@ Match the comment density of the surrounding code.
 - Match the naming and idioms of the surrounding code. No `Enhanced`,
   `Improved`, `Helper`, `Utils` or `Manager` names for new types.
 - Do not add a test target, linter or formatter config unless asked.
-- Never commit `QuPi/Secrets.swift`.
+- Never commit `CineTray/Secrets.swift`.
 
 ## 7. Text
 
 - No emojis, anywhere: code, comments, UI,
   commits, pull requests.
-- The app is QuPi. Show `MediaType.title` ("Shows") to users, not
+- The app is CineTray. Show `MediaType.title` ("Shows") to users, not
   `MediaType.rawValue`.
 - User-facing strings are short and plain. Follow the style of the existing
   UI and of `CHANGELOG.md`.

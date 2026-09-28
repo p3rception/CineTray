@@ -158,8 +158,8 @@ struct PlexLibrary: Identifiable, Hashable, Codable {
 /// authenticates with an X-Plex-Token (pasted directly or obtained through
 /// the plex.tv PIN link flow below).
 struct PlexClient {
-    static let clientIdentifier = "QuPiMenuBar"
-    static let productName = "QuPi"
+    static let clientIdentifier = "CineTrayMenuBar"
+    static let productName = "CineTray"
 
     let config: PlexConfiguration
 

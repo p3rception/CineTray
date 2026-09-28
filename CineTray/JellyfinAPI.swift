@@ -25,12 +25,12 @@ struct JellyfinLibrary: Identifiable, Hashable, Codable {
 /// Minimal Jellyfin server client, mirroring PlexClient's role. Authenticates
 /// with username/password to obtain an access token and user ID.
 struct JellyfinClient {
-    static let deviceID = "QuPiMenuBar"
+    static let deviceID = "CineTrayMenuBar"
 
     let config: JellyfinConfiguration
 
     private static func authorizationHeader(token: String?) -> String {
-        var header = #"MediaBrowser Client="QuPi", Device="Mac", DeviceId="\#(deviceID)", Version="1.0""#
+        var header = #"MediaBrowser Client="CineTray", Device="Mac", DeviceId="\#(deviceID)", Version="1.0""#
         if let token {
             header += #", Token="\#(token)""#
         }

@@ -1,19 +1,19 @@
 // swift-tools-version: 6.3
-// Builds QuPi without Xcode (Command Line Tools only). Run ./build.sh to
-// produce dist/QuPi.app. The Xcode project remains the alternative.
+// Builds CineTray without Xcode (Command Line Tools only). Run ./build.sh to
+// produce dist/CineTray.app. The Xcode project remains the alternative.
 import PackageDescription
 
 let package = Package(
-    name: "QuPi",
+    name: "CineTray",
     platforms: [.macOS(.v26)],
     dependencies: [
         .package(url: "https://github.com/harflabs/SwiftVLC.git", from: "1.0.0"),
     ],
     targets: [
         .executableTarget(
-            name: "QuPi",
+            name: "CineTray",
             dependencies: [.product(name: "SwiftVLC", package: "SwiftVLC")],
-            path: "QuPi",
+            path: "CineTray",
             exclude: ["Info.plist", "AppIcon.icns"],
             // Mirrors the Xcode project's build settings.
             swiftSettings: [

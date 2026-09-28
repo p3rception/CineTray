@@ -141,7 +141,7 @@ enum MediaSource: String, Codable, Hashable {
     }
 
     /// Whether the server keeps its own watched state and Continue Watching
-    /// list, which then wins over QuPi's local progress.
+    /// list, which then wins over CineTray's local progress.
     var keepsWatchState: Bool {
         self == .plex || self == .jellyfin
     }
@@ -414,7 +414,7 @@ struct MediaItem: Identifiable, Hashable, Codable {
     /// Where the server says playback of a partly watched item stopped.
     var resumePositionSeconds: Double?
     /// When the server says this was last played; orders Continue Watching
-    /// and decides whether the server's resume point is newer than QuPi's.
+    /// and decides whether the server's resume point is newer than CineTray's.
     var lastViewedAt: Date?
 
     /// Release year when the subtitle carries one (used for Trakt matching).
@@ -627,7 +627,7 @@ nonisolated enum SettingsKeys {
     static let downloadsEnabled = "downloadsEnabled"
     static let playerUISize = "playerUISize"
     static let playerMode = "playerMode"
-    /// Path of the app that plays video; empty for QuPi's own player.
+    /// Path of the app that plays video; empty for CineTray's own player.
     static let videoPlayerApp = "videoPlayerApp"
     static let richMedia = "richMedia"
     static let movieSort = "movieSort"

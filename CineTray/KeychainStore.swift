@@ -6,7 +6,7 @@ import Security
 /// permission once per item whenever the app's signature changes (every
 /// ad-hoc build or update).
 enum KeychainStore {
-    private static let service = "QuPi"
+    private static let service = "CineTray"
     private static let account = "secrets"
     /// nil until the item has been read, and after a failed read, so a later
     /// access asks again instead of overwriting secrets it could not read.
