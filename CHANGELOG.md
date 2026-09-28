@@ -15,6 +15,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - The Rich Media info button sits at the top left of posters instead of the bottom left, clear of the watch progress bar.
 - Simple Visuals in Settings > Visuals is now Show Posters, on by default. Turn it off for the text-only menu. Your current choice is kept.
+- Cached artwork is stored in `~/Library/Caches/QuPi/Artwork` instead of `~/Library/Caches/Artwork`, so it's clear which app it belongs to. Posters download once more after updating. You can delete the old `Artwork` folder if no other app uses it.
 - QuPi asks for Keychain access once instead of once per account. All sign-ins are now kept in a single Keychain item. The first launch after updating still asks once for each existing account while it moves them over.
 
 ### Fixed

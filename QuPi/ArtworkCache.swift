@@ -10,7 +10,8 @@ import SwiftUI
 nonisolated enum ArtworkCache {
     static let persistentSession: URLSession = {
         let configuration = URLSessionConfiguration.default
-        let directory = URL.cachesDirectory.appending(path: "Artwork")
+        // Not sandboxed, so cachesDirectory is the shared ~/Library/Caches.
+        let directory = URL.cachesDirectory.appending(path: "QuPi/Artwork")
         configuration.urlCache = URLCache(
             memoryCapacity: 64 * 1024 * 1024,
             diskCapacity: 512 * 1024 * 1024,
