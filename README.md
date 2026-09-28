@@ -1,4 +1,4 @@
-<p align="center"><img src="Screenshots/Banner.jpg" alt="QuPi: your Plex, Jellyfin and Navidrome libraries, and your own media, in the macOS menu bar."></p>
+<p align="center"><img src="Screenshots/Banner.png" alt="QuPi: your Plex, Jellyfin and Navidrome libraries, and your own media, in the macOS menu bar."></p>
 
 ## Contents
 
@@ -15,12 +15,12 @@
 ## Supported servers
 
 | Source | Movies | Shows | Music |
-|---|:-:|:-:|:-:|
-| Plex, one or more servers | Yes | Yes | Yes |
-| Jellyfin | Yes | Yes | Yes |
-| Navidrome | | | Yes |
-| TorrServer | Yes | Yes | |
-| Your own folders | Yes | Yes | Yes |
+|:-:|:-:|:-:|:-:|
+| <img src="Icons/plex.png" width="48" height="48" alt=""><br>Plex, one or more servers | Yes | Yes | Yes |
+| <img src="Icons/jellyfin.png" width="48" height="48" alt=""><br>Jellyfin | Yes | Yes | Yes |
+| <img src="Icons/navidrome.png" width="48" height="48" alt=""><br>Navidrome | | | Yes |
+| <img src="Icons/torrserver.png" width="48" height="48" alt=""><br>TorrServer | Yes | Yes | |
+| <img src="Icons/folder.png" width="48" height="48" alt=""><br>Your own folders | Yes | Yes | Yes |
 
 Connect servers in Settings > Accounts and choose folders in Settings > Data.
 
