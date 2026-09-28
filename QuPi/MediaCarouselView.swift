@@ -98,7 +98,7 @@ struct MediaCarouselView: View {
                                     appState.seek(to: fraction * appState.totalDuration)
                                 }
                             )
-                            // Cover only the artwork, or the entire box if in simple visuals
+                            // Cover only the artwork, or the entire box when posters are off
                             .frame(
                                 width: cellWidth,
                                 height: simpleVisuals ? maxCellHeight : item.posterHeight(byShow: presentsEpisodesByShow) * (isCompact ? Self.compactCellWidth / Self.baseCellWidth : 1)

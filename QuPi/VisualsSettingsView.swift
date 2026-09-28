@@ -21,10 +21,10 @@ struct VisualsSettingsView: View {
                         Text("\(count)").tag(count)
                     }
                 }
-                Toggle("Simple Visuals", isOn: $simpleVisuals)
+                Toggle("Show Posters", isOn: Binding(get: { !simpleVisuals }, set: { simpleVisuals = !$0 }))
                 Toggle("Rich Media (Descriptions, Bios and more)", isOn: $richMedia)
             } header: {
-                SectionInfoHeader(title: "Menu", info: "Simple Visuals skips artwork entirely and shows compact text boxes instead. Rich Media adds an info button (bottom-left of posters) that shows descriptions, bios, and synopses on demand - hover tooltips will no longer show them automatically.")
+                SectionInfoHeader(title: "Menu", info: "With Show Posters off, the menu skips artwork entirely and shows compact text boxes instead. Rich Media adds an info button (bottom-left of posters) that shows descriptions, bios, and synopses on demand - hover tooltips will no longer show them automatically.")
             }
 
             Section {

@@ -20,7 +20,7 @@
 <table>
   <tr>
     <td align="center"><img src="Screenshots/Inline-Music-Player.png" width="247" alt="The Music pane with playback controls on the album poster"><br><sub>Music pane with inline player</sub></td>
-    <td align="center"><img src="Screenshots/Compact-Mode.png" width="244" alt="The menu in Simple Visuals, with titles instead of posters"><br><sub>Simple Visuals</sub></td>
+    <td align="center"><img src="Screenshots/Compact-Mode.png" width="244" alt="The menu with Show Posters off, with titles instead of posters"><br><sub>Show Posters off</sub></td>
     <td align="center"><img src="Screenshots/Customisation.png" width="187" alt="The Visuals tab in Settings"><br><sub>Settings</sub></td>
   </tr>
 </table>

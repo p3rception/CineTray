@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// One cell in the carousel: artwork with title and subtitle, or a compact
-/// text box in Simple Visuals mode. Selected cells (open drill-down
+/// text box when Show Posters is off. Selected cells (open drill-down
 /// containers) get an accent border.
 struct PosterCell: View {
     let item: MediaItem

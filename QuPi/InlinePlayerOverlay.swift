@@ -31,7 +31,7 @@ struct InlinePlayerOverlay: View {
             Color.black.opacity(0.2)
                 .allowsHitTesting(false)
 
-            // Transport cluster - mirroring PiP, shrunk dynamically for Simple Visuals mode
+            // Transport cluster - mirroring PiP, shrunk dynamically when posters are off
             GlassEffectContainer(spacing: simpleVisuals ? 4 : 8) {
                 HStack(spacing: simpleVisuals ? 4 : 8) {
                     transportButton("backward.fill", label: "Previous",
@@ -53,7 +53,7 @@ struct InlinePlayerOverlay: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            // Interactive glass scrubber pinned to the bottom - completely hidden in Simple Visuals
+            // Interactive glass scrubber pinned to the bottom - completely hidden when posters are off
             if !simpleVisuals {
                 VStack {
                     Spacer()

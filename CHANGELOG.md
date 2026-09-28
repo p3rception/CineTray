@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Simple Visuals in Settings > Visuals is now Show Posters, on by default. Turn it off for the text-only menu. Your current choice is kept.
 - QuPi asks for Keychain access once instead of once per account. All sign-ins are now kept in a single Keychain item. The first launch after updating still asks once for each existing account while it moves them over.
 
 ### Fixed
