@@ -44,11 +44,7 @@ struct MenuBarContentView: View {
                         selectedID: nil,
                         isCompact: true,
                         onSelect: { item in
-                            if !item.kind.isExpandable {
-                                openWindow(id: item.type == .music ? "music-player" : "video-player", value: item)
-                                NSApplication.shared.activate()
-                                dismiss()
-                            }
+                            if !item.kind.isExpandable { openPlayer(for: item) }
                         }
                     )
                     .padding(.bottom, 10)
@@ -430,10 +426,18 @@ struct MenuBarContentView: View {
                 await appState.startPlayback(item: item, inlinePlaylist: playlist)
             }
         } else {
+            openPlayer(for: item)
+        }
+    }
+
+    private func openPlayer(for item: MediaItem) {
+        if item.type != .music, let app = appState.externalVideoPlayer {
+            appState.play(item, in: app)
+        } else {
             openWindow(id: item.type == .music ? "music-player" : "video-player", value: item)
             NSApplication.shared.activate()
-            dismiss()
         }
+        dismiss()
     }
 
     private func drillLevelTitle(for parent: MediaItem) -> String {

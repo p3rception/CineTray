@@ -9,6 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - TorrServer support. Its movies and shows appear in the Movies and Shows sections, with posters, years and descriptions when the torrent carries TMDB data (as torrents added from Lampa do). Releases of the same show are grouped into one poster, with seasons and episodes read from the file names. MKV and AVI files play in QuPi's player. Connect in Settings > Accounts; a username and password are only needed for servers that ask for one.
 - Install from source with one command: clone the repository and run `make`. It builds QuPi, installs it in Applications and opens it. `make clean` deletes the build files, `make uninstall` removes the app, and `make wipe` also removes its settings, accounts and caches. `Secrets.swift` no longer has to be created by hand.
+- Play video in another app. In Settings > Playback, click Choose… next to Play Video In and pick an app such as VLC, IINA or QuickTime Player. Use QuPi switches back to the built-in player, which stays the default. Another app starts from the beginning, and QuPi can't resume, save progress, scrobble or play the next item for it. Music always plays in QuPi.
 - An app icon, shown in the Dock while a player or Settings is open and in Finder: the menu bar symbol on navy, with glows of blue, purple and periwinkle.
 
 ### Changed

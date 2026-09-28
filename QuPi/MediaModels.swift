@@ -627,6 +627,8 @@ nonisolated enum SettingsKeys {
     static let downloadsEnabled = "downloadsEnabled"
     static let playerUISize = "playerUISize"
     static let playerMode = "playerMode"
+    /// Path of the app that plays video; empty for QuPi's own player.
+    static let videoPlayerApp = "videoPlayerApp"
     static let richMedia = "richMedia"
     static let movieSort = "movieSort"
     static let tvSort = "tvSort"

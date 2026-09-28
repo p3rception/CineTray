@@ -929,6 +929,45 @@ final class AppState {
         }
     }
 
+    /// The app chosen in Settings > Playback for video, or nil for QuPi's own player.
+    var externalVideoPlayer: URL? {
+        UserDefaults.standard.string(forKey: SettingsKeys.videoPlayerApp).flatMap { $0.isEmpty ? nil : URL(filePath: $0) }
+    }
+
+    /// Hands the item's stream to another app. That app starts from the
+    /// beginning and QuPi can't follow it, so there is no resume, progress,
+    /// scrobbling or auto-continue.
+    func play(_ item: MediaItem, in app: URL) {
+        Task {
+            do {
+                var url = try await streamURL(for: item)
+                if !url.isFileURL, NSWorkspace.shared.urlsForApplications(toOpen: .m3uPlaylist).contains(where: { $0.path == app.path }) {
+                    url = try Self.playlist(for: item, streaming: url)
+                }
+                try await NSWorkspace.shared.open([url], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
+            } catch {
+                NSAlert(error: error).runModal()
+            }
+        }
+    }
+
+    /// A one-entry M3U playlist, so players that read one (VLC, IINA) show
+    /// the title instead of the stream URL with its token, and list the
+    /// playlist rather than that URL in their recent items. Only the latest
+    /// playlist is kept.
+    private static func playlist(for item: MediaItem, streaming url: URL) throws -> URL {
+        let folder = URL.temporaryDirectory.appending(path: "QuPi Playback")
+        if FileManager.default.fileExists(atPath: folder.path) {
+            try FileManager.default.removeItem(at: folder)
+        }
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let file = folder.appending(path: item.title.replacing(/[\/:]/, with: "-") + ".m3u")
+        // A line break in a server title would start another playlist entry.
+        let title = item.title.replacing(/[\r\n]/, with: " ")
+        try "#EXTM3U\n#EXTINF:-1,\(title)\n\(url.absoluteString)\n".write(to: file, atomically: true, encoding: .utf8)
+        return file
+    }
+
     func downloadURL(for item: MediaItem) async throws -> URL {
         guard let provider = provider(for: item) else {
             throw URLError(.resourceUnavailable)

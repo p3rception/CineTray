@@ -1,4 +1,6 @@
 import SwiftUI
+import AppKit
+import UniformTypeIdentifiers
 
 struct PlaybackSettingsView: View {
     @Environment(AppState.self) private var appState
@@ -8,9 +10,26 @@ struct PlaybackSettingsView: View {
     @AppStorage(SettingsKeys.musicAutoContinue) private var musicAutoContinue = MusicAutoContinue.off.rawValue
     @AppStorage(SettingsKeys.continueMusic) private var continueMusic = ContinueMusicGrouping.byAlbumPlaylist.rawValue
     @AppStorage(SettingsKeys.continueTimeout) private var continueTimeout = ContinueTimeout.forever.rawValue
+    @AppStorage(SettingsKeys.videoPlayerApp) private var videoPlayerApp = ""
 
     var body: some View {
         Form {
+            Section {
+                LabeledContent("Play Video In") {
+                    HStack {
+                        Text(videoPlayerApp.isEmpty ? "QuPi" : FileManager.default.displayName(atPath: videoPlayerApp))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                        Button("Choose…", action: chooseVideoPlayer)
+                        if !videoPlayerApp.isEmpty {
+                            Button("Use QuPi") { videoPlayerApp = "" }
+                        }
+                    }
+                }
+            } header: {
+                SectionInfoHeader(title: "Video", info: "Another app plays from the beginning, and QuPi can't resume, save progress, scrobble or play the next item for it. Music always plays in QuPi.")
+            }
+
             Section {
                 Picker("When a Movie Ends", selection: $movieAutoContinue) {
                     Text("Stop").tag(MovieAutoContinue.off.rawValue)
@@ -54,6 +73,16 @@ struct PlaybackSettingsView: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    private func chooseVideoPlayer() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.application]
+        panel.directoryURL = URL(filePath: "/Applications")
+        panel.prompt = "Play Video In This App"
+        if panel.runModal() == .OK, let url = panel.url {
+            videoPlayerApp = url == Bundle.main.bundleURL ? "" : url.path
+        }
     }
 }
 
