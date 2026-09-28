@@ -384,4 +384,8 @@ struct NavidromeMediaProvider: MediaProvider {
     func webURL(for item: MediaItem) async throws -> URL? {
         client.webURL(for: item)
     }
+
+    func reportPlayback(of item: MediaItem, state: PlaybackState, positionSeconds: Double, durationSeconds: Double) async throws {
+        try await client.reportPlayback(itemID: item.id, state: state, positionSeconds: positionSeconds, durationSeconds: durationSeconds)
+    }
 }

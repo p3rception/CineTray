@@ -137,6 +137,12 @@ enum MediaSource: String, Codable, Hashable {
         case .local, .sample: nil
         }
     }
+
+    /// Whether the server keeps its own watched state and Continue Watching
+    /// list, which then wins over QuPi's local progress.
+    var keepsWatchState: Bool {
+        self == .plex || self == .jellyfin
+    }
 }
 
 /// Which hierarchy levels expose a download control. Movies always show
@@ -520,6 +526,8 @@ protocol MediaProvider {
     func webURL(for item: MediaItem) async throws -> URL?
     /// The server's own Continue Watching list.
     func continueWatching() async throws -> [MediaItem]
+    /// Tells the server where playback is, for its resume points and play counts.
+    func reportPlayback(of item: MediaItem, state: PlaybackState, positionSeconds: Double, durationSeconds: Double) async throws
 }
 
 extension MediaProvider {
@@ -530,6 +538,7 @@ extension MediaProvider {
     func randomTrack(sameArtistAs item: MediaItem) async throws -> MediaItem? { nil }
     func webURL(for item: MediaItem) async throws -> URL? { nil }
     func continueWatching() async throws -> [MediaItem] { [] }
+    func reportPlayback(of item: MediaItem, state: PlaybackState, positionSeconds: Double, durationSeconds: Double) async throws {}
 }
 
 /// Returns true when AVFoundation can decode the file at `url` without

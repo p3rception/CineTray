@@ -21,7 +21,7 @@ struct LibrariesSettingsView: View {
         Form {
             localSection
 
-            if plexConfigurations.isEmpty && appState.jellyfinConfiguration == nil && appState.navidromeConfiguration == nil {
+            if !appState.hasServers {
                 Section {
                     Text("Sign in to Plex, Jellyfin or Navidrome in the Accounts tab to choose libraries. Until then, the app shows a built-in sample catalog.")
                         .foregroundStyle(.secondary)

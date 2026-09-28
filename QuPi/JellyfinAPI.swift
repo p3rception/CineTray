@@ -826,4 +826,8 @@ struct JellyfinMediaProvider: MediaProvider {
     func continueWatching() async throws -> [MediaItem] {
         try await client.continueWatching(inLibraries: selectedLibraryIDs)
     }
+
+    func reportPlayback(of item: MediaItem, state: PlaybackState, positionSeconds: Double, durationSeconds: Double) async throws {
+        try await client.reportPlayback(itemID: item.id, state: state, positionSeconds: positionSeconds)
+    }
 }

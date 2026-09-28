@@ -74,9 +74,9 @@ final class AppState {
     var sourcesDescription: String {
         if isOfflineMode { return "Offline" }
         var names: [String] = []
-        if !plexConfigurations.isEmpty { names.append("Plex") }
-        if jellyfinConfiguration != nil { names.append("Jellyfin") }
-        if navidromeConfiguration != nil { names.append("Navidrome") }
+        for name in serverProviders().compactMap(\.source.webAppName) where !names.contains(name) {
+            names.append(name)
+        }
         return names.isEmpty ? "No sources" : names.joined(separator: " + ")
     }
 
@@ -113,8 +113,6 @@ final class AppState {
     var plexConfigurations: [PlexConfiguration] { sources.plex }
 
     var jellyfinConfiguration: JellyfinConfiguration? { sources.jellyfin }
-
-    var navidromeConfiguration: NavidromeConfiguration? { sources.navidrome }
 
     private static func loadPlexConfigurations() -> [PlexConfiguration] {
         PlexServerStore.load().compactMap { server in
@@ -240,7 +238,7 @@ final class AppState {
         orderableSections.filter { section in
             switch section {
             case .continueItems:
-                (isOfflineMode || !plexConfigurations.isEmpty || jellyfinConfiguration != nil || navidromeConfiguration != nil)
+                (isOfflineMode || hasServers)
                     && UserDefaults.standard.object(forKey: SettingsKeys.sectionEnabled(section)) as? Bool ?? true
             case .playlists:
                 UserDefaults.standard.bool(forKey: SettingsKeys.sectionEnabled(section))
@@ -372,6 +370,18 @@ final class AppState {
             let local = LocalMediaProvider(tvTopLevel: tvTopLevel, musicTopLevel: musicTopLevel, includeDownloads: true)
             return local.hasContent ? [local] : []
         }
+        // Local provider runs last so de-duplication in load() can filter its
+        // items against server results (server poster wins when both exist).
+        let local = LocalMediaProvider(tvTopLevel: tvTopLevel, musicTopLevel: musicTopLevel)
+        return serverProviders(musicTopLevel: musicTopLevel) + (local.hasContent ? [local] : [])
+    }
+
+    /// Whether any media server is connected, even while Offline Mode hides it.
+    var hasServers: Bool { !serverProviders().isEmpty }
+
+    /// One provider per connected server. Adding a server type means adding
+    /// it here, to `sources` and to `MediaSource`.
+    private func serverProviders(musicTopLevel: MusicTopLevel = .album) -> [any MediaProvider] {
         var result: [any MediaProvider] = []
         for configuration in plexConfigurations {
             result.append(PlexMediaProvider(
@@ -389,14 +399,8 @@ final class AppState {
                 musicTopLevel: musicTopLevel
             ))
         }
-        if let configuration = navidromeConfiguration {
+        if let configuration = sources.navidrome {
             result.append(NavidromeMediaProvider(client: NavidromeClient(config: configuration), musicTopLevel: musicTopLevel))
-        }
-        // Local provider runs last so de-duplication in load() can filter its
-        // items against server results (server poster wins when both exist).
-        let local = LocalMediaProvider(tvTopLevel: tvTopLevel, musicTopLevel: musicTopLevel)
-        if local.hasContent {
-            result.append(local)
         }
         return result
     }
@@ -487,7 +491,7 @@ final class AppState {
         let localDates = Dictionary(local.map { ($0.item.id, $0.updatedAt) }, uniquingKeysWith: max)
         var entries = local.filter { entry in
             !serverIDs.contains(entry.item.id)
-                && !([.plex, .jellyfin].contains(entry.item.source) && entry.updatedAt < serverContinueFetchedAt ?? .distantPast)
+                && !(entry.item.source.keepsWatchState && entry.updatedAt < serverContinueFetchedAt ?? .distantPast)
         }
         .map { ($0.item, $0.updatedAt) }
         let cutoff = PlaybackProgressStore.cutoff ?? .distantPast
@@ -627,7 +631,7 @@ final class AppState {
     /// that type and the cached drill-downs containing it are re-fetched.
     /// Waits briefly so Plex has processed the final timeline report.
     private func refreshAfterPlayback(of item: MediaItem) {
-        guard [.plex, .jellyfin].contains(item.source), item.type != .music else { return }
+        guard item.source.keepsWatchState, item.type != .music else { return }
         Task {
             try? await Task.sleep(for: .seconds(2))
             if itemsBySection[.continueItems] != nil { await load(.continueItems) }
@@ -1035,40 +1039,12 @@ final class AppState {
 
         guard item.source != .sample, item.source != .local else { return }
         Task {
-            switch item.source {
-            case .plex:
-                let configurations = plexConfigurations
-                let serverID = item.attributes[PlexMediaProvider.serverIDAttribute]
-                let configuration = configurations.first { $0.serverID == serverID }
-                    ?? configurations.first
-                if let configuration {
-                    try? await PlexClient(config: configuration).reportTimeline(
-                        ratingKey: item.id,
-                        state: state,
-                        positionSeconds: positionSeconds,
-                        durationSeconds: durationSeconds
-                    )
-                }
-            case .jellyfin:
-                if let configuration = jellyfinConfiguration {
-                    try? await JellyfinClient(config: configuration).reportPlayback(
-                        itemID: item.id,
-                        state: state,
-                        positionSeconds: positionSeconds
-                    )
-                }
-            case .navidrome:
-                if let configuration = navidromeConfiguration {
-                    try? await NavidromeClient(config: configuration).reportPlayback(
-                        itemID: item.id,
-                        state: state,
-                        positionSeconds: positionSeconds,
-                        durationSeconds: durationSeconds
-                    )
-                }
-            case .sample, .local:
-                break
-            }
+            try? await provider(for: item)?.reportPlayback(
+                of: item,
+                state: state,
+                positionSeconds: positionSeconds,
+                durationSeconds: durationSeconds
+            )
 
             // Scrobblers only care about transitions, not periodic progress.
             guard state != .playing else { return }

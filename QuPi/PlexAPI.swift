@@ -1089,4 +1089,8 @@ struct PlexMediaProvider: MediaProvider {
     func continueWatching() async throws -> [MediaItem] {
         try await client.continueWatching(inLibraries: selectedLibraryKeys).map(tagged)
     }
+
+    func reportPlayback(of item: MediaItem, state: PlaybackState, positionSeconds: Double, durationSeconds: Double) async throws {
+        try await client.reportTimeline(ratingKey: item.id, state: state, positionSeconds: positionSeconds, durationSeconds: durationSeconds)
+    }
 }
