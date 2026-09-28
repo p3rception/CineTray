@@ -4,18 +4,24 @@
 
 <table>
   <tr>
-    <td width="33%" valign="top"><img src="Screenshots/Welcome-QuPi.png" alt="The QuPi menu with Continue Watching and Movies carousels"><br><sub>Continue Watching and your libraries</sub></td>
-    <td width="67%" valign="top" colspan="2"><img src="Screenshots/Mini-Video-Player.png" alt="The video player window playing The Matrix"><br><sub>Video player</sub></td>
+    <td align="center"><img src="Screenshots/Welcome-QuPi.png" width="205" alt="The QuPi menu with Continue Watching and Movies carousels"><br><sub>Continue Watching and your libraries</sub></td>
+    <td align="center"><img src="Screenshots/Mini-Video-Player.png" width="500" alt="The video player window playing The Matrix"><br><sub>Video player</sub></td>
   </tr>
+</table>
+
+<table>
   <tr>
-    <td width="33%" valign="top"><img src="Screenshots/Music-Player.png" alt="The music player window with album art, progress and Up Next"><br><sub>Music player</sub></td>
-    <td width="33%" valign="top"><img src="Screenshots/Full-Library-Exploration.png" alt="Browsing from a show to its seasons and episodes"><br><sub>Shows, seasons and episodes</sub></td>
-    <td width="33%" valign="top"><img src="Screenshots/Dynamic-Filtering.png" alt="Search results grouped by section"><br><sub>Search across every section</sub></td>
+    <td align="center"><img src="Screenshots/Music-Player.png" width="254" alt="The music player window with album art, progress and Up Next"><br><sub>Music player</sub></td>
+    <td align="center"><img src="Screenshots/Full-Library-Exploration.png" width="231" alt="Browsing from a show to its seasons and episodes"><br><sub>Shows, seasons and episodes</sub></td>
+    <td align="center"><img src="Screenshots/Dynamic-Filtering.png" width="193" alt="Search results grouped by section"><br><sub>Search across every section</sub></td>
   </tr>
+</table>
+
+<table>
   <tr>
-    <td width="33%" valign="top"><img src="Screenshots/Inline-Music-Player.png" alt="The Music pane with playback controls on the album poster"><br><sub>Music pane with inline player</sub></td>
-    <td width="33%" valign="top"><img src="Screenshots/Compact-Mode.png" alt="The menu in Simple Visuals, with titles instead of posters"><br><sub>Simple Visuals</sub></td>
-    <td width="33%" valign="top"><img src="Screenshots/Customisation.png" alt="The Visuals tab in Settings"><br><sub>Settings</sub></td>
+    <td align="center"><img src="Screenshots/Inline-Music-Player.png" width="247" alt="The Music pane with playback controls on the album poster"><br><sub>Music pane with inline player</sub></td>
+    <td align="center"><img src="Screenshots/Compact-Mode.png" width="244" alt="The menu in Simple Visuals, with titles instead of posters"><br><sub>Simple Visuals</sub></td>
+    <td align="center"><img src="Screenshots/Customisation.png" width="187" alt="The Visuals tab in Settings"><br><sub>Settings</sub></td>
   </tr>
 </table>
 
