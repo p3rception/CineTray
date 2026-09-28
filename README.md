@@ -1,3 +1,24 @@
+<h1 align="center">QuPi</h1>
+
+<p align="center">Your Plex, Jellyfin and Navidrome libraries, and your own media, in the macOS menu bar.</p>
+
+<table>
+  <tr>
+    <td width="33%" valign="top"><img src="Screenshots/Welcome-QuPi.png" alt="The QuPi menu with Continue Watching and Movies carousels"><br><sub>Continue Watching and your libraries</sub></td>
+    <td width="67%" valign="top" colspan="2"><img src="Screenshots/Mini-Video-Player.png" alt="The video player window playing The Matrix"><br><sub>Video player</sub></td>
+  </tr>
+  <tr>
+    <td width="33%" valign="top"><img src="Screenshots/Music-Player.png" alt="The music player window with album art, progress and Up Next"><br><sub>Music player</sub></td>
+    <td width="33%" valign="top"><img src="Screenshots/Full-Library-Exploration.png" alt="Browsing from a show to its seasons and episodes"><br><sub>Shows, seasons and episodes</sub></td>
+    <td width="33%" valign="top"><img src="Screenshots/Dynamic-Filtering.png" alt="Search results grouped by section"><br><sub>Search across every section</sub></td>
+  </tr>
+  <tr>
+    <td width="33%" valign="top"><img src="Screenshots/Inline-Music-Player.png" alt="The Music pane with playback controls on the album poster"><br><sub>Music pane with inline player</sub></td>
+    <td width="33%" valign="top"><img src="Screenshots/Compact-Mode.png" alt="The menu in Simple Visuals, with titles instead of posters"><br><sub>Simple Visuals</sub></td>
+    <td width="33%" valign="top"><img src="Screenshots/Customisation.png" alt="The Visuals tab in Settings"><br><sub>Settings</sub></td>
+  </tr>
+</table>
+
 ## About this fork
 
 This is a fork of [KuDoZ007/QP](https://github.com/KuDoZ007/QP). The main differences:
@@ -67,21 +88,10 @@ QuPi is a sleek, lightweight, and highly customizable menu bar application desig
 *   **Integrated Playback:**
     *   **Inline Music Player:** Control your tunes without opening a separate window. The inline player lives right inside the menu bar dropdown (`Inline-Music-Player.jpg`).
     *   **Mini Video Player:** Watch your favorite shows while you work using the floating picture-in-picture video player (`Mini-Video-Player.jpg`).
-*   **Offline Downloads:** Queue up movies and episodes to download locally so you can enjoy your media on the go (`Download-Queue.jpg`).
+*   **Offline Downloads:** Queue up movies and episodes to download locally so you can enjoy your media on the go.
 *   **Highly Customizable UI:** Tailor QuPi to your exact preferences. 
     *   Choose which libraries appear, adjust the player UI size, and configure carousel items (`Customisation.jpg`).
     *   Switch to a streamlined view for a cleaner look (`Compact-Mode.jpg`).
-
-## Screenshots
-
-![Welcome.](/Screenshots/Welcome-QuPi.png)
-![Simple Visuals Mode.](/Screenshots/Compact-Mode.png)
-![Mini Video Player.](/Screenshots/Mini-Video-Player.png)
-![Inline Music Player.](/Screenshots/Inline-Music-Player.png)
-![Full Library Exploration.](/Screenshots/Full-Library-Exploration.png)
-![Download Queue.](/Screenshots/Download-Queue.png)
-![Dynamic Filtering.](/Screenshots/Dynamic-Filtering.png)
-![Customisation.](/Screenshots/Customisation.png)
 
 ## Disclaimer
 
