@@ -8,6 +8,7 @@ Contribution rules for all changes: @AGENTS.md
 
 Two build paths. Both must keep working.
 
+- **Install:** `make` runs `./build.sh build` and copies `dist/QuPi.app` to `/Applications`. This is the path the README gives users.
 - **SwiftPM (no Xcode needed):** `./build.sh` builds, bundles `dist/QuPi.app`, ad-hoc signs and launches it. `./build.sh build` skips the launch. Compile only: `swift build -c release --disable-keychain`.
 - **Xcode:** `QuPi.xcodeproj`. When Xcode MCP tools are available, prefer `BuildProject`, `XcodeRefreshCodeIssuesInFile` and `GetBuildLog`. Project paths are `QuPi/<File>.swift`. `XcodeUpdate` does not always flush to disk; verify with a filesystem `Read` and fall back to `Edit`.
 

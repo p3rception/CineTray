@@ -9,6 +9,21 @@ BUNDLE_ID=QuPi   # same as the Xcode build, so settings and Keychain items are s
 
 pkill -x QuPi 2>/dev/null || true
 
+# Placeholders are enough to build; scrobbling needs real values (see README).
+[ -f QuPi/Secrets.swift ] || cat > QuPi/Secrets.swift <<'EOF'
+enum TraktSecrets {
+    static let clientID     = "YOUR_TRAKT_CLIENT_ID"
+    static let clientSecret = "YOUR_TRAKT_CLIENT_SECRET"
+    static let redirectURI  = "qupi://trakt-auth"
+}
+
+enum LastFMSecrets {
+    static let apiKey       = "YOUR_LASTFM_API_KEY"
+    static let sharedSecret = "YOUR_LASTFM_SHARED_SECRET"
+    static let callbackURL  = "qupi://lastfm-auth"
+}
+EOF
+
 swift build -c release --disable-keychain
 
 rm -rf "$APP"
@@ -39,4 +54,4 @@ IDENTITY=$(security find-identity -p codesigning -v 2>/dev/null | awk -F'"' '/Ap
 codesign --force --sign "${IDENTITY:--}" "$APP"
 echo "Built $APP (signed: ${IDENTITY:-ad-hoc})"
 
-[ "${1:-run}" = run ] && open "$APP"
+if [ "${1:-run}" = run ]; then open "$APP"; fi

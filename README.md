@@ -44,7 +44,7 @@ This is a fork of [KuDoZ007/QP](https://github.com/KuDoZ007/QP). The main differ
 *   **Keyboard shortcuts in windows.** While a player or Settings is open, QuPi gets a Dock icon and a menu bar, so Full Screen, Hide and Close shortcuts work.
 *   **Fixes.** Offline Mode works with downloads alone, Plex errors are readable, and Jellyfin HEVC videos show the picture instead of playing audio only.
 *   **Leaner.** The unfinished transcoding feature and other unused code are removed (about 1,450 lines), so FFmpeg is no longer needed.
-*   **Builds without Xcode.** `./build.sh` builds, signs and launches the app using only the Command Line Tools.
+*   **Builds without Xcode.** Clone and run `make`: it builds, signs and installs the app using only the Command Line Tools.
 
 See [CHANGELOG.md](CHANGELOG.md) for the full list.
 
@@ -54,29 +54,20 @@ Continue Watching, watched indicators and parts of the Settings reorganization a
 
 Requirements: macOS 26 or later, plus either the Command Line Tools (`xcode-select --install`) or Xcode 26.4 or later. The SwiftVLC package requires Swift 6.3.
 
-1.  Create `QuPi/Secrets.swift` with your own credentials:
+```sh
+git clone https://github.com/p3rception/QP.git
+cd QP
+make
+```
 
-    ```swift
-    enum TraktSecrets {
-        static let clientID     = "YOUR_TRAKT_CLIENT_ID"
-        static let clientSecret = "YOUR_TRAKT_CLIENT_SECRET"
-        static let redirectURI  = "qupi://trakt-auth"
-    }
+`make` builds QuPi, installs it in `/Applications` and opens it. Run `make` again after `git pull` to update. Without an Apple Development certificate the app is signed ad-hoc, so macOS asks again for Keychain access after each rebuild.
 
-    enum LastFMSecrets {
-        static let apiKey       = "YOUR_LASTFM_API_KEY"
-        static let sharedSecret = "YOUR_LASTFM_SHARED_SECRET"
-        static let callbackURL  = "qupi://lastfm-auth"
-    }
-    ```
+Scrobbling (optional): the first build creates `QuPi/Secrets.swift` with placeholders. Replace them with your own credentials and run `make` again.
 
-    Trakt: register at https://trakt.tv/oauth/applications/new with redirect URI `qupi://trakt-auth`.
-    Last.fm: register at https://www.last.fm/api/account/create with callback URL `qupi://lastfm-auth`.
-    The placeholders are enough to build; scrobbling needs real values.
-2.  Build and launch:
-    *   **Without Xcode:** run `./build.sh`. It builds with SwiftPM, creates `dist/QuPi.app`, signs it and opens it. Use `./build.sh build` to build without launching. Without an Apple Development certificate the app is signed ad-hoc, so macOS asks again for Keychain access after each rebuild.
-    *   **With Xcode:** open `QuPi.xcodeproj`, select your own development team under Signing & Capabilities, and run.
-3.  Optional: install it like any other app with `cp -R dist/QuPi.app /Applications/`. Repeat after each rebuild.
+*   Trakt: register at https://trakt.tv/oauth/applications/new with redirect URI `qupi://trakt-auth`.
+*   Last.fm: register at https://www.last.fm/api/account/create with callback URL `qupi://lastfm-auth`.
+
+For development, `./build.sh` builds `dist/QuPi.app` and opens it without installing. With Xcode, run `make` once (or `./build.sh build`) to create `Secrets.swift`, then open `QuPi.xcodeproj`, select your own development team under Signing & Capabilities, and run.
 
 ---
 

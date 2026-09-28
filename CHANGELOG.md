@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Install from source with one command: clone the repository and run `make`. It builds QuPi, installs it in Applications and opens it. `Secrets.swift` no longer has to be created by hand.
 - An app icon, shown in the Dock while a player or Settings is open and in Finder: the menu bar symbol on navy, with glows of blue, purple and periwinkle.
 
 ### Changed
