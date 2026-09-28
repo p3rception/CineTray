@@ -16,11 +16,11 @@
 
 | Source | Movies | Shows | Music |
 |:-:|:-:|:-:|:-:|
-| <img src="Icons/plex.png" width="48" height="48" alt=""><br>Plex, one or more servers | Yes | Yes | Yes |
-| <img src="Icons/jellyfin.png" width="48" height="48" alt=""><br>Jellyfin | Yes | Yes | Yes |
-| <img src="Icons/navidrome.png" width="48" height="48" alt=""><br>Navidrome | | | Yes |
-| <img src="Icons/torrserver.png" width="48" height="48" alt=""><br>TorrServer | Yes | Yes | |
-| <img src="Icons/folder.png" width="48" height="48" alt=""><br>Your own folders | Yes | Yes | Yes |
+| <img src="Icons/plex.png" width="48" height="48" alt=""><br>Plex, one or more servers | ✓ | ✓ | ✓ |
+| <img src="Icons/jellyfin.png" width="48" height="48" alt=""><br>Jellyfin | ✓ | ✓ | ✓ |
+| <img src="Icons/navidrome.png" width="48" height="48" alt=""><br>Navidrome | | | ✓ |
+| <img src="Icons/torrserver.png" width="48" height="48" alt=""><br>TorrServer | ✓ | ✓ | |
+| <img src="Icons/folder.png" width="48" height="48" alt=""><br>Your own folders | ✓ | ✓ | ✓ |
 
 Connect servers in Settings > Accounts and choose folders in Settings > Data.
 
