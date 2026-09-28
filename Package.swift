@@ -14,7 +14,7 @@ let package = Package(
             name: "QuPi",
             dependencies: [.product(name: "SwiftVLC", package: "SwiftVLC")],
             path: "QuPi",
-            exclude: ["Info.plist"],
+            exclude: ["Info.plist", "AppIcon.icns"],
             // Mirrors the Xcode project's build settings.
             swiftSettings: [
                 .swiftLanguageMode(.v5),

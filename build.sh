@@ -12,8 +12,9 @@ pkill -x QuPi 2>/dev/null || true
 swift build -c release --disable-keychain
 
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/arm64-apple-macosx/release/QuPi "$APP/Contents/MacOS/QuPi"
+cp QuPi/AppIcon.icns "$APP/Contents/Resources/"
 
 # Start from QuPi/Info.plist (URL scheme, ATS, Bonjour) and add the keys
 # Xcode would normally generate.
