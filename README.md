@@ -60,7 +60,7 @@ cd QP
 make
 ```
 
-`make` builds QuPi, installs it in `/Applications` and opens it. Run `make` again after `git pull` to update. Without an Apple Development certificate the app is signed ad-hoc, so macOS asks again for Keychain access after each rebuild.
+`make` builds QuPi, installs it in `/Applications` and opens it. Run `make` again after `git pull` to update. `make clean` deletes the build files (about 4 GB) once it is installed, `make uninstall` removes the app but keeps your settings, and `make wipe` also deletes settings, accounts and caches (downloaded media stays). Without an Apple Development certificate the app is signed ad-hoc, so macOS asks again for Keychain access after each rebuild.
 
 Scrobbling (optional): the first build creates `QuPi/Secrets.swift` with placeholders. Replace them with your own credentials and run `make` again.
 
