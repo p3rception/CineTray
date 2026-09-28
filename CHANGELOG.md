@@ -5,6 +5,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## 2026-09-28
 
+### Changed
+
+- QuPi asks for Keychain access once instead of once per account. All sign-ins are now kept in a single Keychain item. The first launch after updating still asks once for each existing account while it moves them over.
+
 ### Fixed
 
 - In Simple Visuals, the progress bar no longer covers the year or episode line of items you've started.
