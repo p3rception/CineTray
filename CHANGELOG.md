@@ -11,6 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Clicking the Settings or a player window after switching to another app brings QuPi to the front again. Before, the window stayed inactive until you clicked QuPi's Dock icon.
 - In Simple Visuals, the progress bar no longer covers the year or episode line of items you've started.
 - VoiceOver can open posters of items you've started, such as everything in Continue Watching, and reads how much you've watched.
 

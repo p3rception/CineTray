@@ -285,7 +285,6 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = QuPi/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = QP;
-				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "QuPi uses your local network to discover and connect to Plex and Jellyfin media servers.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -327,7 +326,6 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = QuPi/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = QP;
-				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "QuPi uses your local network to discover and connect to Plex and Jellyfin media servers.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;

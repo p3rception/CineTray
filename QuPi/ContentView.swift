@@ -6,6 +6,13 @@ import AppKit
 @main struct MyApp: App {
     @State private var appState = AppState()
 
+    init() {
+        // Set here rather than with LSUIElement: an app launched as a UI
+        // element and switched to .regular later isn't activated by clicks on
+        // its windows until its Dock icon is clicked.
+        NSApplication.shared.setActivationPolicy(.accessory)
+    }
+
     var body: some Scene {
         MenuBarExtra {
             MenuBarContentView()
@@ -40,7 +47,7 @@ import AppKit
     }
 }
 
-/// QuPi is a menu bar app (LSUIElement), so its windows get no app menus
+/// QuPi is a menu bar app (.accessory), so its windows get no app menus
 /// and none of their shortcuts (Full Screen, Hide, Close). While a player
 /// or the Settings window is open it becomes a regular app with a Dock icon,
 /// and goes back to menu bar only when the last one closes.

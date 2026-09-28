@@ -27,7 +27,6 @@ set_key CFBundlePackageType string APPL
 set_key CFBundleShortVersionString string 1.0
 set_key CFBundleVersion string 1
 set_key LSMinimumSystemVersion string 26.0
-set_key LSUIElement bool YES
 set_key NSPrincipalClass string NSApplication
 set_key NSHighResolutionCapable bool YES
 set_key NSLocalNetworkUsageDescription string "QuPi uses your local network to discover and connect to Plex and Jellyfin media servers."
