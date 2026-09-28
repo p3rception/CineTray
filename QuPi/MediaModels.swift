@@ -687,10 +687,10 @@ enum KeychainKeys {
     }
     static let jellyfinToken = "jellyfinToken"
     static let navidromeToken = "navidromeToken"
-    static let traktAccessToken = "traktAccessToken"
-    static let traktRefreshToken = "traktRefreshToken"
     /// TorrServer only does HTTP Basic auth, so the password itself is kept.
     static let torrServerPassword = "torrServerPassword"
+    static let traktAccessToken = "traktAccessToken"
+    static let traktRefreshToken = "traktRefreshToken"
     static let lastfmSessionKey = "lastfmSessionKey"
     /// Same name as the UserDefaults key older builds used, so
     /// KeychainStore.stringMigratingFromDefaults(for:) moves it over.
