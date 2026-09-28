@@ -125,6 +125,7 @@ enum MediaSource: String, Codable, Hashable {
     case plex
     case jellyfin
     case navidrome
+    case torrServer
     /// Locally downloaded content, served by LocalMediaProvider.
     case local
 
@@ -134,6 +135,7 @@ enum MediaSource: String, Codable, Hashable {
         case .plex: "Plex"
         case .jellyfin: "Jellyfin"
         case .navidrome: "Navidrome"
+        case .torrServer: "TorrServer"
         case .local, .sample: nil
         }
     }
@@ -542,12 +544,16 @@ extension MediaProvider {
 }
 
 /// Returns true when AVFoundation can decode the file at `url` without
-/// transcoding. Network URLs (HLS streams) always pass - the server already
-/// produces a compatible format. Local files are checked by container extension;
-/// anything not in the allowlist (e.g. .mkv, .avi) requires the SwiftVLC engine.
+/// transcoding. Network URLs pass, since servers already produce a compatible
+/// format, except original files in containers it can't open, which
+/// TorrServer serves as they are. Local files are checked by container
+/// extension; anything not in the allowlist (e.g. .mkv, .avi) requires the
+/// SwiftVLC engine.
 func isAVFoundationPlayable(_ url: URL) -> Bool {
-    guard url.isFileURL else { return true }
     let ext = url.pathExtension.lowercased()
+    guard url.isFileURL else {
+        return !["mkv", "avi", "wmv", "ts", "m2ts", "webm", "mpg", "mpeg", "flv", "vob"].contains(ext)
+    }
     let supported: Set<String> = [
         // Video containers AVFoundation can open directly
         "mp4", "m4v", "mov",
@@ -603,6 +609,9 @@ nonisolated enum SettingsKeys {
     static let navidromeUsername = "navidromeUsername"
     /// Not secret: it only goes with the token in the Keychain.
     static let navidromeSalt = "navidromeSalt"
+    /// Set once Connect succeeds; the password is in the Keychain.
+    static let torrServerURL = "torrServerURL"
+    static let torrServerUsername = "torrServerUsername"
 
     static let tvTopLevel = "tvTopLevel"
     /// Whether the menu shows the Music pane instead of the Video pane.
@@ -678,6 +687,8 @@ enum KeychainKeys {
     static let navidromeToken = "navidromeToken"
     static let traktAccessToken = "traktAccessToken"
     static let traktRefreshToken = "traktRefreshToken"
+    /// TorrServer only does HTTP Basic auth, so the password itself is kept.
+    static let torrServerPassword = "torrServerPassword"
     static let lastfmSessionKey = "lastfmSessionKey"
     /// Same name as the UserDefaults key older builds used, so
     /// KeychainStore.stringMigratingFromDefaults(for:) moves it over.

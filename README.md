@@ -2,6 +2,7 @@
 
 ## Contents
 
+*   [Supported servers](#supported-servers)
 *   [About this fork](#about-this-fork)
     *   [Building this fork](#building-this-fork)
 *   [Screenshots](#screenshots)
@@ -11,12 +12,25 @@
     *   [Prerequisites](#prerequisites)
     *   [Getting Started](#getting-started)
 
+## Supported servers
+
+| Source | Movies | Shows | Music |
+|---|:-:|:-:|:-:|
+| Plex, one or more servers | Yes | Yes | Yes |
+| Jellyfin | Yes | Yes | Yes |
+| Navidrome | | | Yes |
+| TorrServer | Yes | Yes | |
+| Your own folders | Yes | Yes | Yes |
+
+Connect servers in Settings > Accounts and choose folders in Settings > Data.
+
 ## About this fork
 
 This is a fork of [KuDoZ007/QP](https://github.com/KuDoZ007/QP). The main differences:
 
 *   **Runs on macOS 26 (Tahoe).** Upstream needs macOS 27 because it used two SwiftUI APIs that only exist there (`AsyncImage(request:)` and `.asyncImageURLSession(_:)`). Posters now load through a small `ArtworkImage` view that works on both.
 *   **Navidrome support.** Music from a Navidrome server, next to Plex, Jellyfin and your own folders.
+*   **TorrServer support.** Movies and shows from a TorrServer. Releases of the same show are grouped into one poster, with seasons and episodes read from the file names.
 *   **Your libraries, your names.** The menu shows one section per server library, named as on the server (for example Movies, Shows and YouTube), instead of fixed Movies / TV Shows / Music sections. Choose which libraries appear in Settings > Libraries. "TV Shows" is called "Shows" throughout.
 *   **Video and Music panes.** Click the menu title to switch between video and music. The Music pane has Artists, Albums and Playlists sections.
 *   **Sorting.** Movies and shows are sorted by date added, newest first, by default. A small sort button on each open section changes the field and order without opening Settings. Drag the menu's sections into any order in Settings > Libraries.
@@ -108,7 +122,7 @@ Have used Gemini and Claude to help me build this; though all the prototyping, t
 ## Prerequisites
 
 *   macOS 26 (Tahoe) or later
-*   A Plex Media Server, Jellyfin Server or local media files
+*   A Plex, Jellyfin, Navidrome or TorrServer server, or local media files
 
 ## Getting Started
 *   Build this fork from source as described in [Building this fork](#building-this-fork). The upstream DMG requires macOS 27.

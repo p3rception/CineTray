@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- TorrServer support. Its movies and shows appear in the Movies and Shows sections, with posters, years and descriptions when the torrent carries TMDB data (as torrents added from Lampa do). Releases of the same show are grouped into one poster, with seasons and episodes read from the file names. MKV and AVI files play in QuPi's player. Connect in Settings > Accounts; a username and password are only needed for servers that ask for one.
 - Install from source with one command: clone the repository and run `make`. It builds QuPi, installs it in Applications and opens it. `Secrets.swift` no longer has to be created by hand.
 - An app icon, shown in the Dock while a player or Settings is open and in Finder: the menu bar symbol on navy, with glows of blue, purple and periwinkle.
 

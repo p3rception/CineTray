@@ -23,7 +23,7 @@ struct LibrariesSettingsView: View {
 
             if !appState.hasServers {
                 Section {
-                    Text("Sign in to Plex, Jellyfin or Navidrome in the Accounts tab to choose libraries. Until then, the app shows a built-in sample catalog.")
+                    Text("Sign in to a media server in the Accounts tab to choose libraries.")
                         .foregroundStyle(.secondary)
                 }
             }

@@ -5,7 +5,7 @@ import MediaPlayer
 import AppKit
 
 /// Shared app state managing UI sections, drill-down paths, and catalogs.
-/// Merges Plex, Jellyfin, Navidrome and local library providers.
+/// Merges Plex, Jellyfin, Navidrome, TorrServer and local library providers.
 @MainActor
 @Observable
 final class AppState {
@@ -94,11 +94,11 @@ final class AppState {
     /// and menu redraw. Cleared by resetCatalog(), which every account
     /// change calls. Keeping the PlexConfiguration objects also keeps a
     /// working fallback URL for the rest of the session.
-    @ObservationIgnored private var cachedSources: (plex: [PlexConfiguration], jellyfin: JellyfinConfiguration?, navidrome: NavidromeConfiguration?)?
+    @ObservationIgnored private var cachedSources: (plex: [PlexConfiguration], jellyfin: JellyfinConfiguration?, navidrome: NavidromeConfiguration?, torrServer: TorrServerConfiguration?)?
 
-    private var sources: (plex: [PlexConfiguration], jellyfin: JellyfinConfiguration?, navidrome: NavidromeConfiguration?) {
+    private var sources: (plex: [PlexConfiguration], jellyfin: JellyfinConfiguration?, navidrome: NavidromeConfiguration?, torrServer: TorrServerConfiguration?) {
         if let cachedSources { return cachedSources }
-        let loaded = (plex: Self.loadPlexConfigurations(), jellyfin: Self.loadJellyfinConfiguration(), navidrome: Self.loadNavidromeConfiguration())
+        let loaded = (plex: Self.loadPlexConfigurations(), jellyfin: Self.loadJellyfinConfiguration(), navidrome: Self.loadNavidromeConfiguration(), torrServer: Self.loadTorrServerConfiguration())
         cachedSources = loaded
         let tokens = loaded.plex.flatMap { configuration in
             ([configuration.serverURL] + (configuration.fallbackURLs ?? [])).map { (ArtworkCache.addressKey($0), configuration.token) }
@@ -153,6 +153,16 @@ final class AppState {
             return nil
         }
         return NavidromeConfiguration(serverURL: url, username: username, token: token, salt: salt)
+    }
+
+    private static func loadTorrServerConfiguration() -> TorrServerConfiguration? {
+        guard let url = UserDefaults.standard.string(forKey: SettingsKeys.torrServerURL).flatMap(URL.init(string:)) else { return nil }
+        let username = UserDefaults.standard.string(forKey: SettingsKeys.torrServerUsername) ?? ""
+        return TorrServerConfiguration(
+            serverURL: url,
+            username: username.isEmpty ? nil : username,
+            password: KeychainStore.string(for: KeychainKeys.torrServerPassword)
+        )
     }
 
     private func selectedLibraries(forKey key: String) -> Set<String> {
@@ -401,6 +411,9 @@ final class AppState {
         }
         if let configuration = sources.navidrome {
             result.append(NavidromeMediaProvider(client: NavidromeClient(config: configuration), musicTopLevel: musicTopLevel))
+        }
+        if let configuration = sources.torrServer {
+            result.append(TorrServerMediaProvider(client: TorrServerClient(config: configuration)))
         }
         return result
     }

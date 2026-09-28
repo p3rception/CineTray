@@ -2,7 +2,8 @@ import SwiftUI
 import AuthenticationServices
 
 /// Sign-in for the media servers (Plex PIN flow, Jellyfin username/password
-/// or Quick Connect, Navidrome username/password)
+/// or Quick Connect, Navidrome username/password, TorrServer optional
+/// HTTP Basic auth)
 /// and the scrobblers (Trakt OAuth, Last.fm web auth). Secrets are kept in the
 /// Keychain; only non-secret settings use UserDefaults.
 struct AccountsSettingsView: View {
@@ -15,6 +16,8 @@ struct AccountsSettingsView: View {
     @AppStorage(SettingsKeys.navidromeServerURL) private var navidromeServerURL = ""
     @AppStorage(SettingsKeys.navidromeUsername) private var navidromeUsername = ""
     @AppStorage(SettingsKeys.navidromeSalt) private var navidromeSalt = ""
+    @AppStorage(SettingsKeys.torrServerURL) private var torrServerURL = ""
+    @AppStorage(SettingsKeys.torrServerUsername) private var torrServerUsername = ""
 
     // Connected Plex servers; tokens live in the Keychain, one per server.
     @State private var plexServers = PlexServerStore.load()
@@ -32,6 +35,9 @@ struct AccountsSettingsView: View {
     @State private var jellyfinPassword = ""
     @State private var navidromePassword = ""
     @State private var navidromeStatus = ""
+    @State private var torrServerAddress = UserDefaults.standard.string(forKey: SettingsKeys.torrServerURL) ?? ""
+    @State private var torrServerPassword = ""
+    @State private var torrServerStatus = ""
     @State private var pinCode = ""
     @State private var plexStatus = ""
     @State private var plexAdvancedExpanded = false
@@ -58,6 +64,7 @@ struct AccountsSettingsView: View {
             plexSection
             jellyfinSection
             navidromeSection
+            torrServerSection
             // traktSection
             // lastfmSection
             tmdbSection
@@ -569,6 +576,76 @@ struct AccountsSettingsView: View {
                 return
             }
             navidromeStatus = "Sign-in failed: \(lastError?.localizedDescription ?? "server not reachable.")"
+        }
+    }
+
+    // MARK: - TorrServer
+
+    private var torrServerSection: some View {
+        Section("TorrServer") {
+            LabeledContent("Server URL") { TextField("Server URL", text: $torrServerAddress).underlinedField() }
+            LabeledContent("Username") { TextField("Optional", text: $torrServerUsername).underlinedField() }
+            LabeledContent("Password") { SecureField("Optional", text: $torrServerPassword).underlinedField() }
+            HStack {
+                Button("Connect") { connectToTorrServer() }
+                    .disabled(torrServerAddress.isEmpty)
+                if !torrServerURL.isEmpty {
+                    Button("Disconnect") {
+                        torrServerURL = ""
+                        KeychainStore.set(nil, for: KeychainKeys.torrServerPassword)
+                        torrServerStatus = "Disconnected."
+                        appState.resetCatalog()
+                    }
+                }
+            }
+            if !torrServerURL.isEmpty {
+                Text("Connected to \(torrServerURL).")
+                    .font(.callout)
+                    .foregroundStyle(.green)
+            }
+            statusText(torrServerStatus)
+        }
+    }
+
+    /// Lists the torrents at each candidate address (HTTPS first) and keeps
+    /// the address that worked.
+    private func connectToTorrServer() {
+        torrServerStatus = "Connecting…"
+        Task {
+            let candidates = serverURLCandidates(torrServerAddress)
+            guard !candidates.isEmpty else {
+                torrServerStatus = "Invalid server URL."
+                return
+            }
+            let username = torrServerUsername.trimmingCharacters(in: .whitespaces)
+            let password = torrServerPassword
+            var lastError: Error?
+            for url in candidates {
+                let configuration = TorrServerConfiguration(
+                    serverURL: url,
+                    username: username.isEmpty ? nil : username,
+                    password: password.isEmpty ? nil : password
+                )
+                do {
+                    _ = try await TorrServerClient(config: configuration).torrents()
+                } catch let error as TorrServerClient.ServerError {
+                    // The server answered, so the other scheme won't help.
+                    torrServerStatus = "Connection failed: \(error.localizedDescription)"
+                    return
+                } catch {
+                    lastError = error
+                    continue
+                }
+                torrServerURL = url.absoluteString
+                torrServerAddress = url.absoluteString
+                torrServerUsername = username
+                KeychainStore.set(password.isEmpty ? nil : password, for: KeychainKeys.torrServerPassword)
+                torrServerPassword = ""
+                torrServerStatus = ""
+                appState.resetCatalog()
+                return
+            }
+            torrServerStatus = "Connection failed: \(lastError?.localizedDescription ?? "server not reachable.")"
         }
     }
 
