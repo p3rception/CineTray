@@ -1,29 +1,15 @@
-<h1 align="center">QuPi</h1>
+<p align="center"><img src="Screenshots/Banner.jpg" alt="QuPi: your Plex, Jellyfin and Navidrome libraries, and your own media, in the macOS menu bar."></p>
 
-<p align="center">Your Plex, Jellyfin and Navidrome libraries, and your own media, in the macOS menu bar.</p>
+## Contents
 
-<table>
-  <tr>
-    <td align="center"><img src="Screenshots/Welcome-QuPi.png" width="205" alt="The QuPi menu with Continue Watching and Movies carousels"><br><sub>Continue Watching and your libraries</sub></td>
-    <td align="center"><img src="Screenshots/Mini-Video-Player.png" width="500" alt="The video player window playing The Matrix"><br><sub>Video player</sub></td>
-  </tr>
-</table>
-
-<table>
-  <tr>
-    <td align="center"><img src="Screenshots/Music-Player.png" width="254" alt="The music player window with album art, progress and Up Next"><br><sub>Music player</sub></td>
-    <td align="center"><img src="Screenshots/Full-Library-Exploration.png" width="231" alt="Browsing from a show to its seasons and episodes"><br><sub>Shows, seasons and episodes</sub></td>
-    <td align="center"><img src="Screenshots/Dynamic-Filtering.png" width="193" alt="Search results grouped by section"><br><sub>Search across every section</sub></td>
-  </tr>
-</table>
-
-<table>
-  <tr>
-    <td align="center"><img src="Screenshots/Inline-Music-Player.png" width="247" alt="The Music pane with playback controls on the album poster"><br><sub>Music pane with inline player</sub></td>
-    <td align="center"><img src="Screenshots/Compact-Mode.png" width="244" alt="The menu with Show Posters off, with titles instead of posters"><br><sub>Show Posters off</sub></td>
-    <td align="center"><img src="Screenshots/Customisation.png" width="187" alt="The Visuals tab in Settings"><br><sub>Settings</sub></td>
-  </tr>
-</table>
+*   [About this fork](#about-this-fork)
+    *   [Building this fork](#building-this-fork)
+*   [Screenshots](#screenshots)
+*   [QuPi](#qupi)
+    *   [Key Features](#key-features)
+    *   [Disclaimer](#disclaimer)
+    *   [Prerequisites](#prerequisites)
+    *   [Getting Started](#getting-started)
 
 ## About this fork
 
@@ -68,6 +54,31 @@ Scrobbling (optional): the first build creates `QuPi/Secrets.swift` with placeho
 *   Last.fm: register at https://www.last.fm/api/account/create with callback URL `qupi://lastfm-auth`.
 
 For development, `./build.sh` builds `dist/QuPi.app` and opens it without installing. With Xcode, run `make` once (or `./build.sh build`) to create `Secrets.swift`, then open `QuPi.xcodeproj`, select your own development team under Signing & Capabilities, and run.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><img src="Screenshots/Welcome-QuPi.png" width="205" alt="The QuPi menu with Continue Watching and Movies carousels"><br><sub>Continue Watching and your libraries</sub></td>
+    <td align="center"><img src="Screenshots/Mini-Video-Player.png" width="500" alt="The video player window playing The Matrix"><br><sub>Video player</sub></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td align="center"><img src="Screenshots/Music-Player.png" width="254" alt="The music player window with album art, progress and Up Next"><br><sub>Music player</sub></td>
+    <td align="center"><img src="Screenshots/Full-Library-Exploration.png" width="231" alt="Browsing from a show to its seasons and episodes"><br><sub>Shows, seasons and episodes</sub></td>
+    <td align="center"><img src="Screenshots/Dynamic-Filtering.png" width="193" alt="Search results grouped by section"><br><sub>Search across every section</sub></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td align="center"><img src="Screenshots/Inline-Music-Player.png" width="247" alt="The Music pane with playback controls on the album poster"><br><sub>Music pane with inline player</sub></td>
+    <td align="center"><img src="Screenshots/Compact-Mode.png" width="244" alt="The menu with Show Posters off, with titles instead of posters"><br><sub>Show Posters off</sub></td>
+    <td align="center"><img src="Screenshots/Customisation.png" width="187" alt="The Visuals tab in Settings"><br><sub>Settings</sub></td>
+  </tr>
+</table>
 
 ---
 
