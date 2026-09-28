@@ -8,8 +8,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - TorrServer support. Its movies and shows appear in the Movies and Shows sections, with posters, years and descriptions when the torrent carries TMDB data (as torrents added from Lampa do). Releases of the same show are grouped into one poster, with seasons and episodes read from the file names. MKV and AVI files play in CineTray's player. Connect in Settings > Accounts; a username and password are only needed for servers that ask for one.
-- Install from source with one command: clone the repository and run `make`. It builds CineTray, installs it in Applications and opens it. `make clean` deletes the build files, `make uninstall` removes the app, and `make wipe` also removes its settings, accounts and caches. `Secrets.swift` no longer has to be created by hand.
+- Install from source with one command: clone the repository and run `make`. It builds CineTray, installs it in Applications and opens it. `make clean` deletes the build files, `make uninstall` removes the app, and `make wipe` also removes its settings, accounts and caches.
 - Play video in another app. In Settings > Playback, click Choose… next to Play Video In and pick an app such as VLC, IINA or QuickTime Player. Use CineTray switches back to the built-in player, which stays the default. Another app starts from the beginning, and CineTray can't resume, save progress, scrobble or play the next item for it. Music always plays in CineTray.
+- Trakt and Last.fm sign-in in Settings > Accounts. Enter the keys of your own Trakt app and Last.fm API account there, then sign in to scrobble movies and music. The README lists the steps. Last.fm sign-in happens in your browser, and CineTray notices when you allow access. The keys are kept in the Keychain; `Secrets.swift` is no longer used. If you filled it in before, copy its values into Settings and delete the file.
+- Music Artwork in Settings > Accounts. Your own music gets covers and artist photos from Deezer, MusicBrainz, Last.fm, TheAudioDB or Discogs, from the first one that has a picture. Turn each source on or off. TheAudioDB works without a key; Discogs needs a personal access token.
 - An app icon, shown in the Dock while a player or Settings is open and in Finder: the menu bar symbol on navy, with glows of blue, purple and periwinkle.
 
 ### Changed
@@ -22,6 +24,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Artists in your own music no longer get Last.fm's grey star placeholder as their photo.
 - With Rich Media on, Jellyfin items in Continue Watching get the info button too. Its description in Settings no longer says tooltips show descriptions, which they never did.
 - Clicking the Settings or a player window after switching to another app brings CineTray to the front again. Before, the window stayed inactive until you clicked CineTray's Dock icon.
 - In Simple Visuals, the progress bar no longer covers the year or episode line of items you've started.

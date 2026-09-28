@@ -9,21 +9,6 @@ BUNDLE_ID=CineTray   # same as the Xcode build, so settings and Keychain items a
 
 pkill -x CineTray 2>/dev/null || true
 
-# Placeholders are enough to build; scrobbling needs real values (see README).
-[ -f CineTray/Secrets.swift ] || cat > CineTray/Secrets.swift <<'EOF'
-enum TraktSecrets {
-    static let clientID     = "YOUR_TRAKT_CLIENT_ID"
-    static let clientSecret = "YOUR_TRAKT_CLIENT_SECRET"
-    static let redirectURI  = "cinetray://trakt-auth"
-}
-
-enum LastFMSecrets {
-    static let apiKey       = "YOUR_LASTFM_API_KEY"
-    static let sharedSecret = "YOUR_LASTFM_SHARED_SECRET"
-    static let callbackURL  = "cinetray://lastfm-auth"
-}
-EOF
-
 swift build -c release --disable-keychain
 
 rm -rf "$APP"

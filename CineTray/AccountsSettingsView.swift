@@ -18,6 +18,7 @@ struct AccountsSettingsView: View {
     @AppStorage(SettingsKeys.navidromeSalt) private var navidromeSalt = ""
     @AppStorage(SettingsKeys.torrServerURL) private var torrServerURL = ""
     @AppStorage(SettingsKeys.torrServerUsername) private var torrServerUsername = ""
+    @AppStorage(SettingsKeys.disabledMusicArtworkSources) private var disabledMusicArtworkSources = ""
 
     // Connected Plex servers; tokens live in the Keychain, one per server.
     @State private var plexServers = PlexServerStore.load()
@@ -27,8 +28,14 @@ struct AccountsSettingsView: View {
 
     // Secrets, loaded from / persisted to the Keychain.
     @State private var plexAccountToken = KeychainStore.string(for: KeychainKeys.plexAccountToken) ?? ""
+    @State private var traktClientID = KeychainStore.string(for: KeychainKeys.traktClientID) ?? ""
+    @State private var traktClientSecret = KeychainStore.string(for: KeychainKeys.traktClientSecret) ?? ""
     @State private var traktAccessToken = KeychainStore.string(for: KeychainKeys.traktAccessToken) ?? ""
+    @State private var lastfmAPIKey = KeychainStore.string(for: KeychainKeys.lastfmAPIKey) ?? ""
+    @State private var lastfmSharedSecret = KeychainStore.string(for: KeychainKeys.lastfmSharedSecret) ?? ""
     @State private var lastfmSessionKey: String? = KeychainStore.string(for: KeychainKeys.lastfmSessionKey)
+    @State private var theAudioDBAPIKey = KeychainStore.string(for: KeychainKeys.theAudioDBAPIKey) ?? ""
+    @State private var discogsToken = KeychainStore.string(for: KeychainKeys.discogsToken) ?? ""
     @State private var tmdbAPIKey = KeychainStore.stringMigratingFromDefaults(for: KeychainKeys.tmdbAPIKey) ?? ""
 
     // Transient sign-in state.
@@ -65,9 +72,10 @@ struct AccountsSettingsView: View {
             jellyfinSection
             navidromeSection
             torrServerSection
-            // traktSection
-            // lastfmSection
+            traktSection
+            lastfmSection
             tmdbSection
+            musicArtworkSection
         }
         .formStyle(.grouped)
         .onDisappear {
@@ -653,11 +661,13 @@ struct AccountsSettingsView: View {
 
     private var traktSection: some View {
         Section("Trakt") {
+            keychainField("Client ID", text: $traktClientID, key: KeychainKeys.traktClientID)
+            keychainField("Client Secret", text: $traktClientSecret, key: KeychainKeys.traktClientSecret, secure: true)
             HStack {
                 Button(traktSignInTask != nil ? "Connecting…" : "Sign in with Trakt") {
                     connectTrakt()
                 }
-                .disabled(traktSignInTask != nil)
+                .disabled(traktSignInTask != nil || traktClientID.isEmpty || traktClientSecret.isEmpty)
                 if !traktAccessToken.isEmpty {
                     Button("Disconnect") {
                         traktAccessToken = ""
@@ -673,6 +683,9 @@ struct AccountsSettingsView: View {
                     .foregroundStyle(.green)
             }
             statusText(traktStatus)
+            Text("Scrobbles the movies you play and finds posters for your Local Library. Create an app at trakt.tv/oauth/applications/new with the redirect URI cinetray://trakt-auth.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -701,12 +714,16 @@ struct AccountsSettingsView: View {
     // MARK: - Last.fm
 
     private var lastfmSection: some View {
-        Section("Last.fm Scrobbler") {
+        Section("Last.fm") {
+            keychainField("API Key", text: $lastfmAPIKey, key: KeychainKeys.lastfmAPIKey)
+            keychainField("Shared Secret", text: $lastfmSharedSecret, key: KeychainKeys.lastfmSharedSecret, secure: true)
             HStack {
-                Button(lastfmSignInTask != nil ? "Connecting…" : "Connect to Last.fm") {
-                    connectLastFM()
+                if let lastfmSignInTask {
+                    Button("Cancel") { lastfmSignInTask.cancel() }
+                } else {
+                    Button("Connect to Last.fm…") { connectLastFM() }
+                        .disabled(lastfmAPIKey.isEmpty || lastfmSharedSecret.isEmpty)
                 }
-                .disabled(lastfmSignInTask != nil)
                 if lastfmSessionKey != nil {
                     Button("Disconnect") {
                         lastfmSessionKey = nil
@@ -715,12 +732,19 @@ struct AccountsSettingsView: View {
                     }
                 }
             }
+            if lastfmSignInTask != nil {
+                Text("Click \"Yes, allow access\" on the Last.fm page in your browser.")
+                    .font(.callout)
+            }
             if lastfmSessionKey != nil {
                 Text("Connected - finished music playback will be scrobbled.")
                     .font(.callout)
                     .foregroundStyle(.green)
             }
             statusText(lastfmStatus)
+            Text("Scrobbles the music you finish and finds covers for your Local Library. Create an API account at last.fm/api/account/create and leave its callback URL empty.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -730,17 +754,19 @@ struct AccountsSettingsView: View {
             defer { lastfmSignInTask = nil }
             do {
                 let token = try await LastFMClient.requestToken()
-                let callbackURL = try await webAuth(
-                    url: LastFMClient.authorizeURL(token: token),
-                    callbackScheme: "cinetray"
-                )
-                // Last.fm echoes the token in the callback; prefer the returned
-                // value but fall back to the original if absent.
-                let returnedToken = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false)?
-                    .queryItems?.first(where: { $0.name == "token" })?.value ?? token
-                let sessionKey = try await LastFMClient.getSession(token: returnedToken)
-                lastfmSessionKey = sessionKey
-                KeychainStore.set(sessionKey, for: KeychainKeys.lastfmSessionKey)
+                NSWorkspace.shared.open(LastFMClient.authorizeURL(token: token))
+                // Last.fm doesn't send the browser back to the app after approval,
+                // so ask until the token is approved: 5 minutes, well within its
+                // 60-minute lifetime.
+                for _ in 0..<150 {
+                    try await Task.sleep(for: .seconds(2))
+                    if let sessionKey = try await LastFMClient.getSession(token: token) {
+                        lastfmSessionKey = sessionKey
+                        KeychainStore.set(sessionKey, for: KeychainKeys.lastfmSessionKey)
+                        return
+                    }
+                }
+                lastfmStatus = "Sign-in timed out - try again."
             } catch is CancellationError {
             } catch {
                 lastfmStatus = "Sign-in failed: \(error.localizedDescription)"
@@ -819,7 +845,56 @@ struct AccountsSettingsView: View {
         tmdbKeyStatus = status
     }
 
+    // MARK: - Music Artwork
+
+    private var musicArtworkSection: some View {
+        Section("Music Artwork") {
+            ForEach(MusicArtworkSource.allCases) { source in
+                Toggle(source.title, isOn: musicArtworkBinding(source))
+            }
+            keychainField("TheAudioDB API Key", text: $theAudioDBAPIKey, key: KeychainKeys.theAudioDBAPIKey)
+            keychainField("Discogs Token", text: $discogsToken, key: KeychainKeys.discogsToken, secure: true)
+            Text("Covers and artist photos for your Local Library, from the first source that has one, in this order. Last.fm needs the API key above. TheAudioDB works without a key; a paid key raises its limits. Discogs needs a personal access token from discogs.com/settings/developers.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func musicArtworkBinding(_ source: MusicArtworkSource) -> Binding<Bool> {
+        Binding {
+            !disabledMusicArtworkSources.split(separator: ",").contains(Substring(source.rawValue))
+        } set: { enabled in
+            var disabled = Set(disabledMusicArtworkSources.split(separator: ",").map(String.init))
+            if enabled { disabled.remove(source.rawValue) } else { disabled.insert(source.rawValue) }
+            disabledMusicArtworkSources = disabled.sorted().joined(separator: ",")
+        }
+    }
+
     // MARK: - Helpers
+
+    /// A key field saved to the Keychain on every edit, so closing Settings
+    /// never loses it; an empty field removes the item.
+    private func keychainField(_ title: String, text: Binding<String>, key: String, secure: Bool = false) -> some View {
+        LabeledContent(title) {
+            Group {
+                if secure {
+                    SecureField(title, text: text)
+                } else {
+                    TextField(title, text: text)
+                }
+            }
+            .underlinedField()
+            .onChange(of: text.wrappedValue) {
+                let trimmed = text.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                // Pasted keys often carry a stray space or newline, which the services reject.
+                if trimmed != text.wrappedValue {
+                    text.wrappedValue = trimmed
+                } else {
+                    KeychainStore.set(trimmed, for: key)
+                }
+            }
+        }
+    }
 
     @ViewBuilder
     private func statusText(_ status: String) -> some View {

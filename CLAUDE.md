@@ -21,7 +21,6 @@ There is no test target and no linter.
 - Deployment target is **macOS 26**. Do not use APIs introduced in macOS 27 (for example `AsyncImage(request:)` or `.asyncImageURLSession(_:)`). Load artwork with `ArtworkImage` (`ArtworkCache.swift`).
 - The app is macOS-only (`SUPPORTED_PLATFORMS = macosx`). Do not add iOS code paths.
 - `#Preview` blocks must be wrapped in `#if !SWIFT_PACKAGE`, because the Command Line Tools lack the previews macro plugin.
-- `CineTray/Secrets.swift` (Trakt and Last.fm credentials) is gitignored. Never commit it or print its values. The README has a template.
 
 ## Concurrency
 
@@ -76,7 +75,7 @@ MediaType (movies / tvShows / music)
 
 `DownloadManager.shared` handles two kinds of folders per media type, each stored as a security-scoped bookmark:
 - **Download folder** (`downloadFolderBookmark_*`): files downloaded from servers, indexed in `.cinetray-downloads.json` inside the folder.
-- **Library folder** (`libraryFolderBookmark_*`): the user's own media, scanned by `LocalLibraryScanner` and enriched with artwork by `AppState.refreshLocalLibrary()` (Last.fm, Trakt, TMDb).
+- **Library folder** (`libraryFolderBookmark_*`): the user's own media, scanned by `LocalLibraryScanner` and enriched with artwork by `AppState.refreshLocalLibrary()`: music from the sources in `MusicArtworkSource` (each can be turned off in Settings), movies and shows from Trakt and TMDb.
 
 `DownloadManager.localURL(for:)` is checked first by `AppState.streamURL`, so downloaded items play from disk.
 
@@ -94,7 +93,7 @@ MediaType (movies / tvShows / music)
 
 ### Scrobbling
 
-`ScrobbleClients.swift` implements Trakt (movies) and Last.fm (music). `AppState.scrobble` is called on state transitions only, not on the periodic `.playing` reports.
+`ScrobbleClients.swift` implements Trakt (movies) and Last.fm (music). `AppState.scrobble` is called on state transitions only, not on the periodic `.playing` reports. Users register their own Trakt and Last.fm apps and enter the credentials in Settings > Accounts; they live in the Keychain, never in the source.
 
 ## Conventions
 

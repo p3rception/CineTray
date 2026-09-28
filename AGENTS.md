@@ -94,7 +94,6 @@ Match the comment density of the surrounding code.
 - Match the naming and idioms of the surrounding code. No `Enhanced`,
   `Improved`, `Helper`, `Utils` or `Manager` names for new types.
 - Do not add a test target, linter or formatter config unless asked.
-- Never commit `CineTray/Secrets.swift`.
 
 ## 7. Text
 

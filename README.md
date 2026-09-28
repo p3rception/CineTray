@@ -5,6 +5,7 @@
 *   [Supported servers](#supported-servers)
 *   [About this fork](#about-this-fork)
     *   [Building this fork](#building-this-fork)
+    *   [Scrobbling and artwork](#scrobbling-and-artwork)
 *   [Screenshots](#screenshots)
 *   [CineTray](#cinetray)
     *   [Key Features](#key-features)
@@ -38,8 +39,9 @@ This is a fork of [KuDoZ007/QP](https://github.com/KuDoZ007/QP). The main differ
 *   **Better search.** Ignores spacing, punctuation and accents ("madmen" finds "Mad Men") and shows only the sections with matches.
 *   **Open in Plex or Jellyfin.** Hover a poster and click the arrow at its top right (or use the player's toolbar button) to open that item in the server's web app: browse in CineTray, watch in Plex or Jellyfin.
 *   **Your video player.** Play video in CineTray's own player or in another installed app, such as VLC, IINA or QuickTime Player (Settings > Playback).
+*   **Scrobbling and artwork set up in the app.** Trakt and Last.fm sign-in are back. Their API keys go in Settings > Accounts instead of a source file you edit before building, and [Scrobbling and artwork](#scrobbling-and-artwork) says where to get them. Your own music gets covers and artist photos from Deezer, MusicBrainz, Last.fm, TheAudioDB or Discogs; turn each one on or off.
 *   **Easier sign-in.** Jellyfin Quick Connect (approve a code from another signed-in device, no password). Server addresses work without `http://` or `https://`; the app tries HTTPS first, then HTTP. The TMDb API key field checks the key as you type.
-*   **Security.** The Plex token is never sent over plain HTTP to remote servers, Plex tokens are no longer saved in plain text inside poster URLs, the TMDb key is stored in the Keychain, and `Secrets.swift` is no longer committed (the upstream `.gitignore` pointed to the wrong path).
+*   **Security.** The Plex token is never sent over plain HTTP to remote servers, Plex tokens are no longer saved in plain text inside poster URLs, and the TMDb, Trakt and Last.fm keys are stored in the Keychain instead of in the source code (upstream committed its `Secrets.swift` by accident, because its `.gitignore` pointed to the wrong path).
 *   **Faster.** Server settings and download indexes stay in memory instead of being re-read from the Keychain and disk on every redraw, sources load in parallel, Plex checks all server addresses at once (seconds instead of minutes after switching networks), the menu refreshes in the background when opened, and Jellyfin plays compatible files directly, so videos start in under a second.
 *   **Clearer Settings.** Smaller sections with buttons in rows, the signed-in Plex account in Accounts, plain-language playback menus, a section per media type in Data, and Delete Downloads asks first.
 *   **Keyboard shortcuts in windows.** While a player or Settings is open, CineTray gets a Dock icon and a menu bar, so Full Screen, Hide and Close shortcuts work.
@@ -61,12 +63,6 @@ cd CineTray
 make
 ```
 
-> [!IMPORTANT]
-> Trakt and Last.fm scrobbling need your own credentials. The first build creates `CineTray/Secrets.swift` with placeholders. Replace them and run `make` again.
->
-> *   Trakt: register at https://trakt.tv/oauth/applications/new with redirect URI `cinetray://trakt-auth`.
-> *   Last.fm: register at https://www.last.fm/api/account/create with callback URL `cinetray://lastfm-auth`.
-
 | Command | What it does |
 | --- | --- |
 | `make` | Builds CineTray, installs it in `/Applications` and opens it. Run it again after `git pull` to update. |
@@ -76,7 +72,27 @@ make
 
 Without an Apple Development certificate the app is signed ad-hoc, so macOS asks again for Keychain access after each rebuild.
 
-For development, `./build.sh` builds `dist/CineTray.app` and opens it without installing. With Xcode, run `make` once (or `./build.sh build`) to create `Secrets.swift`, then open `CineTray.xcodeproj`, select your own development team under Signing & Capabilities, and run.
+For development, `./build.sh` builds `dist/CineTray.app` and opens it without installing. With Xcode, open `CineTray.xcodeproj`, select your own development team under Signing & Capabilities, and run.
+
+### Scrobbling and artwork
+
+Optional. Each service needs a free account of your own. The keys go in Settings > Accounts and are kept in the Keychain.
+
+**Trakt** scrobbles the movies you play and finds posters for your own movies and shows.
+
+1. Create an app at https://trakt.tv/oauth/applications/new. Name it `CineTray` and set Redirect uri to `cinetray://trakt-auth`.
+2. Copy its Client ID and Client Secret into Settings > Accounts > Trakt.
+3. Click Sign in with Trakt and approve.
+
+**Last.fm** scrobbles the music you finish and finds album covers.
+
+1. Create an API account at https://www.last.fm/api/account/create. Leave Callback URL empty; Last.fm only accepts web addresses there, and CineTray doesn't need one.
+2. Copy its API Key and Shared Secret into Settings > Accounts > Last.fm.
+3. Click Connect to Last.fm…, then Yes, allow access on the page that opens in your browser. CineTray notices within a few seconds.
+
+**TMDb** finds posters for your own movies and shows. Copy the API Key (v3) from https://www.themoviedb.org/settings/api into Settings > Accounts > The Movie Database. The API Read Access Token doesn't work.
+
+**Music artwork** for your own music comes from Deezer, MusicBrainz, Last.fm, TheAudioDB and Discogs, in that order. Deezer, MusicBrainz and TheAudioDB work without a key. Discogs needs a personal access token from https://www.discogs.com/settings/developers. Turn sources on or off in Settings > Accounts > Music Artwork.
 
 ## Screenshots
 

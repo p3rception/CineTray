@@ -673,6 +673,8 @@ nonisolated enum SettingsKeys {
     static let movieLocalFirst = "movieLocalFirst"
     static let tvLocalFirst = "tvLocalFirst"
     static let musicLocalFirst = "musicLocalFirst"
+    /// Comma-separated `MusicArtworkSource` raw values turned off in Settings.
+    static let disabledMusicArtworkSources = "disabledMusicArtworkSources"
 }
 
 /// Keychain item names for secrets.
@@ -689,9 +691,15 @@ enum KeychainKeys {
     static let navidromeToken = "navidromeToken"
     /// TorrServer only does HTTP Basic auth, so the password itself is kept.
     static let torrServerPassword = "torrServerPassword"
+    static let traktClientID = "traktClientID"
+    static let traktClientSecret = "traktClientSecret"
     static let traktAccessToken = "traktAccessToken"
     static let traktRefreshToken = "traktRefreshToken"
+    static let lastfmAPIKey = "lastfmAPIKey"
+    static let lastfmSharedSecret = "lastfmSharedSecret"
     static let lastfmSessionKey = "lastfmSessionKey"
+    static let theAudioDBAPIKey = "theAudioDBAPIKey"
+    static let discogsToken = "discogsToken"
     /// Same name as the UserDefaults key older builds used, so
     /// KeychainStore.stringMigratingFromDefaults(for:) moves it over.
     static let tmdbAPIKey = "tmdbAPIKey"

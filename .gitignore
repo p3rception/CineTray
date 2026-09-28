@@ -2,7 +2,7 @@
 *.xcuserstate
 xcuserdata/
 
-# App secrets — fill in Secrets.swift locally, never commit it
+# Older builds kept Trakt and Last.fm credentials here; never commit a leftover copy
 CineTray/Secrets.swift
 
 # macOS

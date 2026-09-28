@@ -3,11 +3,13 @@ import CryptoKit
 
 // MARK: - Trakt
 
-/// Trakt.tv client using OAuth browser-redirect flow. Credentials are embedded
-/// in Secrets.swift (gitignored); only the user's access and refresh tokens
-/// live in the Keychain.
+/// Trakt.tv client using OAuth browser-redirect flow. The user registers
+/// their own Trakt app; its credentials and the tokens live in the Keychain.
 struct TraktClient {
     private static let baseURL = URL(string: "https://api.trakt.tv")!
+    static let redirectURI = "cinetray://trakt-auth"
+    private static var clientID: String { KeychainStore.string(for: KeychainKeys.traktClientID) ?? "" }
+    private static var clientSecret: String { KeychainStore.string(for: KeychainKeys.traktClientSecret) ?? "" }
 
     // MARK: - OAuth
 
@@ -16,8 +18,8 @@ struct TraktClient {
         var components = URLComponents(string: "https://trakt.tv/oauth/authorize")!
         components.queryItems = [
             URLQueryItem(name: "response_type", value: "code"),
-            URLQueryItem(name: "client_id", value: TraktSecrets.clientID),
-            URLQueryItem(name: "redirect_uri", value: TraktSecrets.redirectURI),
+            URLQueryItem(name: "client_id", value: Self.clientID),
+            URLQueryItem(name: "redirect_uri", value: Self.redirectURI),
         ]
         return components.url!
     }
@@ -34,9 +36,9 @@ struct TraktClient {
         }
         let (data, status) = try await TraktClient().post(path: "/oauth/token", body: [
             "code": code,
-            "client_id": TraktSecrets.clientID,
-            "client_secret": TraktSecrets.clientSecret,
-            "redirect_uri": TraktSecrets.redirectURI,
+            "client_id": Self.clientID,
+            "client_secret": Self.clientSecret,
+            "redirect_uri": Self.redirectURI,
             "grant_type": "authorization_code",
         ])
         guard status == 200 else { throw URLError(.badServerResponse) }
@@ -56,9 +58,9 @@ struct TraktClient {
         }
         let (data, status) = try await TraktClient().post(path: "/oauth/token", body: [
             "refresh_token": refreshToken,
-            "client_id": TraktSecrets.clientID,
-            "client_secret": TraktSecrets.clientSecret,
-            "redirect_uri": TraktSecrets.redirectURI,
+            "client_id": Self.clientID,
+            "client_secret": Self.clientSecret,
+            "redirect_uri": Self.redirectURI,
             "grant_type": "refresh_token",
         ])
         guard status == 200 else { throw URLError(.badServerResponse) }
@@ -144,7 +146,7 @@ struct TraktClient {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("2", forHTTPHeaderField: "trakt-api-version")
-        request.setValue(TraktSecrets.clientID, forHTTPHeaderField: "trakt-api-key")
+        request.setValue(Self.clientID, forHTTPHeaderField: "trakt-api-key")
         if let accessToken {
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         }
@@ -154,12 +156,13 @@ struct TraktClient {
     }
 
     private func get(path: String, query: [String: String]) async throws -> Data {
+        guard !Self.clientID.isEmpty else { throw TraktError.unauthorized }
         var components = URLComponents(url: Self.baseURL.appending(path: path), resolvingAgainstBaseURL: false)!
         components.queryItems = query.map { URLQueryItem(name: $0.key, value: $0.value) }
         var request = URLRequest(url: components.url!)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("2", forHTTPHeaderField: "trakt-api-version")
-        request.setValue(TraktSecrets.clientID, forHTTPHeaderField: "trakt-api-key")
+        request.setValue(Self.clientID, forHTTPHeaderField: "trakt-api-key")
         let (data, response) = try await URLSession.shared.data(for: request)
         guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
         return data
@@ -173,10 +176,19 @@ enum TraktError: Error {
 
 // MARK: - Last.fm
 
-/// Last.fm scrobbler using the web-auth token flow. Credentials are embedded
-/// in Secrets.swift (gitignored); only the session key lives in the Keychain.
+/// An error Last.fm reported, with its own explanation.
+struct LastFMError: LocalizedError {
+    let code: Int
+    let message: String
+    var errorDescription: String? { message }
+}
+
+/// Last.fm scrobbler using the web-auth token flow. The user registers their
+/// own API account; its key, secret and the session key live in the Keychain.
 struct LastFMClient {
     private static let baseURL = URL(string: "https://ws.audioscrobbler.com/2.0/")!
+    private static var apiKey: String { KeychainStore.string(for: KeychainKeys.lastfmAPIKey) ?? "" }
+    private static var sharedSecret: String { KeychainStore.string(for: KeychainKeys.lastfmSharedSecret) ?? "" }
 
     // MARK: - OAuth
 
@@ -189,19 +201,30 @@ struct LastFMClient {
 
     /// The Last.fm authorization URL the user visits to grant access.
     static func authorizeURL(token: String) -> URL {
-        URL(string: "https://www.last.fm/api/auth/?api_key=\(LastFMSecrets.apiKey)&token=\(token)")!
+        var components = URLComponents(string: "https://www.last.fm/api/auth/")!
+        components.queryItems = [
+            URLQueryItem(name: "api_key", value: Self.apiKey),
+            URLQueryItem(name: "token", value: token),
+        ]
+        return components.url!
     }
 
-    /// Exchanges an authorized token for a permanent session key.
-    static func getSession(token: String) async throws -> String {
+    /// Exchanges an authorized token for a permanent session key; nil while
+    /// the user hasn't approved it yet.
+    static func getSession(token: String) async throws -> String? {
         struct Response: Decodable {
             struct Session: Decodable { let key: String }
             let session: Session
         }
-        let data = try await LastFMClient().signedGet(params: [
-            "method": "auth.getSession",
-            "token": token,
-        ])
+        let data: Data
+        do {
+            data = try await LastFMClient().signedGet(params: [
+                "method": "auth.getSession",
+                "token": token,
+            ])
+        } catch let error as LastFMError where error.code == 14 {
+            return nil  // "This token has not been authorized"
+        }
         return try JSONDecoder().decode(Response.self, from: data).session.key
     }
 
@@ -263,8 +286,11 @@ struct LastFMClient {
         }
         guard let response = try? JSONDecoder().decode(Response.self, from: data),
               let artist = response.artist else { return nil }
+        // Last.fm stopped serving artist photos in 2019 and returns a grey
+        // star placeholder instead, which is worse than no image.
         return artist.image
             .sorted { sizeRank($0.size) > sizeRank($1.size) }
+            .filter { !$0.text.contains("2a96cbd8b46e442fc41c2b86b821562f") }
             .compactMap { URL(string: $0.text) }
             .first
     }
@@ -286,22 +312,29 @@ struct LastFMClient {
     /// Signed GET for methods that require an api_sig (e.g. auth.getToken, auth.getSession).
     private func signedGet(params: [String: String]) async throws -> Data {
         var all = params
-        all["api_key"] = LastFMSecrets.apiKey
-        let signatureBase = all.keys.sorted().map { "\($0)\(all[$0]!)" }.joined() + LastFMSecrets.sharedSecret
+        all["api_key"] = Self.apiKey
+        let signatureBase = all.keys.sorted().map { "\($0)\(all[$0]!)" }.joined() + Self.sharedSecret
         let digest = Insecure.MD5.hash(data: Data(signatureBase.utf8))
         all["api_sig"] = digest.map { String(format: "%02x", $0) }.joined()
         all["format"] = "json"
         var components = URLComponents(url: Self.baseURL, resolvingAgainstBaseURL: false)!
         components.queryItems = all.map { URLQueryItem(name: $0.key, value: $0.value) }
         let (data, response) = try await URLSession.shared.data(from: components.url!)
-        guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
+        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+            struct Failure: Decodable { let error: Int; let message: String }
+            if let failure = try? JSONDecoder().decode(Failure.self, from: data) {
+                throw LastFMError(code: failure.error, message: failure.message)
+            }
+            throw URLError(.badServerResponse)
+        }
         return data
     }
 
     /// Unsigned GET for public read-only Last.fm methods.
     private func publicGet(params: [String: String]) async throws -> Data {
+        guard !Self.apiKey.isEmpty else { throw URLError(.userAuthenticationRequired) }
         var all = params
-        all["api_key"] = LastFMSecrets.apiKey
+        all["api_key"] = Self.apiKey
         all["format"] = "json"
         var components = URLComponents(url: Self.baseURL, resolvingAgainstBaseURL: false)!
         components.queryItems = all.map { URLQueryItem(name: $0.key, value: $0.value) }
@@ -314,8 +347,8 @@ struct LastFMClient {
     /// name+value concatenation plus the shared secret.
     private func post(params: [String: String]) async throws -> Data {
         var signed = params
-        signed["api_key"] = LastFMSecrets.apiKey
-        let signatureBase = signed.keys.sorted().map { "\($0)\(signed[$0]!)" }.joined() + LastFMSecrets.sharedSecret
+        signed["api_key"] = Self.apiKey
+        let signatureBase = signed.keys.sorted().map { "\($0)\(signed[$0]!)" }.joined() + Self.sharedSecret
         let digest = Insecure.MD5.hash(data: Data(signatureBase.utf8))
         signed["api_sig"] = digest.map { String(format: "%02x", $0) }.joined()
         signed["format"] = "json"

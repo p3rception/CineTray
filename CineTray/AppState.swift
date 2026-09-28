@@ -1178,15 +1178,17 @@ final class AppState {
     // MARK: - Local Library refresh (indexing + metadata scraping)
 
     /// Scans each library folder, indexes newly dropped files so they are
-    /// playable, and fetches cover art / metadata from Last.fm, Trakt, and
-    /// TMDb for items that don't have it yet. Idempotent: items that already
+    /// playable, and fetches cover art / metadata from the music artwork
+    /// sources, Trakt and TMDb for items that don't have it yet. Idempotent: items that already
     /// have a posterURL are not re-scraped.
     func refreshLocalLibrary() async {
         let tmdbKey = KeychainStore.stringMigratingFromDefaults(for: KeychainKeys.tmdbAPIKey)
 
         let tmdb = tmdbKey.map { TMDbClient(apiKey: $0) }
-        let lastfm = LastFMClient()
         let trakt = TraktClient()
+        // Every track of an album asks for the same cover; MusicBrainz alone
+        // allows one request per second.
+        var musicArtwork: [String: URL?] = [:]
 
         for type in MediaType.allCases {
             guard let folder = DownloadManager.resolvedLibraryFolder(for: type) else { continue }
@@ -1210,12 +1212,12 @@ final class AppState {
                 case .music:
                     let artist = item.subtitle ?? ""
                     let album = item.parentTitle ?? ""
-                    if !artist.isEmpty, !album.isEmpty,
-                       let info = await lastfm.albumInfo(artist: artist, album: album) {
-                        item.posterURL = info.imageURL
-                    } else if !artist.isEmpty,
-                              let url = await lastfm.artistImageURL(artist: artist) {
-                        item.posterURL = url
+                    let key = "\(artist)\n\(album)"
+                    if let cached = musicArtwork[key] {
+                        item.posterURL = cached
+                    } else {
+                        item.posterURL = await MusicArtworkSource.imageURL(artist: artist, album: album)
+                        musicArtwork[key] = item.posterURL
                     }
                 case .movies:
                     var tmdbID: Int?
