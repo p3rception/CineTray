@@ -11,6 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Posters from TorrServer and the music artwork sources are only loaded from web addresses, never from files on your Mac.
 - The playlist handed to another video player holds the stream address with your token, so it is deleted when CineTray quits. `make wipe` removes it too.
 - Navidrome sign-in details and TMDb, Last.fm and TheAudioDB keys are no longer written to CineTray's cache on disk. The first launch after updating empties the cache once, so posters download again.
 - Your Plex token is no longer passed on when a server redirects to another address.

@@ -205,7 +205,8 @@ struct TorrServerMediaProvider: MediaProvider {
             }
             let date = tmdb?.release_date ?? tmdb?.first_air_date
             let year = date.flatMap { Int($0.prefix(4)) } ?? torrent.title.firstMatch(of: (/\b(?:19|20)\d{2}\b/).wordBoundaryKind(.simple)).flatMap { Int($0.output) }
-            let poster = torrent.poster.flatMap { $0.isEmpty ? nil : URL(string: $0) }
+            // Web addresses only: a file:// poster would be read from disk.
+            let poster = torrent.poster.flatMap(URL.init(string:)).flatMap { $0.scheme == "https" || $0.scheme == "http" ? $0 : nil }
                 ?? tmdb?.poster_path.flatMap { URL(string: "https://image.tmdb.org/t/p/w500\($0)") }
             result.append((MediaItem(
                 id: id,

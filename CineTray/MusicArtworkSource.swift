@@ -39,15 +39,17 @@ enum MusicArtworkSource: String, CaseIterable, Identifiable {
         return nil
     }
 
-    /// Album cover when `album` is given, otherwise an artist photo.
+    /// Album cover when `album` is given, otherwise an artist photo. Web
+    /// addresses only: a file:// URL in a response would be read from disk.
     private func imageURL(artist: String, album: String?) async -> URL? {
-        switch self {
+        let url = switch self {
         case .deezer: await deezer(artist: artist, album: album)
         case .musicBrainz: await musicBrainz(artist: artist, album: album)
         case .lastfm: await lastfm(artist: artist, album: album)
         case .theAudioDB: await theAudioDB(artist: artist, album: album)
         case .discogs: await discogs(artist: artist, album: album)
         }
+        return url.flatMap { $0.scheme == "https" || $0.scheme == "http" ? $0 : nil }
     }
 
     private func deezer(artist: String, album: String?) async -> URL? {
