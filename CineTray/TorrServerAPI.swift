@@ -79,17 +79,27 @@ struct TorrServerClient {
         return try await load(request, as: [Torrent].self)
     }
 
-    /// The torrent's files. Asking the server makes it join the swarm, which
-    /// can take seconds, so a list it already has is used first.
+    /// The file list the server already has: `file_stats` while the torrent
+    /// is active, or the list it saved in `data`.
+    static func knownFiles(of torrent: Torrent) -> [File]? {
+        (torrent.file_stats ?? metadata(of: torrent)?.TorrServer?.Files).flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    /// The torrent's files. Asking the server wakes an idle torrent, and it
+    /// answers only once it has found peers: up to 90 seconds, then a 500.
     func files(of torrent: Torrent) async throws -> [File] {
-        if let files = torrent.file_stats ?? Self.metadata(of: torrent)?.TorrServer?.Files, !files.isEmpty {
+        if let files = Self.knownFiles(of: torrent) { return files }
+        var request = request("stream", query: [URLQueryItem(name: "link", value: torrent.hash), URLQueryItem(name: "stat", value: nil)])
+        // The server keeps looking for peers after we stop waiting, so a
+        // retry a minute later finds the files.
+        request.timeoutInterval = 20
+        let notReady = ServerError(message: "TorrServer is still looking for peers for this release. Try again in a minute.")
+        do {
+            guard let files = try await load(request, as: Torrent.self).file_stats, !files.isEmpty else { throw notReady }
             return files
+        } catch let error as URLError where error.code == .timedOut || error.code == .badServerResponse {
+            throw notReady
         }
-        let status = try await load(
-            request("stream", query: [URLQueryItem(name: "link", value: torrent.hash), URLQueryItem(name: "stat", value: nil)]),
-            as: Torrent.self
-        )
-        return status.file_stats ?? []
     }
 
     /// Needs no credentials: TorrServer plays any torrent in its list without
@@ -135,27 +145,37 @@ struct TorrServerMediaProvider: MediaProvider {
     func children(of item: MediaItem) async throws -> [MediaItem] {
         switch item.kind {
         case .show:
-            var seasons: [MediaItem] = []
-            for episode in try await episodes(ofShow: item.id) where !seasons.contains(where: { $0.id == episode.parentID }) {
-                seasons.append(MediaItem(
-                    id: episode.parentID ?? "",
+            guard let torrents = try await catalog().first(where: { $0.item.id == item.id })?.torrents else { return [] }
+            // Seasons named in a title are listed without asking for its
+            // files, which wakes the torrent and can take a minute.
+            let named = torrents.filter { TorrServerClient.knownFiles(of: $0) == nil && Self.seasons(in: $0.title) != nil }
+            let (episodes, error) = await episodes(of: torrents.filter { torrent in !named.contains { $0.hash == torrent.hash } }, show: item)
+            let numbers = Set(named.compactMap { Self.seasons(in: $0.title) }.joined()).union(episodes.map(\.season))
+            if numbers.isEmpty, let error { throw error }
+            return numbers.sorted().map { number in
+                MediaItem(
+                    id: "\(item.id)|\(number)",
                     source: .torrServer,
                     type: .tvShows,
                     kind: .season,
-                    title: episode.parentTitle ?? "",
-                    posterURL: episode.parentPosterURL,
+                    title: number == 0 ? "Specials" : "Season \(number)",
+                    posterURL: item.posterURL,
                     parentID: item.id,
                     parentKind: .show,
                     parentTitle: item.title,
                     parentPosterURL: item.posterURL
-                ))
+                )
             }
-            return seasons
         case .season:
             // Season ids are "<show id>|<number>"; auto-continue asks with an
             // id-only stub, so the id must be enough.
-            guard let bar = item.id.lastIndex(of: "|") else { return [] }
-            return try await episodes(ofShow: String(item.id[..<bar])).filter { $0.parentID == item.id }
+            guard let bar = item.id.lastIndex(of: "|"), let number = Int(item.id[item.id.index(after: bar)...]),
+                  let entry = try await catalog().first(where: { $0.item.id == item.id[..<bar] }) else { return [] }
+            let torrents = entry.torrents.filter { TorrServerClient.knownFiles(of: $0) != nil || Self.seasons(in: $0.title)?.contains(number) != false }
+            let (episodes, error) = await episodes(of: torrents, show: entry.item)
+            let season = episodes.filter { $0.season == number }
+            if season.isEmpty, let error { throw error }
+            return season.map(\.item)
         default:
             return []
         }
@@ -229,7 +249,7 @@ struct TorrServerMediaProvider: MediaProvider {
         switch torrent.category ?? "" {
         case "movie": .movies
         case "tv": .tvShows
-        case "": tmdb?.first_air_date != nil || seasonNumber(in: torrent.title) != nil ? .tvShows : .movies
+        case "": tmdb?.first_air_date != nil || seasons(in: torrent.title) != nil ? .tvShows : .movies
         default: nil
         }
     }
@@ -243,9 +263,11 @@ struct TorrServerMediaProvider: MediaProvider {
         return name.isEmpty ? title : name
     }
 
-    private static func seasonNumber(in text: String) -> Int? {
-        (text.firstMatch(of: (/\b[Ss](\d{1,2})(?:[Ee]\d|\b)/).wordBoundaryKind(.simple))?.output.1 ?? text.firstMatch(of: /[Ss]eason\s*(\d{1,2})/)?.output.1)
-            .flatMap { Int($0) }
+    /// "S02", "Season 2", "Сезон: 2", or a pack: "S01-S04", "Сезон 1-2".
+    private static func seasons(in text: String) -> ClosedRange<Int>? {
+        guard let match = text.firstMatch(of: (/\b(?:[Ss]|[Ss]easons?[\s:]*|[Сс]езоны?[\s:]*)(\d{1,2})(?:\s*[-–]\s*[Ss]?(\d{1,2}))?(?:[Ee]\d|\b)/).wordBoundaryKind(.simple)),
+              let first = Int(match.output.1) else { return nil }
+        return first...max(first, match.output.2.flatMap { Int($0) } ?? first)
     }
 
     /// "Show.S01E02.mkv", "Show s1.e2.mkv" or "Show 1x02.mkv".
@@ -261,11 +283,11 @@ struct TorrServerMediaProvider: MediaProvider {
         videoExtensions.contains((file.path as NSString).pathExtension.lowercased())
     }
 
-    /// The show's episodes across all its torrents, in season and episode
-    /// order. When two torrents have the same episode, the newest wins.
-    private func episodes(ofShow showID: String) async throws -> [MediaItem] {
-        guard let entry = try await catalog().first(where: { $0.item.id == showID }) else { return [] }
-        let (show, torrents, client) = (entry.item, entry.torrents, client)
+    /// The episodes in the torrents' files, in season and episode order. When
+    /// two torrents have the same episode, the newest wins. Torrents the server
+    /// can't list yet are left out, with the first such error.
+    private func episodes(of torrents: [TorrServerClient.Torrent], show: MediaItem) async -> (episodes: [(season: Int, episode: Int, item: MediaItem)], error: Error?) {
+        let client = client
         let results = await withTaskGroup(of: (Int, Result<[TorrServerClient.File], Error>).self) { group in
             for (index, torrent) in torrents.enumerated() {
                 group.addTask { @MainActor in
@@ -276,22 +298,26 @@ struct TorrServerMediaProvider: MediaProvider {
             for await (index, result) in group { results[index] = result }
             return results
         }
-        // Torrents the server can't reach are left out, unless that is all of them.
-        if case .failure(let error) = results.first, results.allSatisfy({ (try? $0.get()) == nil }) { throw error }
 
         var episodes: [(season: Int, episode: Int, item: MediaItem)] = []
+        var firstError: Error?
         for (torrent, result) in zip(torrents, results) {
-            let videos = ((try? result.get()) ?? []).filter(Self.isVideo).sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
+            let files: [TorrServerClient.File]
+            switch result {
+            case .success(let list): files = list
+            case .failure(let error): firstError = firstError ?? error; continue
+            }
+            let videos = files.filter(Self.isVideo).sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
             // ponytail: files without S01E02-style numbers are numbered in path
             // order within the torrent's season; parse "01. Title.mkv" if that misplaces packs.
+            let season = Self.seasons(in: torrent.title)?.lowerBound ?? 1
             var unnumbered = 0
             for file in videos {
                 let number = Self.episodeNumber(in: file.path) ?? {
                     unnumbered += 1
-                    return (Self.seasonNumber(in: torrent.title) ?? 1, unnumbered)
+                    return (season, unnumbered)
                 }()
                 guard !episodes.contains(where: { $0.season == number.season && $0.episode == number.episode }) else { continue }
-                let seasonTitle = number.season == 0 ? "Specials" : "Season \(number.season)"
                 episodes.append((number.season, number.episode, MediaItem(
                     id: "\(torrent.hash)-\(file.id)",
                     source: .torrServer,
@@ -300,19 +326,19 @@ struct TorrServerMediaProvider: MediaProvider {
                     title: "Episode \(number.episode)",
                     subtitle: "S\(number.season)E\(number.episode)",
                     posterURL: show.posterURL,
-                    parentID: "\(showID)|\(number.season)",
+                    parentID: "\(show.id)|\(number.season)",
                     parentKind: .season,
-                    parentTitle: seasonTitle,
+                    parentTitle: number.season == 0 ? "Specials" : "Season \(number.season)",
                     parentPosterURL: show.posterURL,
                     attributes: [
                         "originalPath": file.path,
                         "grandparentTitle": show.title,
-                        "grandparentRatingKey": showID,
+                        "grandparentRatingKey": show.id,
                         "grandparentPosterURL": show.posterURL?.absoluteString ?? "",
                     ]
                 )))
             }
         }
-        return episodes.sorted { ($0.season, $0.episode) < ($1.season, $1.episode) }.map(\.item)
+        return (episodes.sorted { ($0.season, $0.episode) < ($1.season, $1.episode) }, firstError)
     }
 }

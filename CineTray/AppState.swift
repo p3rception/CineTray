@@ -885,7 +885,7 @@ final class AppState {
         return path[index + 1].id
     }
 
-    private func loadChildrenIfNeeded(of item: MediaItem) {
+    func loadChildrenIfNeeded(of item: MediaItem) {
         // Search results already carry their filtered children.
         if isSearchActive, !trimmedQuery.isEmpty, deepSearchChildren[item.id] != nil { return }
         guard childrenByItemID[item.id] == nil, !loadingChildrenIDs.contains(item.id) else { return }

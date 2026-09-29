@@ -466,12 +466,16 @@ struct MenuBarContentView: View {
                 }
                 .frame(height: 60)
             } else if let error = appState.childErrorsByItemID[parent.id] {
-                Text(error)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
+                VStack(spacing: 6) {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                    Button("Retry") { appState.loadChildrenIfNeeded(of: parent) }
+                        .controlSize(.small)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
             } else if let children = appState.displayedChildren(of: parent)?.filter({ !appState.isOfflineMode || downloadManager.isDownloaded($0) }), !children.isEmpty {
                 MediaCarouselView(
                     items: children,
