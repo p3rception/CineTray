@@ -43,6 +43,22 @@ final class NetworkChangeMonitor {
     }
 }
 
+/// URLSession drops Authorization when a server redirects to another
+/// address, but keeps custom headers, so the Plex token is dropped here.
+nonisolated final class PlexTokenRedirectGuard: NSObject, URLSessionTaskDelegate {
+    static let shared = PlexTokenRedirectGuard()
+
+    // The async variant of this method crashes the Swift 6.3 compiler in its Objective-C thunk.
+    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+                    newRequest request: URLRequest, completionHandler: @escaping @Sendable (URLRequest?) -> Void) {
+        var request = request
+        if let from = response.url, let to = request.url, ArtworkCache.addressKey(from) != ArtworkCache.addressKey(to) {
+            request.setValue(nil, forHTTPHeaderField: "X-Plex-Token")
+        }
+        completionHandler(request)
+    }
+}
+
 /// A connected Plex server. The list lives in UserDefaults; each server's
 /// token is a separate Keychain item so no secrets are stored alongside.
 enum PlexError: LocalizedError {
@@ -187,7 +203,7 @@ struct PlexClient {
         request.setValue(config.token, forHTTPHeaderField: "X-Plex-Token")
         request.setValue(Self.clientIdentifier, forHTTPHeaderField: "X-Plex-Client-Identifier")
         request.setValue(Self.productName, forHTTPHeaderField: "X-Plex-Product")
-        let result = try await URLSession.shared.data(for: request)
+        let result = try await URLSession.shared.data(for: request, delegate: PlexTokenRedirectGuard.shared)
         // The server answered, so an HTTP error is final: the other
         // addresses reach the same server.
         try Self.validate(result.1)

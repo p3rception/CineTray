@@ -473,6 +473,12 @@ func serverURLCandidates(_ input: String) -> [URL] {
     }
 }
 
+extension URLSession {
+    /// For requests with credentials in the URL (Subsonic tokens, API keys):
+    /// the shared session's disk cache would keep those URLs in plain text.
+    nonisolated static let uncached = URLSession(configuration: .ephemeral)
+}
+
 /// Loopback, private and link-local addresses, `.local` names and
 /// single-label names such as "nas".
 func isLocalNetworkHost(_ host: String) -> Bool {
@@ -642,6 +648,7 @@ nonisolated enum SettingsKeys {
     static let tvAutoContinue = "tvAutoContinue"
     static let musicAutoContinue = "musicAutoContinue"
     static let cacheArtwork = "cacheArtwork"
+    static let removedCredentialCacheEntries = "removedCredentialCacheEntries"
     static let simpleVisuals = "simpleVisuals"
     static let playbackProgress = "playbackProgress"
     static let continueTimeout = "continueTimeout"

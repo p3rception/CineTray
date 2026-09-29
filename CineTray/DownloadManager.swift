@@ -641,7 +641,7 @@ final class DownloadManager {
     private func downloadArtwork(from posterURL: URL, stem: String, destinationFolder: URL) async {
         let preferredExt = posterURL.pathExtension.lowercased() == "png" ? "png" : "jpg"
         do {
-            let (tempURL, response) = try await URLSession.shared.download(for: ArtworkCache.request(for: posterURL))
+            let (tempURL, response) = try await URLSession.shared.download(for: ArtworkCache.request(for: posterURL), delegate: PlexTokenRedirectGuard.shared)
             var finalExt = preferredExt
             if let mime = response.mimeType {
                 if mime.contains("png") { finalExt = "png" }
@@ -653,7 +653,7 @@ final class DownloadManager {
             try? FileManager.default.removeItem(at: finalDest)
             try FileManager.default.moveItem(at: tempURL, to: finalDest)
         } catch {
-            print("Failed to download artwork: \(error)")
+            // Artwork is optional; the error's URL can carry Navidrome credentials, so it isn't logged.
         }
     }
 

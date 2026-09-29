@@ -11,6 +11,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Navidrome sign-in details and TMDb, Last.fm and TheAudioDB keys are no longer written to CineTray's cache on disk. The first launch after updating empties the cache once, so posters download again.
+- Your Plex token is no longer passed on when a server redirects to another address.
 - A Plex server on your home network is reached over HTTP only when none of its HTTPS addresses answers. Before, the fastest address won, which was usually plain HTTP, and every request carries your Plex token.
 - Downloads can no longer end up outside the download folder. A server could name a file so that downloading it wrote to, or deleted, a folder above your download folder.
 - Delete Downloads only removes files inside the download folder, even when the folder's `.cinetray-downloads.json` has been edited.

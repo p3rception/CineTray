@@ -30,6 +30,7 @@ final class AppState {
 
     init() {
         PlaybackProgressStore.removeSavedPlexTokens()
+        ArtworkCache.removeCredentialEntries()
         setupMediaKeys()
         
         Task {

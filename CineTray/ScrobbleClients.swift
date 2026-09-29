@@ -319,7 +319,7 @@ struct LastFMClient {
         all["format"] = "json"
         var components = URLComponents(url: Self.baseURL, resolvingAgainstBaseURL: false)!
         components.queryItems = all.map { URLQueryItem(name: $0.key, value: $0.value) }
-        let (data, response) = try await URLSession.shared.data(from: components.url!)
+        let (data, response) = try await URLSession.uncached.data(from: components.url!)
         guard (response as? HTTPURLResponse)?.statusCode == 200 else {
             struct Failure: Decodable { let error: Int; let message: String }
             if let failure = try? JSONDecoder().decode(Failure.self, from: data) {
@@ -338,7 +338,7 @@ struct LastFMClient {
         all["format"] = "json"
         var components = URLComponents(url: Self.baseURL, resolvingAgainstBaseURL: false)!
         components.queryItems = all.map { URLQueryItem(name: $0.key, value: $0.value) }
-        let (data, response) = try await URLSession.shared.data(from: components.url!)
+        let (data, response) = try await URLSession.uncached.data(from: components.url!)
         guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
         return data
     }

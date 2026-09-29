@@ -53,7 +53,7 @@ struct NavidromeClient {
     }
 
     private func get<Body: Decodable>(_ method: String, _ query: [URLQueryItem] = [], as _: Body.Type) async throws -> Body {
-        let (data, response) = try await URLSession.shared.data(from: url(method, query))
+        let (data, response) = try await URLSession.uncached.data(from: url(method, query))
         guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
         // Errors, wrong credentials included, arrive with HTTP 200.
         let status = try JSONDecoder().decode(Envelope<Status>.self, from: data).body

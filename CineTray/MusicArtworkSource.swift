@@ -158,7 +158,7 @@ enum MusicArtworkSource: String, CaseIterable, Identifiable {
         var request = URLRequest(url: requestURL)
         request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
         for (field, value) in headers { request.setValue(value, forHTTPHeaderField: field) }
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
+        guard let (data, response) = try? await URLSession.uncached.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase

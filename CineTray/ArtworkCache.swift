@@ -77,7 +77,7 @@ nonisolated enum ArtworkCache {
     /// full-size poster doesn't sit in memory at original resolution.
     @concurrent
     static func image(at url: URL) async -> CGImage? {
-        guard let (data, _) = try? await session.data(for: request(for: url)),
+        guard let data = await data(at: url),
               let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
         // ponytail: fixed 600 px cap covers the largest view (280 pt music artwork @2x).
         let options: [CFString: Any] = [
@@ -87,6 +87,34 @@ nonisolated enum ArtworkCache {
             kCGImageSourceThumbnailMaxPixelSize: 600,
         ]
         return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+    }
+
+    /// Navidrome's credentials are in the query, and the disk cache keys
+    /// responses by URL, so its artwork is fetched without the cache and
+    /// stored under the URL without them.
+    private static func data(at url: URL) async -> Data? {
+        let request = request(for: url)
+        guard request.url != url else {
+            return try? await session.data(for: request, delegate: PlexTokenRedirectGuard.shared).0
+        }
+        let key = URLRequest(url: url)
+        let cache = session.configuration.urlCache
+        if let cached = cache?.cachedResponse(for: key) { return cached.data }
+        guard let (data, response) = try? await URLSession.uncached.data(for: request),
+              let headers = (response as? HTTPURLResponse).flatMap({ $0.statusCode == 200 ? $0.allHeaderFields : nil }),
+              let stored = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: headers as? [String: String])
+        else { return nil }
+        cache?.storeCachedResponse(CachedURLResponse(response: stored, data: data), for: key)
+        return data
+    }
+
+    /// Removes cache entries older builds wrote with credentials in their
+    /// URLs (Navidrome, API keys). Runs once.
+    static func removeCredentialEntries() {
+        guard !UserDefaults.standard.bool(forKey: SettingsKeys.removedCredentialCacheEntries) else { return }
+        URLCache.shared.removeAllCachedResponses()
+        persistentSession.configuration.urlCache?.removeAllCachedResponses()
+        UserDefaults.standard.set(true, forKey: SettingsKeys.removedCredentialCacheEntries)
     }
 }
 
