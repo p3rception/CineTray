@@ -1155,29 +1155,18 @@ final class AppState {
 
     private func scrobble(item: MediaItem, state: PlaybackState, progressPercent: Double) async {
         switch item.type {
-        case .movies:
-            guard let token = KeychainStore.string(for: KeychainKeys.traktAccessToken), !token.isEmpty else { return }
+        case .movies, .tvShows:
+            guard let token = KeychainStore.string(for: KeychainKeys.traktAccessToken), !token.isEmpty,
+                  let media = Self.traktMedia(for: item) else { return }
             let client = TraktClient()
             do {
-                try await client.scrobble(
-                    state: state,
-                    title: item.title,
-                    year: item.year,
-                    progressPercent: progressPercent,
-                    accessToken: token
-                )
+                try await client.scrobble(state: state, media: media, progressPercent: progressPercent, accessToken: token)
             } catch TraktError.unauthorized {
                 guard let refreshToken = KeychainStore.string(for: KeychainKeys.traktRefreshToken) else { return }
                 if let (newAccess, newRefresh) = try? await TraktClient.refreshAccessToken(refreshToken) {
                     KeychainStore.set(newAccess, for: KeychainKeys.traktAccessToken)
                     KeychainStore.set(newRefresh, for: KeychainKeys.traktRefreshToken)
-                    try? await client.scrobble(
-                        state: state,
-                        title: item.title,
-                        year: item.year,
-                        progressPercent: progressPercent,
-                        accessToken: newAccess
-                    )
+                    try? await client.scrobble(state: state, media: media, progressPercent: progressPercent, accessToken: newAccess)
                 }
             } catch {
                 // Scrobble errors are silently ignored.
@@ -1190,9 +1179,22 @@ final class AppState {
                 return
             }
             try? await LastFMClient().scrobble(artist: artist, track: item.title, sessionKey: sessionKey)
-        case .tvShows:
-            break  // episode-level identity needed; not tracked yet
         }
+    }
+
+    /// What Trakt matches a scrobble on: a movie by title and year, an
+    /// episode by its show's title and the "S1E3" code every source puts in
+    /// the subtitle. Nil when an episode lacks either.
+    private static func traktMedia(for item: MediaItem) -> [String: Any]? {
+        if item.type == .movies {
+            var movie: [String: Any] = ["title": item.title]
+            if let year = item.year { movie["year"] = year }
+            return ["movie": movie]
+        }
+        guard item.kind == .episode, let show = item.attributes["grandparentTitle"], !show.isEmpty,
+              let code = item.subtitle?.wholeMatch(of: /S(\d+)E(\d+)/),
+              let season = Int(code.1), let number = Int(code.2) else { return nil }
+        return ["show": ["title": show], "episode": ["season": season, "number": number]]
     }
 
     // MARK: - Local Library refresh (indexing + metadata scraping)

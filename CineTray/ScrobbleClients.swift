@@ -120,20 +120,17 @@ struct TraktClient {
 
     // MARK: - Scrobble
 
-    /// Scrobbles a movie by title/year match. TV scrobbling needs episode-level
-    /// identity, which the carousel doesn't track yet.
-    /// Throws `TraktError.unauthorized` when the access token has expired.
-    func scrobble(state: PlaybackState, title: String, year: Int?, progressPercent: Double, accessToken: String) async throws {
+    /// Scrobbles `media`, the "movie" or "show" and "episode" objects Trakt
+    /// matches on. Throws `TraktError.unauthorized` when the access token has expired.
+    func scrobble(state: PlaybackState, media: [String: Any], progressPercent: Double, accessToken: String) async throws {
         let action = switch state {
         case .started, .playing: "start"
         case .paused: "pause"
         case .stopped: "stop"
         }
-        var movie: [String: Any] = ["title": title]
-        if let year { movie["year"] = year }
         let (_, status) = try await post(
             path: "/scrobble/\(action)",
-            body: ["movie": movie, "progress": progressPercent],
+            body: media.merging(["progress": progressPercent]) { $1 },
             accessToken: accessToken
         )
         if status == 401 { throw TraktError.unauthorized }

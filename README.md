@@ -80,7 +80,7 @@ For development, `./build.sh` builds `dist/CineTray.app` and opens it without in
 
 Optional. Each service needs a free account of your own. The keys go in Settings > Accounts and are kept in the Keychain.
 
-**Trakt** scrobbles the movies you play and finds posters for your own movies and shows.
+**Trakt** scrobbles the movies and episodes you play and finds posters for your own movies and shows.
 
 1. Create an app at https://trakt.tv/oauth/applications/new. Name it `CineTray` and set Redirect uri to `cinetray://trakt-auth`.
 2. Copy its Client ID and Client Secret into Settings > Accounts > Trakt.

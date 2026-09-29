@@ -70,6 +70,7 @@ struct LocalLibraryScanner {
                     ep.parentID = showID
                     ep.parentKind = .show
                     ep.subtitle = formatEpisodeCode(season: season, episode: episode)
+                    ep.attributes["grandparentTitle"] = showTitle
                     ep.posterURL = Self.artworkURL(in: showDir, stem: stem)
                     entries.append(DownloadIndexEntry(item: ep, filename: rel))
                 }
@@ -97,6 +98,7 @@ struct LocalLibraryScanner {
                         ep.parentID = seasonID
                         ep.parentKind = .season
                         ep.subtitle = formatEpisodeCode(season: seasonNumber, episode: episode)
+                        ep.attributes["grandparentTitle"] = showTitle
                         ep.posterURL = Self.artworkURL(in: seasonDir, stem: stem)
                         entries.append(DownloadIndexEntry(item: ep, filename: rel))
                     }

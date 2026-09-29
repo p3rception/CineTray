@@ -678,7 +678,7 @@ struct AccountsSettingsView: View {
                 }
             }
             if !traktAccessToken.isEmpty {
-                Text("Connected - movie playback will be scrobbled.")
+                Text("Connected - movies and episodes you play will be scrobbled.")
                     .font(.callout)
                     .foregroundStyle(.green)
             }
