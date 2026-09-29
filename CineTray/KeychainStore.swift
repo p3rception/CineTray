@@ -16,11 +16,13 @@ enum KeychainStore {
         secrets()?[key]
     }
 
-    /// Passing nil or an empty string removes the value.
-    static func set(_ value: String?, for key: String) {
-        guard var all = secrets() else { return }
+    /// Passing nil or an empty string removes the value. Returns whether the
+    /// Keychain was updated.
+    @discardableResult
+    static func set(_ value: String?, for key: String) -> Bool {
+        guard var all = secrets() else { return false }
         all[key] = value?.isEmpty == false ? value : nil
-        save(all)
+        return save(all)
     }
 
     /// Reads a secret, migrating it out of UserDefaults if an older build
@@ -30,8 +32,11 @@ enum KeychainStore {
         guard let legacy = UserDefaults.standard.string(forKey: key), !legacy.isEmpty else {
             return nil
         }
-        set(legacy, for: key)
-        UserDefaults.standard.removeObject(forKey: key)
+        // Kept in UserDefaults until the Keychain has it, so a denied
+        // Keychain prompt doesn't lose it; the next launch tries again.
+        if set(legacy, for: key) {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
         return legacy
     }
 
