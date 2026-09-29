@@ -1,5 +1,7 @@
 <p align="center"><img src="Screenshots/Banner.png" alt="CineTray: movies, shows and music from your media servers and your own folders, in the macOS menu bar."></p>
 
+<p align="center"><img src="https://visitor-badge.laobi.icu/badge?page_id=p3rception.CineTray&left_text=Visitors&left_color=%230B111D&right_color=%233B4489&radius=5&height=25" alt="Visitors"></p>
+
 ## Contents
 
 *   [Supported servers](#supported-servers)
