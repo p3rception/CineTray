@@ -19,6 +19,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - TorrServer shows list all their seasons at once, read from the release names, without waking every release. A season's files load when you open it. If TorrServer is still looking for peers for a release, the season says so, instead of leaving that release's episodes out.
+- A TorrServer release without TMDB data joins its show when one of the titles in its name, as in "Ричер (Сезон 2) / Reacher / S2E1-8", matches the show's title or original title.
 - When a show's seasons or a season's episodes fail to load, a Retry button tries again.
 - The checkboxes that choose which items get a download button now tick when clicked, and posters show the button right away. They moved into the Downloads section of Settings > Data, next to Enable Downloads.
 - An account saved by an older build is no longer lost when it can't be moved to the Keychain, for example because you denied access. CineTray tries again on the next launch.

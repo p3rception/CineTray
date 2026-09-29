@@ -43,6 +43,8 @@ struct TorrServerClient {
             let id: Int?
             let title: String?
             let name: String?
+            let original_title: String?
+            let original_name: String?
             let release_date: String?
             let first_air_date: String?
             let overview: String?
@@ -210,19 +212,34 @@ struct TorrServerMediaProvider: MediaProvider {
 
     /// Every movie and show, each with the torrents behind it, newest first.
     private func catalog() async throws -> [(item: MediaItem, torrents: [TorrServerClient.Torrent])] {
-        let torrents = try await client.torrents().sorted { ($0.timestamp ?? 0) > ($1.timestamp ?? 0) }
+        let torrents = try await client.torrents()
+            .sorted { ($0.timestamp ?? 0) > ($1.timestamp ?? 0) }
+            .map { (torrent: $0, tmdb: TorrServerClient.metadata(of: $0)?.movie) }
         var result: [(item: MediaItem, torrents: [TorrServerClient.Torrent])] = []
-        for torrent in torrents {
-            let tmdb = TorrServerClient.metadata(of: torrent)?.movie
+        // The local and original titles of the shows with TMDB data.
+        var showNames: [String: Set<String>] = [:]
+        // Releases with TMDB data first, so a release without it can join
+        // its show by name.
+        for (torrent, tmdb) in torrents.filter({ $0.tmdb?.id != nil }) + torrents.filter({ $0.tmdb?.id == nil }) {
+            let tmdbNames = [tmdb?.title, tmdb?.name, tmdb?.original_title, tmdb?.original_name].compactMap { $0 }
+            let names = tmdbNames.isEmpty ? Self.names(in: torrent.title) : tmdbNames
+            let lowercasedNames = Set(names.map { $0.lowercased() })
+            if tmdb?.id == nil, ["", "tv"].contains(torrent.category ?? "") {
+                let matches = showNames.keys.filter { !showNames[$0, default: []].isDisjoint(with: lowercasedNames) }
+                // Only an unambiguous name: two shows may share one.
+                if matches.count == 1, let index = result.firstIndex(where: { $0.item.id == matches[0] }) {
+                    result[index].torrents.append(torrent)
+                    continue
+                }
+            }
             guard let type = Self.mediaType(of: torrent, tmdb: tmdb) else { continue }
-            let title = tmdb?.title ?? tmdb?.name ?? Self.cleanTitle(torrent.title)
-            let key = tmdb?.id.map { "tmdb\($0)" } ?? title.lowercased()
-            let id = type == .movies ? torrent.hash : "show:\(key)"
-            // A release without TMDB data joins the show with its title.
-            if let index = result.firstIndex(where: { $0.item.id == id || type == .tvShows && $0.item.kind == .show && $0.item.title.lowercased() == title.lowercased() }) {
+            let title = names.first ?? torrent.title
+            let id = type == .movies ? torrent.hash : "show:\(tmdb?.id.map { "tmdb\($0)" } ?? title.lowercased())"
+            if let index = result.firstIndex(where: { $0.item.id == id }) {
                 result[index].torrents.append(torrent)
                 continue
             }
+            if type == .tvShows, tmdb?.id != nil { showNames[id] = lowercasedNames }
             let date = tmdb?.release_date ?? tmdb?.first_air_date
             let year = date.flatMap { Int($0.prefix(4)) } ?? torrent.title.firstMatch(of: (/\b(?:19|20)\d{2}\b/).wordBoundaryKind(.simple)).flatMap { Int($0.output) }
             // Web addresses only: a file:// poster would be read from disk.
@@ -240,6 +257,10 @@ struct TorrServerMediaProvider: MediaProvider {
                 addedAt: torrent.timestamp.map { Date(timeIntervalSince1970: $0) }
             ), [torrent]))
         }
+        for index in result.indices {
+            result[index].torrents.sort { ($0.timestamp ?? 0) > ($1.timestamp ?? 0) }
+            result[index].item.addedAt = result[index].torrents.first?.timestamp.map { Date(timeIntervalSince1970: $0) }
+        }
         return result
     }
 
@@ -254,13 +275,22 @@ struct TorrServerMediaProvider: MediaProvider {
         }
     }
 
+    /// The titles in a release name. Russian releases name the show in each
+    /// language, "Ричер (Сезон 2) / Reacher / S2E1-8", so each part is one.
+    private static func names(in title: String) -> [String] {
+        title.split(separator: " / ").compactMap { part in
+            let name = cleanTitle(String(part.replacing(/\[[^\]]*\]/, with: "").split(separator: /\s[(\[]/).first ?? ""))
+            return name.isEmpty ? nil : name
+        }
+    }
+
     /// "The.Matrix.1999.1080p.BluRay" becomes "The Matrix": the name ends at
     /// the first year, season or resolution tag. The regexes here use simple
     /// word boundaries; Unicode ones don't break between "Matrix.1999".
     private static func cleanTitle(_ title: String) -> String {
         let end = title.firstMatch(of: (/[\s._\-\[(]+(?:[Ss]\d{1,2}|[Ss]eason\s*\d|(?:19|20)\d{2}\b|\d{3,4}p\b)/).wordBoundaryKind(.simple))?.range.lowerBound ?? title.endIndex
         let name = title[..<end].replacing(/[._]/, with: " ").trimmingCharacters(in: .whitespaces)
-        return name.isEmpty ? title : name
+        return name.isEmpty ? title.trimmingCharacters(in: .whitespaces) : name
     }
 
     /// "S02", "Season 2", "Сезон: 2", or a pack: "S01-S04", "Сезон 1-2".
