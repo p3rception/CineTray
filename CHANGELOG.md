@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Downloads can no longer end up outside the download folder. A server could name a file so that downloading it wrote to, or deleted, a folder above your download folder.
+- Delete Downloads only removes files inside the download folder, even when the folder's `.cinetray-downloads.json` has been edited.
 - Albums in your own music show their cover instead of a photo of the artist, and artists get a photo. Albums indexed before this fix keep their old picture; delete `.cinetray-downloads.json` in your Music library folder and press Refresh to fetch them again.
 
 ## 2026-09-28

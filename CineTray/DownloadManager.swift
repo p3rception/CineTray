@@ -240,8 +240,7 @@ final class DownloadManager {
         
         for (id, entry) in index {
             if entry.item.source != .local {
-                if let filename = entry.filename {
-                    let fileURL = folder.appending(path: filename)
+                if let fileURL = entry.filename.flatMap({ fileURL($0, in: folder) }) {
                     try? FileManager.default.removeItem(at: fileURL)
                 }
                 index.removeValue(forKey: id)
@@ -344,9 +343,15 @@ final class DownloadManager {
     /// The indexed file for `item` in `folder`, if it still exists on disk.
     private static func indexedFileURL(for item: MediaItem, in folder: URL?) -> URL? {
         guard let folder,
-              let filename = readIndexFromFolder(folder)[item.id]?.filename else { return nil }
-        let fileURL = folder.appending(path: filename)
+              let filename = readIndexFromFolder(folder)[item.id]?.filename,
+              let fileURL = fileURL(filename, in: folder) else { return nil }
         return FileManager.default.fileExists(atPath: fileURL.path) ? fileURL : nil
+    }
+
+    /// `filename` from an index inside `folder`, or nil when a ".." would
+    /// leave it. Anyone who can write to the folder can edit its index.
+    private static func fileURL(_ filename: String, in folder: URL) -> URL? {
+        filename.split(separator: "/").contains("..") ? nil : folder.appending(path: filename)
     }
 
     func download(_ item: MediaItem, appState: AppState) {
@@ -659,11 +664,15 @@ final class DownloadManager {
         return result.isEmpty ? "Unknown" : result
     }
 
+    /// Every component comes from the server (paths, IDs, titles, the file
+    /// extension), so each is sanitized: a ".." would place the file, and the
+    /// removeItem before it, outside the download folder.
     private static func relativePath(for item: MediaItem, ancestors: [MediaItem], fileExtension ext: String) -> String {
+        let fallbackFilename = "\(sanitizePathComponent(item.id))-\(sanitizePathComponent(item.title)).\(sanitizePathComponent(ext))"
         if item.kind == .episode {
             let originalComponents = (item.attributes["originalPath"] ?? "")
                 .components(separatedBy: CharacterSet(charactersIn: "\\/")).filter { !$0.isEmpty }
-            let filename = originalComponents.last ?? "\(item.id)-\(sanitizePathComponent(item.title)).\(ext)"
+            let filename = originalComponents.last.map(sanitizePathComponent) ?? fallbackFilename
 
             let showName: String?
             if let s = ancestors.first(where: { $0.kind == .show }) {
@@ -701,6 +710,7 @@ final class DownloadManager {
 
         if let original = item.attributes["originalPath"], !original.isEmpty {
             let components = original.components(separatedBy: CharacterSet(charactersIn: "\\/")).filter { !$0.isEmpty }
+                .map(sanitizePathComponent)
             if !components.isEmpty {
                 switch item.type {
                 case .tvShows: return components.suffix(3).joined(separator: "/")
@@ -710,7 +720,7 @@ final class DownloadManager {
             }
         }
 
-        let filename = "\(item.id)-\(sanitizePathComponent(item.title)).\(ext)"
+        let filename = fallbackFilename
         switch item.kind {
         case .track:
             let artistName = item.subtitle ?? ancestors.first(where: { $0.kind == .artist })?.title
