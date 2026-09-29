@@ -129,16 +129,16 @@ CineTray is a sleek, lightweight, and highly customizable menu bar application d
 
 ## Key Features
 
-*   **Quick Access:** Access every library on your servers (movies, shows, music and more) and your playlists directly from the menu bar (`Welcome-CineTray.jpg`).
-*   **Dynamic Search & Filtering:** Find exactly what you're looking for instantly. The search bar dynamically filters your library as you type, narrowing down results across all media types (`Dynamic-Filtering.jpg`).
-*   **Full Library Exploration:** Easily drill down into your content. Browse from your top-level shows down to specific seasons and episodes with a clean, intuitive interface (`Full-Library-Exploration.jpg`).
+*   **Quick Access:** Access every library on your servers (movies, shows, music and more) and your playlists directly from the menu bar ([Welcome-CineTray.png](https://github.com/p3rception/CineTray/blob/main/Screenshots/Welcome-CineTray.png)).
+*   **Dynamic Search & Filtering:** Find exactly what you're looking for instantly. The search bar dynamically filters your library as you type, narrowing down results across all media types ([Dynamic-Filtering.png](https://github.com/p3rception/CineTray/blob/main/Screenshots/Dynamic-Filtering.png)).
+*   **Full Library Exploration:** Easily drill down into your content. Browse from your top-level shows down to specific seasons and episodes with a clean, intuitive interface ([Full-Library-Exploration.png](https://github.com/p3rception/CineTray/blob/main/Screenshots/Full-Library-Exploration.png)).
 *   **Integrated Playback:**
-    *   **Inline Music Player:** Control your tunes without opening a separate window. The inline player lives right inside the menu bar dropdown (`Inline-Music-Player.jpg`).
-    *   **Mini Video Player:** Watch your favorite shows while you work using the floating picture-in-picture video player (`Mini-Video-Player.jpg`).
+    *   **Inline Music Player:** Control your tunes without opening a separate window. The inline player lives right inside the menu bar dropdown ([Inline-Music-Player.png](https://github.com/p3rception/CineTray/blob/main/Screenshots/Inline-Music-Player.png)).
+    *   **Mini Video Player:** Watch your favorite shows while you work using the floating picture-in-picture video player ([Mini-Video-Player.png](https://github.com/p3rception/CineTray/blob/main/Screenshots/Mini-Video-Player.png)).
 *   **Offline Downloads:** Queue up movies and episodes to download locally so you can enjoy your media on the go.
 *   **Highly Customizable UI:** Tailor CineTray to your exact preferences. 
-    *   Choose which libraries appear, adjust the player UI size, and configure carousel items (`Customisation.jpg`).
-    *   Switch to a streamlined view for a cleaner look (`Compact-Mode.jpg`).
+    *   Choose which libraries appear, adjust the player UI size, and configure carousel items ([Customisation.png](https://github.com/p3rception/CineTray/blob/main/Screenshots/Customisation.png)).
+    *   Switch to a streamlined view for a cleaner look ([Compact-Mode.png](https://github.com/p3rception/CineTray/blob/main/Screenshots/Compact-Mode.png)).
 
 ## Disclaimer
 
