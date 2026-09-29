@@ -649,7 +649,8 @@ struct JellyfinClient {
     /// (starts in a fraction of a second, no server work); anything else
     /// goes through the HLS remux/transcode, which takes a few seconds.
     private func videoStreamURL(itemID: String) async -> URL {
-        if let source = try? await mediaSource(itemID: itemID), Self.canDirectPlay(source) {
+        let source = try? await mediaSource(itemID: itemID)
+        if let source, Self.canDirectPlay(source) {
             var components = URLComponents(
                 url: config.serverURL.appending(path: "/Videos/\(itemID)/stream"),
                 resolvingAgainstBaseURL: false
@@ -667,6 +668,7 @@ struct JellyfinClient {
         )!
         var videoCodecs = "h264,hevc"
         if PlexClient.supportsAV1 { videoCodecs += ",av1" }
+        let pick = source?.MediaStreams?.first { $0.Type == "Subtitle" && $0.Index == source?.DefaultSubtitleStreamIndex }
         // Providing codec capabilities encourages Jellyfin to direct-stream (remux) rather than
         // transcode. Direct-stream produces a VOD-type HLS manifest with #EXT-X-ENDLIST, which
         // gives AVFoundation a fully populated seekableTimeRanges - required for the system PiP
@@ -683,8 +685,27 @@ struct JellyfinClient {
             URLQueryItem(name: "SegmentContainer", value: "mp4"),
             URLQueryItem(name: "EnableDirectPlay", value: "false"),
             URLQueryItem(name: "EnableDirectStream", value: "true"),
+            // Hls lists every text subtitle in the playlist, for the player's
+            // menu. Image subtitles can't go there, so the one the user's
+            // Jellyfin settings choose is burned in.
+            URLQueryItem(name: "SubtitleMethod", value: pick?.IsTextSubtitleStream == false ? "Encode" : "Hls"),
         ]
+        // Turns on the subtitle the user's Jellyfin settings choose.
+        if let index = pick?.Index {
+            components.queryItems! += [URLQueryItem(name: "SubtitleStreamIndex", value: String(index))]
+        }
         return components.url!
+    }
+
+    /// Seconds by which the server shows HLS subtitles late. Before
+    /// jellyfin/jellyfin#17299 every WebVTT segment maps its time 0 to 10 s,
+    /// as MPEG-TS segments start there, but the fMP4 segments CineTray asks
+    /// for start at 0. Servers with the fix name the offset in the playlist.
+    static func hlsSubtitleLag(masterPlaylist url: URL) async -> Double {
+        // ponytail: keys on the parameter name in that pull request; if it changes before merging, fixed servers get subtitles 10 s early.
+        guard url.lastPathComponent == "master.m3u8",
+              let (data, _) = try? await URLSession.shared.data(from: url) else { return 0 }
+        return String(decoding: data, as: UTF8.self).contains("VttTimestampMapMpegts") ? 0 : 10
     }
 
     private struct PlaybackSource: Decodable {
@@ -692,8 +713,11 @@ struct JellyfinClient {
             let `Type`: String
             let Codec: String?
             let CodecTag: String?
+            let Index: Int?
+            let IsTextSubtitleStream: Bool?
         }
         let Id: String
+        let DefaultSubtitleStreamIndex: Int?
         let Container: String?
         let MediaStreams: [Stream]?
     }

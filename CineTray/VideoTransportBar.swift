@@ -11,6 +11,7 @@ struct VideoTransportBar: View {
     let totalDuration: Double
     let onPlayPause: () -> Void
     let onSeek: (Double) -> Void
+    let bridge: VLCPlayerBridge
 
     @State private var dragProgress: Double?
 
@@ -48,6 +49,7 @@ struct VideoTransportBar: View {
                 .padding(.vertical, 6)
                 .glassEffect()
                 .frame(maxWidth: .infinity)
+                VLCTrackMenu(bridge: bridge)
             }
             .padding(.horizontal, 12)
             .padding(.bottom, 10)

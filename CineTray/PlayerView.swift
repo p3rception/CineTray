@@ -1,6 +1,7 @@
 import SwiftUI
 import AVKit
 import Combine
+import MediaAccessibility
 
 /// Playback window for a media item (AVKit for video, mini-player for music).
 /// Handles async stream resolution, scrobbling, position resuming, and queue management.
@@ -148,6 +149,11 @@ struct PlayerView: View {
                 onSingleClick: appState.togglePlayPause
             )
             .overlay {
+                if let cues = appState.subtitleCues {
+                    SubtitleOverlay(cues: cues, player: player, offset: appState.subtitleOffset)
+                }
+            }
+            .overlay {
                 // AVKit draws its own floating control bar at normal sizes.
                 if usePiPControls { pipControls }
             }
@@ -176,7 +182,8 @@ struct PlayerView: View {
                             currentTime: appState.currentTime,
                             totalDuration: appState.totalDuration,
                             onPlayPause: appState.togglePlayPause,
-                            onSeek: seek
+                            onSeek: seek,
+                            bridge: bridge
                         )
                     }
                 }
@@ -243,10 +250,39 @@ struct PlayerView: View {
                         .help("Crop the video to a fixed aspect ratio")
                     }
                     .sharedBackgroundVisibility(.hidden)
+                    ToolbarItem(placement: .primaryAction) {
+                        subtitleTimingControl
+                    }
                     openInServerToolbarItem
                     pinToolbarItem
                 }
             }
+    }
+
+    /// Subtitle offset with - and + in view, so repeated clicks step it
+    /// without reopening anything. Clicking the value resets it.
+    private var subtitleTimingControl: some View {
+        let offset = appState.subtitleOffset
+        let value = "\(offset.formatted(.number.precision(.fractionLength(1)).sign(strategy: .always(includingZero: false)))) s"
+        return HStack(spacing: 4) {
+            Image(systemName: "captions.bubble")
+                .accessibilityHidden(true)
+            Button { appState.subtitleOffset -= 0.5 } label: { Image(systemName: "minus") }
+                .help("Show subtitles 0.5 seconds earlier")
+                .accessibilityLabel("Show Subtitles Earlier")
+            Button(value) { appState.subtitleOffset = 0 }
+                .font(.callout.monospacedDigit())
+                .frame(minWidth: 44)
+                .disabled(offset == 0)
+                .help("Subtitle timing. Click to reset.")
+                .accessibilityLabel("Subtitle Timing \(value), reset")
+            Button { appState.subtitleOffset += 0.5 } label: { Image(systemName: "plus") }
+                .help("Show subtitles 0.5 seconds later")
+                .accessibilityLabel("Show Subtitles Later")
+        }
+        .buttonStyle(.borderless)
+        .font(toolbarIconFont)
+        .padding(.horizontal, 6)
     }
 
     /// Opens the playing item's page in Plex Web or Jellyfin.
@@ -387,6 +423,92 @@ struct PlayerView: View {
 /// AVKit video view with a controllable controls style, so the scrubber can
 /// be dropped at small window sizes - SwiftUI's `VideoPlayer` offers no
 /// control over its overlay controls.
+/// AVPlayer's subtitles, taken over from AVKit so `SubtitleOverlay` can
+/// shift them: AVPlayer has no subtitle delay, and Jellyfin shows HLS
+/// subtitles 10 s late with fMP4 segments (jellyfin/jellyfin#16647).
+final class SubtitleCues: NSObject, AVPlayerItemLegibleOutputPushDelegate {
+    let output = AVPlayerItemLegibleOutput()
+    /// Seconds by which the server shows the subtitles late.
+    var lag: Double = 0
+    /// Choosing Off in AVKit's menu stops the cues without clearing the
+    /// last ones, so the selection in this group is checked when drawing.
+    var group: AVMediaSelectionGroup?
+    private var cues: [(time: Double, text: String)] = []
+
+    override init() {
+        super.init()
+        output.suppressesPlayerRendering = true
+        // Cues arrive this far ahead of their time, which bounds how much
+        // earlier than AVPlayer's timing they can be shown.
+        output.advanceIntervalForDelegateInvocation = 30
+        output.setDelegate(self, queue: .main)
+    }
+
+    func legibleOutput(_ output: AVPlayerItemLegibleOutput, didOutputAttributedStrings strings: [NSAttributedString],
+                       nativeSampleBuffers nativeSamples: [Any], forItemTime itemTime: CMTime) {
+        // After a seek, cues arrive again from the new position; later ones are stale.
+        cues.removeAll { $0.time >= itemTime.seconds }
+        cues.append((itemTime.seconds, strings.map(\.string).joined(separator: "\n")))
+    }
+
+    func text(at seconds: Double, in item: AVPlayerItem?) -> String {
+        guard let group, item?.currentMediaSelection.selectedMediaOption(in: group) != nil else { return "" }
+        return cues.last { $0.time <= seconds }?.text ?? ""
+    }
+}
+
+/// Draws `SubtitleCues`, shifted by the server's lag and the user's offset,
+/// in the caption style chosen in AVKit's subtitle menu or in System
+/// Settings > Accessibility > Captions. The style is read on every redraw,
+/// so a change shows while the video plays.
+private struct SubtitleOverlay: View {
+    let cues: SubtitleCues
+    let player: AVPlayer
+    let offset: Double
+    @AppStorage(SettingsKeys.subtitleSize) private var sizeScale = 1.0
+
+    var body: some View {
+        GeometryReader { geo in
+            TimelineView(.periodic(from: .now, by: 0.1)) { _ in
+                let text = cues.text(at: player.currentTime().seconds + cues.lag - offset, in: player.currentItem)
+                if !text.isEmpty {
+                    let size = max(11, geo.size.height / 28 * sizeScale * MACaptionAppearanceGetRelativeCharacterSize(.user, nil))
+                    let font = MACaptionAppearanceCopyFontDescriptorForStyle(.user, nil, .default).takeRetainedValue()
+                    // ponytail: text edges are approximated with shadows.
+                    let (blur, shift): (CGFloat, CGFloat) = switch MACaptionAppearanceGetTextEdgeStyle(.user, nil) {
+                    case .uniform: (size / 20, 0)
+                    case .dropShadow: (size / 20, size / 15)
+                    case .raised: (0, size / 30)
+                    case .depressed: (0, -size / 30)
+                    default: (0, 0)
+                    }
+                    let edgeColor: Color = blur == 0 && shift == 0 ? .clear : .black
+                    Text(text)
+                        .font(Font(CTFontCreateWithFontDescriptor(font, size, nil)))
+                        .foregroundStyle(Color(cgColor: MACaptionAppearanceCopyForegroundColor(.user, nil).takeRetainedValue())
+                            .opacity(MACaptionAppearanceGetForegroundOpacity(.user, nil)))
+                        // Twice, since one shadow is too faint for an outline.
+                        .shadow(color: edgeColor, radius: blur, x: shift, y: shift)
+                        .shadow(color: edgeColor, radius: blur, x: shift, y: shift)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(Color(cgColor: MACaptionAppearanceCopyBackgroundColor(.user, nil).takeRetainedValue())
+                            .opacity(MACaptionAppearanceGetBackgroundOpacity(.user, nil)), in: .rect(cornerRadius: 4))
+                        .padding(4)
+                        .background(Color(cgColor: MACaptionAppearanceCopyWindowColor(.user, nil).takeRetainedValue())
+                            .opacity(MACaptionAppearanceGetWindowOpacity(.user, nil)),
+                            in: .rect(cornerRadius: MACaptionAppearanceGetWindowRoundedCornerRadius(.user, nil)))
+                        // ponytail: fixed height clears AVKit's control bar; follow the bar if it gets in the way.
+                        .padding(.bottom, 72)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                }
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
 private struct VideoPlayerRepresentable: NSViewRepresentable {
     let player: AVPlayer
     let controlsStyle: AVPlayerViewControlsStyle

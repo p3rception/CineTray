@@ -77,6 +77,10 @@ final class VLCPlayerBridge {
         try player.seek(to: .milliseconds(Int64(seconds * 1000)))
     }
 
+    func setSubtitleDelay(_ seconds: Double) {
+        try? player.setSubtitleDelay(.milliseconds(Int64(seconds * 1000)))
+    }
+
     func setVolume(_ volume: Float) throws {
         try player.setAudioVolume(Volume(volume))
     }
@@ -88,6 +92,7 @@ final class VLCPlayerBridge {
 /// direct SwiftVLC import while still letting the bridge own the Player.
 struct VLCVideoPlayerView: View {
     let bridge: VLCPlayerBridge
+    @AppStorage(SettingsKeys.subtitleSize) private var subtitleSize = 1.0
 
     var body: some View {
         VideoView(bridge.player)
@@ -96,6 +101,45 @@ struct VLCVideoPlayerView: View {
                 // calling play() before this causes libVLC's video output to crash.
                 try? bridge.playPending()
             }
+            .task(id: subtitleSize) {
+                bridge.player.setSubtitleScale(SubtitleScale(Float(subtitleSize)))
+            }
+    }
+}
+
+/// Audio and subtitle choices for the VLC engine; AVKit's floating bar
+/// already offers the same menu for AVPlayer.
+struct VLCTrackMenu: View {
+    let bridge: VLCPlayerBridge
+
+    var body: some View {
+        let player = bridge.player
+        if player.audioTracks.count > 1 || !player.subtitleTracks.isEmpty {
+            Menu {
+                Picker("Audio", selection: Binding(get: { player.selectedAudioTrack },
+                                                   set: { player.selectedAudioTrack = $0 })) {
+                    ForEach(player.audioTracks) { Text($0.name).tag(Optional($0)) }
+                }
+                Picker("Subtitles", selection: Binding(get: { player.selectedSubtitleTrack },
+                                                       set: { player.selectedSubtitleTrack = $0 })) {
+                    Text("Off").tag(Track?.none)
+                    ForEach(player.subtitleTracks) { Text($0.name).tag(Optional($0)) }
+                }
+            } label: {
+                Image(systemName: "captions.bubble")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 32, height: 32)
+                    .contentShape(Circle())
+            }
+            .pickerStyle(.inline)
+            .menuIndicator(.hidden)
+            .buttonStyle(.plain)
+            .fixedSize()
+            .glassEffect(.regular.interactive(), in: .circle)
+            .accessibilityLabel("Audio and Subtitles")
+            .help("Audio and Subtitles")
+        }
     }
 }
 

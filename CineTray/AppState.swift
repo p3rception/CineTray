@@ -1273,6 +1273,12 @@ final class AppState {
     var currentTime: Double = 0
     var totalDuration: Double = 0
     var isScrubbing = false
+    /// Seconds to show video subtitles later (negative: earlier), for the current item.
+    var subtitleOffset: Double = 0 {
+        didSet { vlcBridge?.setSubtitleDelay(subtitleOffset) }
+    }
+    /// Subtitles of the AVPlayer video, which CineTray draws itself.
+    private(set) var subtitleCues: SubtitleCues?
     var volume: Float = 1.0
     /// Non-nil error message to display in the player window when a session fails.
     var playbackError: String?
@@ -1315,6 +1321,7 @@ final class AppState {
         let generation = playbackGeneration
         tearDownPlayer()
         currentItem = item
+        subtitleOffset = 0
         playbackError = nil
         self.inlinePlaylist = inlinePlaylist
         do {
@@ -1394,6 +1401,16 @@ final class AppState {
                         guard let self, !Task.isCancelled,
                               generation == self.playbackGeneration else { return }
                         self.handleInlineTrackEnd()
+                    }
+                }
+
+                if item.type != .music, let playerItem = newPlayer.currentItem {
+                    let cues = SubtitleCues()
+                    playerItem.add(cues.output)
+                    subtitleCues = cues
+                    cues.group = try? await playerItem.asset.loadMediaSelectionGroup(for: .legible)
+                    if item.source == .jellyfin {
+                        cues.lag = await JellyfinClient.hlsSubtitleLag(masterPlaylist: url)
                     }
                 }
             } else {
@@ -1578,6 +1595,7 @@ final class AppState {
         player = nil
         vlcBridge?.stop()
         vlcBridge = nil
+        subtitleCues = nil
         isPlaying = false
         currentTime = 0
         totalDuration = 0

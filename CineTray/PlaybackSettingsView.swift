@@ -11,6 +11,7 @@ struct PlaybackSettingsView: View {
     @AppStorage(SettingsKeys.continueMusic) private var continueMusic = ContinueMusicGrouping.byAlbumPlaylist.rawValue
     @AppStorage(SettingsKeys.continueTimeout) private var continueTimeout = ContinueTimeout.forever.rawValue
     @AppStorage(SettingsKeys.videoPlayerApp) private var videoPlayerApp = ""
+    @AppStorage(SettingsKeys.subtitleSize) private var subtitleSize = 1.0
 
     var body: some View {
         Form {
@@ -25,6 +26,11 @@ struct PlaybackSettingsView: View {
                             Button("Use CineTray") { videoPlayerApp = "" }
                         }
                     }
+                }
+                Picker("Subtitle Size", selection: $subtitleSize) {
+                    Text("Small").tag(0.75)
+                    Text("Medium").tag(1.0)
+                    Text("Large").tag(1.35)
                 }
             } header: {
                 SectionInfoHeader(title: "Video", info: "Another app plays from the beginning, and CineTray can't resume, save progress, scrobble or play the next item for it. Music always plays in CineTray.")

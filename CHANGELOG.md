@@ -5,6 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## 2026-09-29
 
+### Added
+
+- Choose the audio track and subtitles for MKV, AVI and other videos that play in CineTray's own player: click the speech bubble at the right of the control bar. The button appears when a video has subtitles or more than one audio track. MP4 and MOV videos already had this in their control bar.
+- Subtitles for Jellyfin videos that the server converts for playback, such as MKV files. Every text subtitle is listed in the player's subtitle menu, and the one your Jellyfin settings pick is turned on. Image subtitles (PGS, VobSub) are shown only when your Jellyfin settings pick them, burned into the picture. Jellyfin 12.1 and earlier time these subtitles 10 seconds late; CineTray corrects this.
+- Subtitle timing in the video player's toolbar, for subtitles that don't match the speech: click - to show them half a second earlier and + to show them later, as many times as needed. Click the value between them to reset it. The setting applies to the current video only.
+- Subtitle Size in Settings > Playback: Small, Medium or Large, for every video. It changes the subtitles of a playing video right away. Subtitles also follow the style chosen in the player's subtitle menu or in System Settings > Accessibility > Captions, such as Classic or Outline Text.
+
 ### Changed
 
 - Server addresses typed without `http://` or `https://` fall back to plain HTTP only on your local network, for example `192.168.1.5:8096`, `nas.local` or `nas`. For a server on the internet without HTTPS, type the address with `http://`. Before, a failed HTTPS attempt sent your password over plain HTTP, where others on the network path could read it.
