@@ -293,9 +293,12 @@ struct TorrServerMediaProvider: MediaProvider {
         return name.isEmpty ? title.trimmingCharacters(in: .whitespaces) : name
     }
 
-    /// "S02", "Season 2", "Сезон: 2", or a pack: "S01-S04", "Сезон 1-2".
+    /// "S02", "Season 2", "5 сезон", "Сезон: 5", or a pack: "S01-S04",
+    /// "1-4 сезон". Russian names put episodes after the season: "5 сезон:
+    /// 1-5 серии".
     private static func seasons(in text: String) -> ClosedRange<Int>? {
-        guard let match = text.firstMatch(of: (/\b(?:[Ss]|[Ss]easons?[\s:]*|[Сс]езоны?[\s:]*)(\d{1,2})(?:\s*[-–]\s*[Ss]?(\d{1,2}))?(?:[Ee]\d|\b)/).wordBoundaryKind(.simple)),
+        guard let match = text.firstMatch(of: (/\b(\d{1,2})(?:\s*[-–]\s*(\d{1,2}))?\s*[Сс]езон/).wordBoundaryKind(.simple))
+                ?? text.firstMatch(of: (/\b(?:[Ss]|[Ss]easons?[\s:]*|[Сс]езоны?[\s:]*)(\d{1,2})(?:\s*[-–]\s*[Ss]?(\d{1,2})(?!\s*[Сс]ери))?(?:[Ee]\d|\b)/).wordBoundaryKind(.simple)),
               let first = Int(match.output.1) else { return nil }
         return first...max(first, match.output.2.flatMap { Int($0) } ?? first)
     }

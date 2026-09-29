@@ -3,6 +3,12 @@
 Changes in this fork compared to [KuDoZ007/QP](https://github.com/KuDoZ007/QP).
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-09-30
+
+### Fixed
+
+- TorrServer release names with the season number first, as in "5 сезон: 1-5 серии", are placed in season 5.
+
 ## 2026-09-29
 
 ### Added
