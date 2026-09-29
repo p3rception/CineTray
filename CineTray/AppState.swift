@@ -369,7 +369,19 @@ final class AppState {
         await withTaskGroup(of: (Int, Result<Output, Error>).self) { group in
             for (index, input) in inputs.enumerated() {
                 group.addTask { @MainActor in
-                    do { return (index, .success(try await work(input))) } catch { return (index, .failure(error)) }
+                    var attempts = 1
+                    while true {
+                        do {
+                            return (index, .success(try await work(input)))
+                        } catch let error as URLError where error.code == .notConnectedToInternet && attempts < 4 {
+                            // Right after launch, until macOS has settled the Local
+                            // Network permission, LAN requests fail as if offline.
+                            attempts += 1
+                            try? await Task.sleep(for: .seconds(1))
+                        } catch {
+                            return (index, .failure(error))
+                        }
+                    }
                 }
             }
             var results = [Result<Output, Error>](repeating: .failure(CancellationError()), count: inputs.count)

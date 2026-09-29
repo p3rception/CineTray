@@ -309,6 +309,26 @@ struct TorrServerMediaProvider: MediaProvider {
         return nil
     }
 
+    /// Episode numbers of files named without one, from the part of the name
+    /// that differs between them: "The Devil Judge 05.mp4" or "05-й
+    /// выпуск.mkv" is episode 5.
+    private static func numbersByName(_ paths: [String]) -> [String: Int] {
+        let names = paths.map { Array(($0 as NSString).lastPathComponent) }
+        guard let first = names.first, names.count > 1 else { return [:] }
+        func shared(_ names: [[Character]]) -> Int {
+            names.dropFirst().reduce(names[0].count) { count, name in zip(names[0], name).prefix(count).prefix { $0 == $1 }.count }
+        }
+        // Stop before shared digits, so "Show 12" and "Show 13" keep the 1.
+        var head = shared(names), tail = shared(names.map { Array($0.reversed()) })
+        while head > 0, first[head - 1].isNumber { head -= 1 }
+        while tail > 0, first[first.count - tail].isNumber { tail -= 1 }
+        var numbers: [String: Int] = [:]
+        for (path, name) in zip(paths, names) where head <= name.count - tail {
+            numbers[path] = Int(String(name[head..<(name.count - tail)]))
+        }
+        return numbers
+    }
+
     private static func isVideo(_ file: TorrServerClient.File) -> Bool {
         videoExtensions.contains((file.path as NSString).pathExtension.lowercased())
     }
@@ -337,13 +357,15 @@ struct TorrServerMediaProvider: MediaProvider {
             case .success(let list): files = list
             case .failure(let error): firstError = firstError ?? error; continue
             }
-            let videos = files.filter(Self.isVideo).sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
-            // ponytail: files without S01E02-style numbers are numbered in path
-            // order within the torrent's season; parse "01. Title.mkv" if that misplaces packs.
+            // A sample or trailer would take the slot of the episode it is cut from.
+            let videos = files.filter { Self.isVideo($0) && !$0.path.contains((/(?i)\b(?:sample|trailer|extras|bonus|featurettes?)\b/).wordBoundaryKind(.simple)) }
+                .sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
+            let byName = Self.numbersByName(videos.map(\.path).filter { Self.episodeNumber(in: $0) == nil })
+            // ponytail: files with no number at all are numbered in path order.
             let season = Self.seasons(in: torrent.title)?.lowerBound ?? 1
             var unnumbered = 0
             for file in videos {
-                let number = Self.episodeNumber(in: file.path) ?? {
+                let number = Self.episodeNumber(in: file.path) ?? byName[file.path].map { (season, $0) } ?? {
                     unnumbered += 1
                     return (season, unnumbered)
                 }()
