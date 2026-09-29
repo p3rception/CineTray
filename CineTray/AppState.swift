@@ -1210,8 +1210,8 @@ final class AppState {
                 var item = entry.item
                 switch type {
                 case .music:
-                    let artist = item.subtitle ?? ""
-                    let album = item.parentTitle ?? ""
+                    let artist = item.kind == .artist ? item.title : item.subtitle ?? ""
+                    let album = item.kind == .album ? item.title : item.parentTitle ?? ""
                     let key = "\(artist)\n\(album)"
                     if let cached = musicArtwork[key] {
                         item.posterURL = cached

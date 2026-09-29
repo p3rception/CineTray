@@ -3,6 +3,12 @@
 Changes in this fork compared to [KuDoZ007/QP](https://github.com/KuDoZ007/QP).
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-09-29
+
+### Fixed
+
+- Albums in your own music show their cover instead of a photo of the artist, and artists get a photo. Albums indexed before this fix keep their old picture; delete `.cinetray-downloads.json` in your Music library folder and press Refresh to fetch them again.
+
 ## 2026-09-28
 
 ### Added
