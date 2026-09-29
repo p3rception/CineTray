@@ -11,3 +11,6 @@ CineTray/Secrets.swift
 # SwiftPM build output
 .build/
 dist/
+
+# Internal notes, not published
+internal_docs/
