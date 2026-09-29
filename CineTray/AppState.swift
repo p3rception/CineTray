@@ -654,6 +654,13 @@ final class AppState {
         guard childrenByItemID[container.id] != nil,
               let children = try? await provider(for: container)?.children(of: container) else { return }
         childrenByItemID[container.id] = children
+        // Close an open level whose item is gone.
+        for (section, path) in drillPath {
+            if let index = path.firstIndex(where: { $0.id == container.id }), index + 1 < path.count,
+               !children.contains(where: { $0.id == path[index + 1].id }) {
+                drillPath[section] = Array(path.prefix(through: index))
+            }
+        }
     }
 
     /// After a server video stops, its watched state (and its season's and
