@@ -1,4 +1,5 @@
 import Foundation
+import Network
 
 /// The kinds of media catalogs providers can serve.
 enum MediaType: String, CaseIterable, Identifiable, Codable {
@@ -460,11 +461,32 @@ struct MediaItem: Identifiable, Hashable, Codable {
 
 /// The URLs to try for a server address typed by the user. Without a
 /// scheme ("jellyfin.example.com"), HTTPS comes first and plain HTTP
-/// second; an explicit scheme is kept as the only candidate.
+/// second, but only for local network addresses: sign-in sends the
+/// password, and on the internet an attacker could make HTTPS fail to get
+/// it sent in plain text. An explicit scheme is kept as the only candidate.
 func serverURLCandidates(_ input: String) -> [URL] {
     let address = input.trimmingCharacters(in: .whitespacesAndNewlines)
     let strings = address.contains("://") ? [address] : ["https://\(address)", "http://\(address)"]
-    return strings.compactMap(URL.init(string:)).filter { $0.host() != nil }
+    return strings.compactMap(URL.init(string:)).filter { url in
+        guard let host = url.host() else { return false }
+        return address.contains("://") || url.scheme == "https" || isLocalNetworkHost(host)
+    }
+}
+
+/// Loopback, private and link-local addresses, `.local` names and
+/// single-label names such as "nas".
+func isLocalNetworkHost(_ host: String) -> Bool {
+    if host == "localhost" || host.hasSuffix(".local") || !host.contains(".") && !host.contains(":") {
+        return true
+    }
+    if let bytes = IPv4Address(host)?.rawValue {
+        return bytes[0] == 10 || bytes[0] == 127 || bytes[0] == 172 && (16...31).contains(bytes[1])
+            || bytes[0] == 192 && bytes[1] == 168 || bytes[0] == 169 && bytes[1] == 254
+    }
+    if let address = IPv6Address(host) {
+        return address.isLoopback || address.isLinkLocal || address.rawValue[0] & 0xfe == 0xfc
+    }
+    return false
 }
 
 extension URL {

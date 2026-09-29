@@ -334,8 +334,8 @@ struct AccountsSettingsView: View {
             plexStatus = "Enter a valid server URL."
             return
         }
-        // Without a scheme, HTTP is kept as a fallback; the first request
-        // promotes whichever address answers.
+        // Without a scheme, a local address keeps HTTP as a fallback; the
+        // first request promotes whichever address answers.
         let server = PlexServer(
             id: UUID().uuidString,
             name: url.host() ?? "Plex Server",

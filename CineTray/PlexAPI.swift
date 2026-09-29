@@ -216,9 +216,18 @@ struct PlexClient {
         }
     }
 
+    /// HTTP addresses are tried only when no HTTPS one answers: every request
+    /// carries the token, and on a LAN plain HTTP would otherwise win the race,
+    /// since the server's certificate doesn't match its raw IP address.
+    private static func firstReachableURL(among urls: [URL]) async -> URL? {
+        let secure = urls.filter { $0.scheme == "https" }
+        if let url = await firstAnswering(secure) { return url }
+        return await firstAnswering(urls.filter { $0.scheme != "https" })
+    }
+
     /// Asks every address at once for /identity (no token needed, so nothing
     /// sensitive is sent) with a 3 s timeout, and returns the first to answer.
-    private static func firstReachableURL(among urls: [URL]) async -> URL? {
+    private static func firstAnswering(_ urls: [URL]) async -> URL? {
         await withTaskGroup(of: URL?.self) { group in
             for url in urls {
                 group.addTask {

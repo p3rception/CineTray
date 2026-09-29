@@ -33,7 +33,8 @@ nonisolated enum ArtworkCache {
         persistentSession.configuration.urlCache?.currentDiskUsage ?? 0
     }
 
-    /// Plex tokens by server address ("host:port"). Poster URLs are stored
+    /// Plex tokens by server address ("scheme:host:port", so an http:// URL
+    /// never gets the token of an https:// server). Poster URLs are stored
     /// without the token, so it is added as a header when loading them.
     private static let plexTokens = Mutex<[String: String]>([:])
 
@@ -50,7 +51,7 @@ nonisolated enum ArtworkCache {
     }
 
     static func addressKey(_ url: URL) -> String {
-        "\(url.host() ?? ""):\(url.port ?? 0)"
+        "\(url.scheme ?? ""):\(url.host() ?? ""):\(url.port ?? 0)"
     }
 
     /// A request for artwork at `url`, authenticated when it's on a Plex or

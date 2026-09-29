@@ -5,8 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## 2026-09-29
 
+### Changed
+
+- Server addresses typed without `http://` or `https://` fall back to plain HTTP only on your local network, for example `192.168.1.5:8096`, `nas.local` or `nas`. For a server on the internet without HTTPS, type the address with `http://`. Before, a failed HTTPS attempt sent your password over plain HTTP, where others on the network path could read it.
+
 ### Fixed
 
+- A Plex server on your home network is reached over HTTP only when none of its HTTPS addresses answers. Before, the fastest address won, which was usually plain HTTP, and every request carries your Plex token.
 - Downloads can no longer end up outside the download folder. A server could name a file so that downloading it wrote to, or deleted, a folder above your download folder.
 - Delete Downloads only removes files inside the download folder, even when the folder's `.cinetray-downloads.json` has been edited.
 - Albums in your own music show their cover instead of a photo of the artist, and artists get a photo. Albums indexed before this fix keep their old picture; delete `.cinetray-downloads.json` in your Music library folder and press Refresh to fetch them again.
