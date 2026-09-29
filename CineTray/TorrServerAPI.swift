@@ -24,7 +24,8 @@ struct TorrServerClient {
         let poster: String?
         let data: String?
         let timestamp: Double?
-        /// Only present while the torrent is active on the server.
+        let torrent_size: Int64?
+        /// Only in `stat` answers; MatriX.145 leaves it out of the list.
         let file_stats: [File]?
     }
 
@@ -81,10 +82,13 @@ struct TorrServerClient {
         return try await load(request, as: [Torrent].self)
     }
 
-    /// The file list the server already has: `file_stats` while the torrent
-    /// is active, or the list it saved in `data`.
+    /// File lists fetched this session. A torrent's files never change.
+    private static var fetchedFiles: [String: [File]] = [:]
+
+    /// The file list known without waking the torrent: fetched earlier, in
+    /// `file_stats`, or saved by TorrServer in `data`.
     static func knownFiles(of torrent: Torrent) -> [File]? {
-        (torrent.file_stats ?? metadata(of: torrent)?.TorrServer?.Files).flatMap { $0.isEmpty ? nil : $0 }
+        (fetchedFiles[torrent.hash] ?? torrent.file_stats ?? metadata(of: torrent)?.TorrServer?.Files).flatMap { $0.isEmpty ? nil : $0 }
     }
 
     /// The torrent's files. Asking the server wakes an idle torrent, and it
@@ -98,6 +102,7 @@ struct TorrServerClient {
         let notReady = ServerError(message: "TorrServer is still looking for peers for this release. Try again in a minute.")
         do {
             guard let files = try await load(request, as: Torrent.self).file_stats, !files.isEmpty else { throw notReady }
+            Self.fetchedFiles[torrent.hash] = files
             return files
         } catch let error as URLError where error.code == .timedOut || error.code == .badServerResponse {
             throw notReady
@@ -148,19 +153,20 @@ struct TorrServerMediaProvider: MediaProvider {
         switch item.kind {
         case .show:
             guard let torrents = try await catalog().first(where: { $0.item.id == item.id })?.torrents else { return [] }
-            // Seasons named in a title are listed without asking for its
-            // files, which wakes the torrent and can take a minute.
-            let named = torrents.filter { TorrServerClient.knownFiles(of: $0) == nil && Self.seasons(in: $0.title) != nil }
-            let (episodes, error) = await episodes(of: torrents.filter { torrent in !named.contains { $0.hash == torrent.hash } }, show: item)
-            let numbers = Set(named.compactMap { Self.seasons(in: $0.title) }.joined()).union(episodes.map(\.season))
-            if numbers.isEmpty, let error { throw error }
-            return numbers.sorted().map { number in
+            // Asking for a torrent's files wakes it, which can take a minute.
+            // Seasons come from known file lists and titles; any other release
+            // gets a card of its own and is woken only when opened.
+            let unknown = torrents.filter { TorrServerClient.knownFiles(of: $0) == nil }
+            let known = await episodes(of: torrents.filter { TorrServerClient.knownFiles(of: $0) != nil }, show: item).episodes.map(\.season)
+            let seasons = Set(known + unknown.compactMap { Self.seasons(in: $0.title) }.joined()).sorted()
+            func card(_ key: String, _ title: String, _ subtitle: String? = nil) -> MediaItem {
                 MediaItem(
-                    id: "\(item.id)|\(number)",
+                    id: "\(item.id)|\(key)",
                     source: .torrServer,
                     type: .tvShows,
                     kind: .season,
-                    title: number == 0 ? "Specials" : "Season \(number)",
+                    title: title,
+                    subtitle: subtitle,
                     posterURL: item.posterURL,
                     parentID: item.id,
                     parentKind: .show,
@@ -168,14 +174,25 @@ struct TorrServerMediaProvider: MediaProvider {
                     parentPosterURL: item.posterURL
                 )
             }
+            return seasons.map { card(String($0), $0 == 0 ? "Specials" : "Season \($0)") }
+                + unknown.filter { Self.seasons(in: $0.title) == nil }.map { torrent in
+                    card(torrent.hash,
+                         torrent.timestamp.map { Date(timeIntervalSince1970: $0).formatted(date: .abbreviated, time: .omitted) } ?? "Release",
+                         torrent.torrent_size.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) })
+                }
         case .season:
-            // Season ids are "<show id>|<number>"; auto-continue asks with an
-            // id-only stub, so the id must be enough.
-            guard let bar = item.id.lastIndex(of: "|"), let number = Int(item.id[item.id.index(after: bar)...]),
+            // Season ids are "<show id>|<number>", or "<show id>|<hash>" for a
+            // release card; auto-continue asks with an id-only stub, so the id
+            // must be enough.
+            guard let bar = item.id.lastIndex(of: "|"),
                   let entry = try await catalog().first(where: { $0.item.id == item.id[..<bar] }) else { return [] }
-            let torrents = entry.torrents.filter { TorrServerClient.knownFiles(of: $0) != nil || Self.seasons(in: $0.title)?.contains(number) != false }
+            let key = String(item.id[item.id.index(after: bar)...])
+            let number = Int(key)
+            let torrents = entry.torrents.filter { torrent in
+                number.map { TorrServerClient.knownFiles(of: torrent) != nil || Self.seasons(in: torrent.title)?.contains($0) == true } ?? (torrent.hash == key)
+            }
             let (episodes, error) = await episodes(of: torrents, show: entry.item)
-            let season = episodes.filter { $0.season == number }
+            let season = episodes.filter { number == nil || $0.season == number }
             if season.isEmpty, let error { throw error }
             return season.map(\.item)
         default:

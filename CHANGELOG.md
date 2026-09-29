@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- A TorrServer release whose name doesn't give the season, such as one added from Lampa, gets its own card in its show, with the date it was added and its size. It is woken only when you open it; its episodes then join their season. Before, its season could be missing, and the seasons changed between opens.
 - TorrServer release names with the season number first, as in "5 сезон: 1-5 серии", are placed in season 5.
 - An open season closes when a refresh removes it, instead of staying open without its card.
 
