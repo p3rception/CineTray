@@ -32,6 +32,10 @@ final class AppState {
         PlaybackProgressStore.removeSavedPlexTokens()
         ArtworkCache.removeCredentialEntries()
         setupMediaKeys()
+        let playlistFolder = Self.playlistFolder
+        NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { _ in
+            try? FileManager.default.removeItem(at: playlistFolder)
+        }
         
         Task {
             await ensureLibrarySections()
@@ -955,9 +959,10 @@ final class AppState {
     /// A one-entry M3U playlist, so players that read one (VLC, IINA) show
     /// the title instead of the stream URL with its token, and list the
     /// playlist rather than that URL in their recent items. Only the latest
-    /// playlist is kept.
+    /// playlist is kept, and none after CineTray quits, since its URL
+    /// carries the token.
     private static func playlist(for item: MediaItem, streaming url: URL) throws -> URL {
-        let folder = URL.temporaryDirectory.appending(path: "CineTray Playback")
+        let folder = playlistFolder
         if FileManager.default.fileExists(atPath: folder.path) {
             try FileManager.default.removeItem(at: folder)
         }
@@ -968,6 +973,8 @@ final class AppState {
         try "#EXTM3U\n#EXTINF:-1,\(title)\n\(url.absoluteString)\n".write(to: file, atomically: true, encoding: .utf8)
         return file
     }
+
+    private static let playlistFolder = URL.temporaryDirectory.appending(path: "CineTray Playback")
 
     func downloadURL(for item: MediaItem) async throws -> URL {
         guard let provider = provider(for: item) else {

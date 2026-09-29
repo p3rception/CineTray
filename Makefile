@@ -17,7 +17,7 @@ uninstall:
 wipe: uninstall
 	defaults delete CineTray 2>/dev/null || true
 	while security delete-generic-password -s CineTray >/dev/null 2>&1; do :; done
-	rm -rf ~/Library/Caches/CineTray ~/Library/HTTPStorages/CineTray
+	rm -rf ~/Library/Caches/CineTray ~/Library/HTTPStorages/CineTray "$${TMPDIR:-/tmp}/CineTray Playback"
 
 clean:
 	rm -rf .build dist
