@@ -289,11 +289,6 @@ final class DownloadManager {
         }
     }
 
-    static func isLevelEnabled(for kind: MediaKind) -> Bool {
-        guard let level = DownloadLevel(kind: kind) else { return false }
-        return UserDefaults.standard.bool(forKey: SettingsKeys.downloadLevelEnabled(level))
-    }
-
     private static func indexURL(in folder: URL) -> URL {
         folder.appending(path: ".cinetray-downloads.json")
     }

@@ -14,7 +14,6 @@ struct PosterCell: View {
 
     @Environment(AppState.self) private var appState
     @AppStorage(SettingsKeys.simpleVisuals) private var simpleVisuals = false
-    @AppStorage(SettingsKeys.downloadsEnabled) private var downloadsEnabled = false
     @AppStorage(SettingsKeys.richMedia) private var richMedia = false
     
     @State private var isHovering = false
@@ -56,14 +55,14 @@ struct PosterCell: View {
         Button(action: action) {
             if simpleVisuals {
                 compactBox
-                    .overlay(alignment: .bottomTrailing) { downloadButton }
+                    .overlay(alignment: .bottomTrailing) { DownloadButton(item: item, isCompact: isCompact) }
                     .overlay(alignment: .topLeading) { infoButton }
                     .overlay(alignment: .topTrailing) { openInWebAppButton }
                     .overlay(alignment: .topTrailing) { watchedBadge }
             } else {
                 VStack(alignment: .leading, spacing: 4) {
                     poster
-                        .overlay(alignment: .bottomTrailing) { downloadButton }
+                        .overlay(alignment: .bottomTrailing) { DownloadButton(item: item, isCompact: isCompact) }
                         .overlay(alignment: .topLeading) { infoButton }
                         .overlay(alignment: .topTrailing) { openInWebAppButton }
                         .overlay(alignment: .topTrailing) { watchedBadge }
@@ -142,32 +141,6 @@ struct PosterCell: View {
                 // An accessible ProgressView inside the Button's label replaces the
                 // button for VoiceOver, so the fraction is the button's value instead.
                 .accessibilityHidden(true)
-        }
-    }
-
-    @ViewBuilder
-    private var downloadButton: some View {
-        if downloadsEnabled, DownloadManager.isLevelEnabled(for: item.kind) {
-            Group {
-                if DownloadManager.shared.downloadingIDs.contains(item.id) {
-                    ProgressView()
-                        .controlSize(.mini)
-                } else if DownloadManager.shared.isDownloaded(item) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                        .help("Downloaded")
-                } else {
-                    Button("Download for offline use", systemImage: "arrow.down.circle.fill") {
-                        DownloadManager.shared.download(item, appState: appState)
-                    }
-                    .buttonStyle(.plain)
-                    .labelStyle(.iconOnly)
-                    .foregroundStyle(.white, .black.opacity(0.55))
-                    .help("Download for offline use")
-                }
-            }
-            .font(.system(size: isCompact ? 10 : 14))
-            .padding(isCompact ? 2 : 3)
         }
     }
 
@@ -332,6 +305,49 @@ struct MarqueeText: View {
         let duration = Double(diff) * 0.04
         withAnimation(.linear(duration: duration).delay(1.5).repeatForever(autoreverses: true)) {
             offset = -diff
+        }
+    }
+}
+
+/// The download control on a poster. Its own view so @AppStorage can watch the
+/// setting for this item's kind, which is only known at runtime; the poster
+/// then updates as soon as the checkbox changes in Settings.
+private struct DownloadButton: View {
+    let item: MediaItem
+    let isCompact: Bool
+
+    @Environment(AppState.self) private var appState
+    @AppStorage(SettingsKeys.downloadsEnabled) private var downloadsEnabled = false
+    @AppStorage private var levelEnabled: Bool
+
+    init(item: MediaItem, isCompact: Bool) {
+        self.item = item
+        self.isCompact = isCompact
+        _levelEnabled = AppStorage(wrappedValue: false, SettingsKeys.downloadLevelEnabled(DownloadLevel(kind: item.kind)))
+    }
+
+    var body: some View {
+        if downloadsEnabled, levelEnabled {
+            Group {
+                if DownloadManager.shared.downloadingIDs.contains(item.id) {
+                    ProgressView()
+                        .controlSize(.mini)
+                } else if DownloadManager.shared.isDownloaded(item) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                        .help("Downloaded")
+                } else {
+                    Button("Download for offline use", systemImage: "arrow.down.circle.fill") {
+                        DownloadManager.shared.download(item, appState: appState)
+                    }
+                    .buttonStyle(.plain)
+                    .labelStyle(.iconOnly)
+                    .foregroundStyle(.white, .black.opacity(0.55))
+                    .help("Download for offline use")
+                }
+            }
+            .font(.system(size: isCompact ? 10 : 14))
+            .padding(isCompact ? 2 : 3)
         }
     }
 }

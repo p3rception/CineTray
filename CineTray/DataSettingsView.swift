@@ -15,38 +15,35 @@ struct DataSettingsView: View {
         Form {
             Section {
                 Toggle("Enable Downloads", isOn: $downloadsEnabled)
+                Group {
+                    LabeledContent("Movies") {
+                        DownloadLevelToggle("Movie", level: .movie)
+                    }
+                    LabeledContent("Shows") {
+                        HStack {
+                            DownloadLevelToggle("Series", level: .series)
+                            DownloadLevelToggle("Season", level: .season)
+                            DownloadLevelToggle("Episode", level: .episode)
+                        }
+                    }
+                    LabeledContent("Music") {
+                        HStack {
+                            DownloadLevelToggle("Playlist", level: .playlist)
+                            DownloadLevelToggle("Artist", level: .artist)
+                            DownloadLevelToggle("Album", level: .album)
+                            DownloadLevelToggle("Song", level: .song)
+                        }
+                    }
+                }
+                .toggleStyle(.checkbox)
+                .disabled(!downloadsEnabled)
             } header: {
-                SectionInfoHeader(title: "Downloads", info: "With downloads enabled, playable items in the dropdown get a small download button. Each media type saves into its own folder, capped at its storage limit.")
+                SectionInfoHeader(title: "Downloads", info: "With downloads enabled, the items ticked here get a small download button in the dropdown. Downloading a series, season, artist, album or playlist downloads everything in it. Each media type saves into its own folder, capped at its storage limit.")
             }
 
             ForEach(MediaType.allCases) { type in
                 downloadSection(for: type)
             }
-
-            Section {
-                LabeledContent("Movies") {
-                    Toggle("Movie", isOn: levelBinding(.movie))
-                }
-                LabeledContent("Shows") {
-                    HStack {
-                        Toggle("Series", isOn: levelBinding(.series))
-                        Toggle("Season", isOn: levelBinding(.season))
-                        Toggle("Episode", isOn: levelBinding(.episode))
-                    }
-                }
-                LabeledContent("Music") {
-                    HStack {
-                        Toggle("Playlist", isOn: levelBinding(.playlist))
-                        Toggle("Artist", isOn: levelBinding(.artist))
-                        Toggle("Album", isOn: levelBinding(.album))
-                        Toggle("Song", isOn: levelBinding(.song))
-                    }
-                }
-            } header: {
-                SectionInfoHeader(title: "Show Download Button On", info: "Downloading a series, season, artist, album or playlist downloads everything in it.")
-            }
-            .toggleStyle(.checkbox)
-            .disabled(!downloadsEnabled)
 
             Section {
                 Toggle("Cache Artwork Locally", isOn: $cacheArtwork)
@@ -155,18 +152,27 @@ struct DataSettingsView: View {
         }
     }
 
-    private func levelBinding(_ level: DownloadLevel) -> Binding<Bool> {
-        Binding {
-            UserDefaults.standard.bool(forKey: SettingsKeys.downloadLevelEnabled(level))
-        } set: { newValue in
-            UserDefaults.standard.set(newValue, forKey: SettingsKeys.downloadLevelEnabled(level))
-        }
-    }
-
     private func updateCacheSize() {
         let bytes = ArtworkCache.diskUsageBytes
         cacheSizeDescription = bytes > 0
             ? ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
             : "Empty"
+    }
+}
+
+/// A "Show Download Button On" checkbox. @AppStorage rather than a Binding
+/// over UserDefaults, which SwiftUI doesn't watch, so the box redraws when
+/// clicked.
+private struct DownloadLevelToggle: View {
+    let title: String
+    @AppStorage private var isOn: Bool
+
+    init(_ title: String, level: DownloadLevel) {
+        self.title = title
+        _isOn = AppStorage(wrappedValue: false, SettingsKeys.downloadLevelEnabled(level))
+    }
+
+    var body: some View {
+        Toggle(title, isOn: $isOn)
     }
 }

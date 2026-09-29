@@ -148,9 +148,8 @@ enum MediaSource: String, Codable, Hashable {
     }
 }
 
-/// Which hierarchy levels expose a download control. Movies always show
-/// the control (governed by the master downloads toggle); TV and Music
-/// levels are individually opt-in and default to off.
+/// Which hierarchy levels show a download button, each ticked separately in
+/// Settings > Data and off by default.
 enum DownloadLevel: String, CaseIterable {
     case movie
     case series    // show
@@ -174,7 +173,7 @@ enum DownloadLevel: String, CaseIterable {
         }
     }
 
-    init?(kind: MediaKind) {
+    init(kind: MediaKind) {
         switch kind {
         case .movie: self = .movie
         case .show: self = .series

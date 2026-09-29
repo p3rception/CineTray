@@ -11,6 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- The checkboxes that choose which items get a download button now tick when clicked, and posters show the button right away. They moved into the Downloads section of Settings > Data, next to Enable Downloads.
 - An account saved by an older build is no longer lost when it can't be moved to the Keychain, for example because you denied access. CineTray tries again on the next launch.
 - Posters from TorrServer and the music artwork sources are only loaded from web addresses, never from files on your Mac.
 - The playlist handed to another video player holds the stream address with your token, so it is deleted when CineTray quits. `make wipe` removes it too.
