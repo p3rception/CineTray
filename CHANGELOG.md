@@ -5,12 +5,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## 2026-09-30
 
+### Added
+
+- IINA and VLC buttons next to Play Video In in Settings > Playback, to switch to either player in one click. CineTray switches back to the built-in player. A player that isn't installed has its button dimmed and is named below Play Video In.
+- Keyboard control for MKV, AVI and other videos in CineTray's player that play in the VLC engine: Space plays or pauses, Left and Right Arrow skip back and forward 10 seconds, as in other videos.
+
+### Changed
+
+- Subtitle timing in the video player's toolbar is one button. Click it to show - and + and the current value, which stay open while you click; click the value to reset it. The button is filled while the timing is changed.
+
 ### Fixed
 
+- Subtitles in IINA and VLC. These players now get the original video file from Plex and Jellyfin, with all its subtitles and audio tracks, instead of the stream converted for CineTray's player. Plex left the subtitles out of that stream.
+- Jellyfin videos in CineTray's player list the same subtitles as Jellyfin's web app, including subtitle files stored next to the video, under the same names. The one your Jellyfin settings pick is turned on. Videos that Jellyfin used to convert for playback, such as MKV files, now play the original file, with all its subtitles, image subtitles (PGS) included, and all its audio tracks.
 - A TorrServer release whose name doesn't give the season, such as one added from Lampa, gets its own card in its show, with the date it was added and its size. It is woken only when you open it; its episodes then join their season. Before, its season could be missing, and the seasons changed between opens.
 - TorrServer release names with the season number first, as in "5 сезон: 1-5 серии", are placed in season 5.
 - An open season closes when a refresh removes it, instead of staying open without its card.
 - Playing a TorrServer release that nobody shares anymore shows an error after 20 seconds, instead of loading forever.
+- A video or song that CineTray's player can't open, or that fails while playing, shows the error in the player window instead of loading forever.
 
 ## 2026-09-29
 

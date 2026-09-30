@@ -16,15 +16,25 @@ struct PlaybackSettingsView: View {
     var body: some View {
         Form {
             Section {
-                LabeledContent("Play Video In") {
+                let iina = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.colliderli.iina")
+                let vlc = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "org.videolan.vlc")
+                LabeledContent {
                     HStack {
-                        Text(videoPlayerApp.isEmpty ? "CineTray" : FileManager.default.displayName(atPath: videoPlayerApp))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                        Button("CineTray") { videoPlayerApp = "" }
+                        Button("IINA") { videoPlayerApp = iina?.path ?? "" }
+                            .disabled(iina == nil)
+                        Button("VLC") { videoPlayerApp = vlc?.path ?? "" }
+                            .disabled(vlc == nil)
                         Button("Choose…", action: chooseVideoPlayer)
-                        if !videoPlayerApp.isEmpty {
-                            Button("Use CineTray") { videoPlayerApp = "" }
-                        }
+                    }
+                } label: {
+                    Text("Play Video In")
+                    Text(videoPlayerApp.isEmpty ? "CineTray" : FileManager.default.displayName(atPath: videoPlayerApp))
+                        .lineLimit(1)
+                    if iina == nil || vlc == nil {
+                        Text([iina == nil ? "IINA" : nil, vlc == nil ? "VLC" : nil].compactMap { $0 }.joined(separator: " and ") + " not installed")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
                     }
                 }
                 Picker("Subtitle Size", selection: $subtitleSize) {

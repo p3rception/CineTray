@@ -543,6 +543,12 @@ protocol MediaProvider {
     /// a matched track title), so the dropdown can filter every drill level.
     func deepSearch(_ query: String, type: MediaType) async throws -> [[MediaItem]]
     func streamURL(for item: MediaItem) async throws -> URL
+    /// The original file for players that read any container (IINA, VLC),
+    /// where `streamURL` may be a stream converted for AVPlayer.
+    func originalFileURL(for item: MediaItem) async throws -> URL
+    /// What CineTray's player should play with the VLC engine instead of
+    /// `streamURL`, or nil to play `streamURL`.
+    func vlcPlayback(for item: MediaItem) async throws -> VLCPlayback?
     /// The direct-file download URL for the original media, distinct from
     /// `streamURL` which may return an HLS playlist for transcoding.
     func downloadURL(for item: MediaItem) async throws -> URL
@@ -563,11 +569,21 @@ extension MediaProvider {
     func playlists() async throws -> [MediaItem] { [] }
     func deepSearch(_ query: String, type: MediaType) async throws -> [[MediaItem]] { [] }
     func downloadURL(for item: MediaItem) async throws -> URL { throw URLError(.unsupportedURL) }
+    func originalFileURL(for item: MediaItem) async throws -> URL { try await streamURL(for: item) }
+    func vlcPlayback(for item: MediaItem) async throws -> VLCPlayback? { nil }
     func nextMovie(after item: MediaItem, by criterion: MovieAutoContinue) async throws -> MediaItem? { nil }
     func randomTrack(sameArtistAs item: MediaItem) async throws -> MediaItem? { nil }
     func webURL(for item: MediaItem) async throws -> URL? { nil }
     func continueWatching() async throws -> [MediaItem] { [] }
     func reportPlayback(of item: MediaItem, state: PlaybackState, positionSeconds: Double, durationSeconds: Double) async throws {}
+}
+
+/// A video file with subtitle files to add as extra tracks.
+struct VLCPlayback {
+    let file: URL
+    var subtitles: [URL] = []
+    /// The subtitle to turn on, as the server's settings choose.
+    var selectedSubtitle: URL?
 }
 
 /// Returns true when AVFoundation can decode the file at `url` without

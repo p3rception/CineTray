@@ -964,8 +964,17 @@ final class AppState {
     func play(_ item: MediaItem, in app: URL) {
         Task {
             do {
-                var url = try await streamURL(for: item)
-                if !url.isFileURL, NSWorkspace.shared.urlsForApplications(toOpen: .m3uPlaylist).contains(where: { $0.path == app.path }) {
+                let readsPlaylists = NSWorkspace.shared.urlsForApplications(toOpen: .m3uPlaylist).contains { $0.path == app.path }
+                // Players that read playlists (VLC, IINA) read any container,
+                // so they get the original file with every subtitle and audio
+                // track; the stream converted for AVPlayer can lose them (Plex
+                // keeps none). QuickTime Player needs that stream.
+                var url = if readsPlaylists, DownloadManager.shared.localURL(for: item) == nil, let provider = provider(for: item) {
+                    try await provider.originalFileURL(for: item)
+                } else {
+                    try await streamURL(for: item)
+                }
+                if !url.isFileURL, readsPlaylists {
                     url = try Self.playlist(for: item, streaming: url)
                 }
                 try await NSWorkspace.shared.open([url], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
@@ -1308,6 +1317,7 @@ final class AppState {
     private(set) var inlinePlaylist: [MediaItem]?
     private var timeObserver: Any?
     private var statusObservation: NSKeyValueObservation?
+    private var itemStatusObservation: NSKeyValueObservation?
     /// Bumped whenever a session starts or stops so async work from a
     /// superseded session can detect it should bail out.
     private var playbackGeneration = 0
@@ -1346,12 +1356,14 @@ final class AppState {
         playbackError = nil
         self.inlinePlaylist = inlinePlaylist
         do {
-            let url = try await streamURL(for: item)
+            let vlcPlayback = DownloadManager.shared.localURL(for: item) == nil && item.type != .music
+                ? try await provider(for: item)?.vlcPlayback(for: item) : nil
+            let url = if let vlcPlayback { vlcPlayback.file } else { try await streamURL(for: item) }
             // Another session started (or the window closed) while the
             // stream URL resolved; playing now would leave orphaned audio.
             guard generation == playbackGeneration else { return }
 
-            if isAVFoundationPlayable(url) {
+            if vlcPlayback == nil, isAVFoundationPlayable(url) {
                 // ── AVPlayer path (streaming + compatible local files) ──────────
                 let newPlayer = AVPlayer(url: url)
                 newPlayer.volume = volume
@@ -1409,6 +1421,18 @@ final class AppState {
                     }
                 }
 
+                // A stream AVPlayer can't open never leaves the loading state
+                // on its own; only the item's status reports the failure.
+                itemStatusObservation = newPlayer.currentItem?.observe(\.status, options: .initial) { [weak self] playerItem, _ in
+                    guard playerItem.status == .failed else { return }
+                    let message = playerItem.error?.localizedDescription ?? "Playback failed"
+                    Task { @MainActor [weak self] in
+                        guard let self, generation == self.playbackGeneration else { return }
+                        self.stopPlayback()
+                        self.playbackError = message
+                    }
+                }
+
                 // Inline sessions have no player window watching for track end,
                 // so the engine advances through the playlist itself.
                 if inlinePlaylist != nil, let playerItem = newPlayer.currentItem {
@@ -1430,13 +1454,10 @@ final class AppState {
                     playerItem.add(cues.output)
                     subtitleCues = cues
                     cues.group = try? await playerItem.asset.loadMediaSelectionGroup(for: .legible)
-                    if item.source == .jellyfin {
-                        cues.lag = await JellyfinClient.hlsSubtitleLag(masterPlaylist: url)
-                    }
                 }
             } else {
-                // ── SwiftVLC path (local files AVFoundation can't decode, e.g. .mkv) ──
-                await startVLCBridgePlayback(url: url, item: item, inlinePlaylist: inlinePlaylist, resumeAt: resume, generation: generation)
+                // ── SwiftVLC path (files AVFoundation can't decode, e.g. .mkv, and Jellyfin subtitle files) ──
+                await startVLCBridgePlayback(vlcPlayback ?? VLCPlayback(file: url), item: item, inlinePlaylist: inlinePlaylist, resumeAt: resume, generation: generation)
             }
         } catch {
             if generation == playbackGeneration {
@@ -1446,11 +1467,12 @@ final class AppState {
         }
     }
 
-    /// Starts the SwiftVLC engine for a local file whose container AVFoundation
-    /// cannot play. Kept separate so the AVPlayer path above stays readable.
+    /// Starts the SwiftVLC engine for a file whose container AVFoundation
+    /// cannot play, or that has subtitle files to add. Kept separate so the
+    /// AVPlayer path above stays readable.
     @MainActor
     private func startVLCBridgePlayback(
-        url: URL,
+        _ playback: VLCPlayback,
         item: MediaItem,
         inlinePlaylist: [MediaItem]?,
         resumeAt: Double?,
@@ -1463,7 +1485,7 @@ final class AppState {
         // playPending() once its NSView is attached to the window hierarchy.
         // Calling play() before VideoView appears causes libVLC's video output
         // module to crash with "cannot create video output window without NSApplication".
-        bridge.setPendingURL(url)
+        bridge.setPending(playback)
         try? bridge.setVolume(volume)
         reportPlayback(item: item, state: .started, positionSeconds: 0, durationSeconds: 0)
 
@@ -1516,6 +1538,7 @@ final class AppState {
                 }
 
                 if bridge.isError {
+                    self.stopPlayback()
                     self.playbackError = "Playback failed"
                     return
                 }
@@ -1612,6 +1635,7 @@ final class AppState {
         }
         timeObserver = nil
         statusObservation = nil
+        itemStatusObservation = nil
         player?.pause()
         player = nil
         vlcBridge?.stop()

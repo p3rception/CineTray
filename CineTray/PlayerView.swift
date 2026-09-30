@@ -14,6 +14,7 @@ struct PlayerView: View {
     @State private var queue: [MediaItem] = []
     @State private var videoAspectRatio: CGFloat?
     @State private var selectedCrop: VideoCrop = .original
+    @State private var showsSubtitleTiming = false
     @State private var usePiPControls = false
     @State private var controlsVisible = true
 
@@ -187,6 +188,19 @@ struct PlayerView: View {
                         )
                     }
                 }
+                .background {
+                    // AVKit handles these keys itself for AVPlayer.
+                    Group {
+                        Button("Play or Pause", action: appState.togglePlayPause)
+                            .keyboardShortcut(.space, modifiers: [])
+                        Button("Skip Back 10 Seconds") { seek(max(appState.currentTime - 10, 0)) }
+                            .keyboardShortcut(.leftArrow, modifiers: [])
+                        Button("Skip Forward 10 Seconds") { seek(min(appState.currentTime + 10, appState.totalDuration)) }
+                            .keyboardShortcut(.rightArrow, modifiers: [])
+                    }
+                    .opacity(0)
+                    .accessibilityHidden(true)
+                }
                 .task(id: ObjectIdentifier(bridge.player)) {
                     await observeVLCVideoAspectRatio(of: bridge)
                 }
@@ -251,8 +265,17 @@ struct PlayerView: View {
                     }
                     .sharedBackgroundVisibility(.hidden)
                     ToolbarItem(placement: .primaryAction) {
-                        subtitleTimingControl
+                        Button { showsSubtitleTiming.toggle() } label: {
+                            Label("Subtitle Timing", systemImage: appState.subtitleOffset == 0 ? "captions.bubble" : "captions.bubble.fill")
+                                .font(toolbarIconFont)
+                        }
+                        .help("Subtitle timing")
+                        // A popover, not a menu, so repeated clicks on - and + don't close it.
+                        .popover(isPresented: $showsSubtitleTiming, arrowEdge: .bottom) {
+                            subtitleTimingControl
+                        }
                     }
+                    .sharedBackgroundVisibility(.hidden)
                     openInServerToolbarItem
                     pinToolbarItem
                 }
@@ -265,9 +288,7 @@ struct PlayerView: View {
         let offset = appState.subtitleOffset
         let value = "\(offset.formatted(.number.precision(.fractionLength(1)).sign(strategy: .always(includingZero: false)))) s"
         return HStack(spacing: 4) {
-            Image(systemName: "captions.bubble")
-                .accessibilityHidden(true)
-            Button { appState.subtitleOffset -= 0.5 } label: { Image(systemName: "minus") }
+            Button { appState.subtitleOffset -= 0.5 } label: { Image(systemName: "minus").frame(width: 32, height: 32).contentShape(.rect) }
                 .help("Show subtitles 0.5 seconds earlier")
                 .accessibilityLabel("Show Subtitles Earlier")
             Button(value) { appState.subtitleOffset = 0 }
@@ -276,13 +297,13 @@ struct PlayerView: View {
                 .disabled(offset == 0)
                 .help("Subtitle timing. Click to reset.")
                 .accessibilityLabel("Subtitle Timing \(value), reset")
-            Button { appState.subtitleOffset += 0.5 } label: { Image(systemName: "plus") }
+            Button { appState.subtitleOffset += 0.5 } label: { Image(systemName: "plus").frame(width: 32, height: 32).contentShape(.rect) }
                 .help("Show subtitles 0.5 seconds later")
                 .accessibilityLabel("Show Subtitles Later")
         }
         .buttonStyle(.borderless)
         .font(toolbarIconFont)
-        .padding(.horizontal, 6)
+        .padding(4)
     }
 
     /// Opens the playing item's page in Plex Web or Jellyfin.
@@ -424,12 +445,9 @@ struct PlayerView: View {
 /// be dropped at small window sizes - SwiftUI's `VideoPlayer` offers no
 /// control over its overlay controls.
 /// AVPlayer's subtitles, taken over from AVKit so `SubtitleOverlay` can
-/// shift them: AVPlayer has no subtitle delay, and Jellyfin shows HLS
-/// subtitles 10 s late with fMP4 segments (jellyfin/jellyfin#16647).
+/// shift them: AVPlayer has no subtitle delay.
 final class SubtitleCues: NSObject, AVPlayerItemLegibleOutputPushDelegate {
     let output = AVPlayerItemLegibleOutput()
-    /// Seconds by which the server shows the subtitles late.
-    var lag: Double = 0
     /// Choosing Off in AVKit's menu stops the cues without clearing the
     /// last ones, so the selection in this group is checked when drawing.
     var group: AVMediaSelectionGroup?
@@ -457,9 +475,9 @@ final class SubtitleCues: NSObject, AVPlayerItemLegibleOutputPushDelegate {
     }
 }
 
-/// Draws `SubtitleCues`, shifted by the server's lag and the user's offset,
-/// in the caption style chosen in AVKit's subtitle menu or in System
-/// Settings > Accessibility > Captions. The style is read on every redraw,
+/// Draws `SubtitleCues`, shifted by the user's offset, in the caption style
+/// chosen in AVKit's subtitle menu or in System Settings > Accessibility >
+/// Captions. The style is read on every redraw,
 /// so a change shows while the video plays.
 private struct SubtitleOverlay: View {
     let cues: SubtitleCues
@@ -470,7 +488,7 @@ private struct SubtitleOverlay: View {
     var body: some View {
         GeometryReader { geo in
             TimelineView(.periodic(from: .now, by: 0.1)) { _ in
-                let text = cues.text(at: player.currentTime().seconds + cues.lag - offset, in: player.currentItem)
+                let text = cues.text(at: player.currentTime().seconds - offset, in: player.currentItem)
                 if !text.isEmpty {
                     let size = max(11, geo.size.height / 28 * sizeScale * MACaptionAppearanceGetRelativeCharacterSize(.user, nil))
                     let font = MACaptionAppearanceCopyFontDescriptorForStyle(.user, nil, .default).takeRetainedValue()

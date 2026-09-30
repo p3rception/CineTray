@@ -651,16 +651,7 @@ struct JellyfinClient {
     private func videoStreamURL(itemID: String) async -> URL {
         let source = try? await mediaSource(itemID: itemID)
         if let source, Self.canDirectPlay(source) {
-            var components = URLComponents(
-                url: config.serverURL.appending(path: "/Videos/\(itemID)/stream"),
-                resolvingAgainstBaseURL: false
-            )!
-            components.queryItems = [
-                URLQueryItem(name: "static", value: "true"),
-                URLQueryItem(name: "MediaSourceId", value: source.Id),
-                URLQueryItem(name: "api_key", value: config.token),
-            ]
-            return components.url!
+            return staticStreamURL(itemID: itemID, sourceID: source.Id)
         }
         var components = URLComponents(
             url: config.serverURL.appending(path: "/Videos/\(itemID)/master.m3u8"),
@@ -697,15 +688,63 @@ struct JellyfinClient {
         return components.url!
     }
 
-    /// Seconds by which the server shows HLS subtitles late. Before
-    /// jellyfin/jellyfin#17299 every WebVTT segment maps its time 0 to 10 s,
-    /// as MPEG-TS segments start there, but the fMP4 segments CineTray asks
-    /// for start at 0. Servers with the fix name the offset in the playlist.
-    static func hlsSubtitleLag(masterPlaylist url: URL) async -> Double {
-        // ponytail: keys on the parameter name in that pull request; if it changes before merging, fixed servers get subtitles 10 s early.
-        guard url.lastPathComponent == "master.m3u8",
-              let (data, _) = try? await URLSession.shared.data(from: url) else { return 0 }
-        return String(decoding: data, as: UTF8.self).contains("VttTimestampMapMpegts") ? 0 : 10
+    /// The original file, for players that read any container (IINA, VLC).
+    func originalFileURL(itemID: String) async throws -> URL {
+        guard let source = try await mediaSource(itemID: itemID) else { throw URLError(.resourceUnavailable) }
+        return staticStreamURL(itemID: itemID, sourceID: source.Id)
+    }
+
+    private func staticStreamURL(itemID: String, sourceID: String) -> URL {
+        var components = URLComponents(
+            url: config.serverURL.appending(path: "/Videos/\(itemID)/stream"),
+            resolvingAgainstBaseURL: false
+        )!
+        components.queryItems = [
+            URLQueryItem(name: "static", value: "true"),
+            URLQueryItem(name: "MediaSourceId", value: sourceID),
+            URLQueryItem(name: "api_key", value: config.token),
+        ]
+        return components.url!
+    }
+
+    /// The original file and its separate text subtitle files for CineTray's
+    /// VLC engine, which Jellyfin's own clients also load as extra tracks;
+    /// nil when AVPlayer can play the file and there are no separate subtitles.
+    func vlcPlayback(itemID: String) async throws -> VLCPlayback? {
+        guard let source = try await mediaSource(itemID: itemID) else { return nil }
+        let external = (source.MediaStreams ?? []).filter {
+            $0.Type == "Subtitle" && $0.IsExternal == true && $0.IsTextSubtitleStream == true
+        }
+        if Self.canDirectPlay(source), external.isEmpty { return nil }
+        let folder = URL.temporaryDirectory.appending(path: "CineTray Subtitles")
+        if FileManager.default.fileExists(atPath: folder.path) {
+            try FileManager.default.removeItem(at: folder)
+        }
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        var playback = VLCPlayback(file: staticStreamURL(itemID: itemID, sourceID: source.Id))
+        for stream in external {
+            guard let index = stream.Index else { continue }
+            let codec = stream.Codec?.lowercased() ?? ""
+            let format = ["ass", "ssa"].contains(codec) ? codec : "srt"
+            let path = "/Videos/\(itemID)/\(source.Id)/Subtitles/\(index)/0/Stream.\(format)"
+            // VLC names a subtitle file's track after the text between the
+            // last two dots of its name, so the file carries Jellyfin's title.
+            let title = (stream.DisplayTitle ?? "Subtitle \(index)").replacing(/[.\/:]/, with: " ")
+            let file = folder.appending(path: "\(index).\(title).\(format)")
+            do {
+                let (data, response) = try await URLSession.shared.data(for: request(path: path))
+                guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
+                try data.write(to: file)
+                playback.subtitles.append(file)
+            } catch {
+                // Still offered from the server, only named "Track" by VLC.
+                var components = URLComponents(url: config.serverURL.appending(path: path), resolvingAgainstBaseURL: false)!
+                components.queryItems = [URLQueryItem(name: "api_key", value: config.token)]
+                playback.subtitles.append(components.url!)
+            }
+            if index == source.DefaultSubtitleStreamIndex { playback.selectedSubtitle = playback.subtitles.last }
+        }
+        return playback
     }
 
     private struct PlaybackSource: Decodable {
@@ -715,6 +754,8 @@ struct JellyfinClient {
             let CodecTag: String?
             let Index: Int?
             let IsTextSubtitleStream: Bool?
+            let IsExternal: Bool?
+            let DisplayTitle: String?
         }
         let Id: String
         let DefaultSubtitleStreamIndex: Int?
@@ -833,6 +874,14 @@ struct JellyfinMediaProvider: MediaProvider {
 
     func downloadURL(for item: MediaItem) async throws -> URL {
         client.downloadURL(itemID: item.id)
+    }
+
+    func originalFileURL(for item: MediaItem) async throws -> URL {
+        try await client.originalFileURL(itemID: item.id)
+    }
+
+    func vlcPlayback(for item: MediaItem) async throws -> VLCPlayback? {
+        try await client.vlcPlayback(itemID: item.id)
     }
 
     func nextMovie(after item: MediaItem, by criterion: MovieAutoContinue) async throws -> MediaItem? {

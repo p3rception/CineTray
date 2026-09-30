@@ -744,6 +744,14 @@ struct PlexClient {
         return components.url
     }
 
+    /// The original file, for players that read any container (IINA, VLC).
+    func originalFileURL(ratingKey: String) async throws -> URL {
+        guard let partKey = try await metadata(forRatingKey: ratingKey)?.Media?.first?.Part?.first?.key else {
+            throw URLError(.resourceUnavailable)
+        }
+        return directFileURL(partKey: partKey)
+    }
+
     /// The original file, streamed as-is with no server-side processing.
     private func directFileURL(partKey: String) -> URL {
         var components = URLComponents(
@@ -1090,6 +1098,10 @@ struct PlexMediaProvider: MediaProvider {
         return item.kind == .track
             ? await client.trackStreamURL(ratingKey: item.id)
             : await client.videoStreamURL(ratingKey: item.id)
+    }
+
+    func originalFileURL(for item: MediaItem) async throws -> URL {
+        try await client.originalFileURL(ratingKey: item.id)
     }
 
     func downloadURL(for item: MediaItem) async throws -> URL {

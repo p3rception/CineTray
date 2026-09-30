@@ -15,9 +15,9 @@ import SwiftVLC
 @MainActor
 final class VLCPlayerBridge {
     let player: Player
-    /// URL stored by AppState so that play() can be deferred until VideoView
+    /// Stored by AppState so that play() can be deferred until VideoView
     /// is in the window hierarchy (libVLC crashes otherwise on macOS).
-    private(set) var pendingURL: URL?
+    private(set) var pending: VLCPlayback?
 
     init() {
         player = Player()
@@ -48,19 +48,25 @@ final class VLCPlayerBridge {
 
     // MARK: - Playback control
 
-    /// Stores `url` for deferred playback. Call `playPending()` once VideoView
+    /// Stores `playback` for deferred playback. Call `playPending()` once VideoView
     /// is in the window hierarchy to avoid libVLC's "no NSApplication" crash.
-    func setPendingURL(_ url: URL) {
-        pendingURL = url
+    func setPending(_ playback: VLCPlayback) {
+        pending = playback
     }
 
-    /// Plays the pending URL. Must be called from the view's onAppear so that
+    /// Plays the pending file. Must be called from the view's onAppear so that
     /// VideoView's NSView is already attached to a window before libVLC initialises
     /// its video output module.
     func playPending() throws {
-        guard let url = pendingURL else { return }
-        pendingURL = nil
-        try player.play(url: url)
+        guard let playback = pending else { return }
+        pending = nil
+        let media = try Media(url: playback.file)
+        for subtitle in playback.subtitles {
+            // libVLC turns on the subtitle with the highest priority (4);
+            // with 0 the others are only listed.
+            try media.addSlave(from: subtitle, type: .subtitle, priority: subtitle == playback.selectedSubtitle ? 4 : 0)
+        }
+        try player.play(media)
     }
 
     func play(url: URL) throws {
@@ -123,7 +129,8 @@ struct VLCTrackMenu: View {
                 Picker("Subtitles", selection: Binding(get: { player.selectedSubtitleTrack },
                                                        set: { player.selectedSubtitleTrack = $0 })) {
                     Text("Off").tag(Track?.none)
-                    ForEach(player.subtitleTracks) { Text($0.name).tag(Optional($0)) }
+                    // libVLC names a subtitle file's track from its URL without decoding it.
+                    ForEach(player.subtitleTracks) { Text($0.name.removingPercentEncoding ?? $0.name).tag(Optional($0)) }
                 }
             } label: {
                 Image(systemName: "captions.bubble")
