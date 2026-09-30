@@ -1,14 +1,28 @@
 import SwiftUI
 
-/// Radarr and Sonarr, which only feed the release calendar: they manage
-/// downloads and hold nothing to play.
+/// Servers reached with an address and an API key, which hold nothing to
+/// play: Radarr and Sonarr feed the release calendar, Seerr takes requests
+/// from search.
 enum ArrApp: String, CaseIterable, Identifiable {
     case radarr = "Radarr"
     case sonarr = "Sonarr"
+    case seerr = "Seerr"
 
     var id: Self { self }
-    var urlKey: String { self == .radarr ? SettingsKeys.radarrURL : SettingsKeys.sonarrURL }
-    var apiKeyKey: String { self == .radarr ? KeychainKeys.radarrAPIKey : KeychainKeys.sonarrAPIKey }
+    var urlKey: String {
+        switch self {
+        case .radarr: SettingsKeys.radarrURL
+        case .sonarr: SettingsKeys.sonarrURL
+        case .seerr: SettingsKeys.seerrURL
+        }
+    }
+    var apiKeyKey: String {
+        switch self {
+        case .radarr: KeychainKeys.radarrAPIKey
+        case .sonarr: KeychainKeys.sonarrAPIKey
+        case .seerr: KeychainKeys.seerrAPIKey
+        }
+    }
     var color: Color { self == .radarr ? .orange : .blue }
 }
 
@@ -39,22 +53,48 @@ struct ArrClient {
         return ArrClient(app: app, serverURL: url, apiKey: apiKey)
     }
 
-    private func get<Body: Decodable>(_ path: String, query: [URLQueryItem] = [], as _: Body.Type) async throws -> Body {
-        let url = serverURL.appending(path: path)
-        var request = URLRequest(url: query.isEmpty ? url : url.appending(queryItems: query))
+    private static let unreservedCharacters = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
+
+    /// Sends a GET, or a POST with `body` as JSON.
+    func send<Response: Decodable>(_ path: String, query: [URLQueryItem] = [], body: Data? = nil, as _: Response.Type) async throws -> Response {
+        var components = URLComponents(url: serverURL.appending(path: path), resolvingAgainstBaseURL: false)
+        // Seerr rejects a search containing characters such as ' or ! unless
+        // they are percent-encoded, which URLQueryItem leaves as they are.
+        if !query.isEmpty {
+            components?.percentEncodedQueryItems = query.map {
+                URLQueryItem(name: $0.name, value: $0.value?.addingPercentEncoding(withAllowedCharacters: Self.unreservedCharacters))
+            }
+        }
+        guard let url = components?.url else { throw URLError(.badURL) }
+        var request = URLRequest(url: url)
         request.setValue(apiKey, forHTTPHeaderField: "X-Api-Key")
+        if let body {
+            request.httpMethod = "POST"
+            request.httpBody = body
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
         let (data, response) = try await URLSession.shared.data(for: request, delegate: PlexTokenRedirectGuard.shared)
         switch (response as? HTTPURLResponse)?.statusCode {
-        case 200: return try JSONDecoder().decode(Body.self, from: data)
-        case 401: throw ServerError(message: "\(app.rawValue) rejected the API key.")
-        default: throw URLError(.badServerResponse)
+        case 200, 201: return try JSONDecoder().decode(Response.self, from: data)
+        // Seerr answers 403 to a wrong key.
+        case 401, 403: throw ServerError(message: "\(app.rawValue) rejected the API key.")
+        default:
+            // Seerr explains refused requests, such as one that already exists.
+            if let failure = try? JSONDecoder().decode(Failure.self, from: data) {
+                throw ServerError(message: "\(app.rawValue): \(failure.message)")
+            }
+            throw URLError(.badServerResponse)
         }
     }
 
-    private struct Status: Decodable { let version: String }
+    private struct Failure: Decodable { let message: String }
+
+    /// Decodes any JSON object, for responses whose content isn't needed.
+    struct Ignored: Decodable {}
 
     func checkStatus() async throws {
-        _ = try await get("api/v3/system/status", as: Status.self)
+        // Seerr's status endpoint doesn't need the key, so ask who it belongs to.
+        _ = try await send(app == .seerr ? "api/v1/auth/me" : "api/v3/system/status", as: Ignored.self)
     }
 
     private struct Movie: Decodable {
@@ -87,7 +127,7 @@ struct ArrClient {
         switch app {
         case .radarr:
             // A movie is listed when any of its dates is in range, so each date is checked.
-            return try await get("api/v3/calendar", query: query, as: [Movie].self).flatMap { movie in
+            return try await send("api/v3/calendar", query: query, as: [Movie].self).flatMap { movie in
                 [("In Cinemas", movie.inCinemas), ("Digital Release", movie.digitalRelease), ("Physical Release", movie.physicalRelease)]
                     .compactMap { label, value -> ArrRelease? in
                         guard let value, let date = try? Date(String(value.prefix(10)), strategy: Self.dayFormat),
@@ -98,7 +138,7 @@ struct ArrClient {
             }
         case .sonarr:
             query.append(URLQueryItem(name: "includeSeries", value: "true"))
-            return try await get("api/v3/calendar", query: query, as: [Episode].self).compactMap { episode in
+            return try await send("api/v3/calendar", query: query, as: [Episode].self).compactMap { episode in
                 guard let date = episode.airDateUtc.flatMap({ try? Date($0, strategy: .iso8601) }) else { return nil }
                 let number = "S\(episode.seasonNumber)E\(episode.episodeNumber)"
                 return ArrRelease(id: "sonarr-\(episode.id)", app: .sonarr, date: date, hasTime: true,
@@ -106,6 +146,8 @@ struct ArrClient {
                                   detail: [number, episode.title].compactMap { $0 }.joined(separator: " "),
                                   isDownloaded: episode.hasFile ?? false)
             }
+        case .seerr:
+            return []
         }
     }
 }

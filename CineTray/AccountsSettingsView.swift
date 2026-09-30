@@ -3,7 +3,7 @@ import AuthenticationServices
 
 /// Sign-in for the media servers (Plex PIN flow, Jellyfin username/password
 /// or Quick Connect, Navidrome username/password, TorrServer optional
-/// HTTP Basic auth, Radarr and Sonarr API keys)
+/// HTTP Basic auth, Radarr, Sonarr and Seerr API keys)
 /// and the scrobblers (Trakt OAuth, Last.fm web auth). Secrets are kept in the
 /// Keychain; only non-secret settings use UserDefaults.
 struct AccountsSettingsView: View {
@@ -20,6 +20,7 @@ struct AccountsSettingsView: View {
     @AppStorage(SettingsKeys.torrServerUsername) private var torrServerUsername = ""
     @AppStorage(SettingsKeys.radarrURL) private var radarrURL = ""
     @AppStorage(SettingsKeys.sonarrURL) private var sonarrURL = ""
+    @AppStorage(SettingsKeys.seerrURL) private var seerrURL = ""
     @AppStorage(SettingsKeys.disabledMusicArtworkSources) private var disabledMusicArtworkSources = ""
 
     // Connected Plex servers; tokens live in the Keychain, one per server.
@@ -79,6 +80,7 @@ struct AccountsSettingsView: View {
             torrServerSection
             arrSection(.radarr, connectedURL: $radarrURL)
             arrSection(.sonarr, connectedURL: $sonarrURL)
+            arrSection(.seerr, connectedURL: $seerrURL)
             traktSection
             lastfmSection
             tmdbSection
@@ -664,7 +666,7 @@ struct AccountsSettingsView: View {
         }
     }
 
-    // MARK: - Radarr and Sonarr
+    // MARK: - Radarr, Sonarr and Seerr
 
     private func arrSection(_ app: ArrApp, connectedURL: Binding<String>) -> some View {
         Section(app.rawValue) {
@@ -693,7 +695,7 @@ struct AccountsSettingsView: View {
                     .foregroundStyle(.green)
             }
             statusText(arrStatuses[app] ?? "")
-            Text("Shows upcoming \(app == .radarr ? "movies" : "episodes") in the menu's calendar. The API key is in \(app.rawValue) under Settings > General.")
+            Text("\(app == .seerr ? "Adds movies and shows you can request to search results. Requests are made as the Seerr admin." : "Shows upcoming \(app == .radarr ? "movies" : "episodes") in the menu's calendar.") The API key is in \(app.rawValue) under Settings > General.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

@@ -658,6 +658,7 @@ nonisolated enum SettingsKeys {
     /// Set once Connect succeeds; the API key is in the Keychain.
     static let radarrURL = "radarrURL"
     static let sonarrURL = "sonarrURL"
+    static let seerrURL = "seerrURL"
 
     static let tvTopLevel = "tvTopLevel"
     /// Whether the menu shows the Music pane instead of the Video pane.
@@ -744,6 +745,7 @@ enum KeychainKeys {
     static let torrServerPassword = "torrServerPassword"
     static let radarrAPIKey = "radarrAPIKey"
     static let sonarrAPIKey = "sonarrAPIKey"
+    static let seerrAPIKey = "seerrAPIKey"
     static let traktClientID = "traktClientID"
     static let traktClientSecret = "traktClientSecret"
     static let traktAccessToken = "traktAccessToken"

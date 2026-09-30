@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Requests with Seerr. Connect Seerr in Settings > Accounts with its API key, and a search also shows a Seerr row with the movies and shows that aren't in your libraries yet. Click a poster, then Request, then Confirm. For a show, pick the seasons you want; seasons already requested or available are listed but can't be picked. A checkmark confirms the request, and a clock then marks titles already requested. Hover a poster and click the arrow at its top right to open it in Seerr. Requests are made as the Seerr admin.
 - Stop a download. While an item downloads, its download button becomes a stop button. Stopping a show, season or album, or the episode or track downloading now, stops the rest too. Files that finished downloading stay.
 
 ### Changed

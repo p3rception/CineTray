@@ -19,6 +19,7 @@ struct MenuBarContentView: View {
     @AppStorage(SettingsKeys.menuShowsMusic) private var showsMusic = false
     @AppStorage(SettingsKeys.radarrURL) private var radarrURL = ""
     @AppStorage(SettingsKeys.sonarrURL) private var sonarrURL = ""
+    @AppStorage(SettingsKeys.seerrURL) private var seerrURL = ""
     @State private var showsCalendar = false
 
     private var contentWidth: CGFloat {
@@ -98,6 +99,9 @@ struct MenuBarContentView: View {
                 }
                 if appState.isFiltering {
                     searchStatus(hasResults: !shown.isEmpty)
+                    if !seerrURL.isEmpty, !appState.isOfflineMode {
+                        SeerrSearchRow(query: appState.searchText.trimmingCharacters(in: .whitespaces))
+                    }
                 }
             }
         }
