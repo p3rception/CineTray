@@ -396,6 +396,7 @@ struct MenuBarContentView: View {
             ) { item in
                 handleSelection(of: item, in: section, within: items)
             }
+            inlinePlaybackError(in: section, items: items)
             ForEach(appState.drillPath[section] ?? [], id: \.id) { parent in
                 drillLevel(for: parent, in: section)
             }
@@ -407,6 +408,23 @@ struct MenuBarContentView: View {
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
+        }
+    }
+
+    /// Inline playback has no window to show a failure in, so the error
+    /// appears under the carousel holding the track (or, in Continue, its album).
+    @ViewBuilder
+    private func inlinePlaybackError(in section: MenuSection, items: [MediaItem]) -> some View {
+        if section.supportsInlineMusic, playerMode == PlayerMode.inline.rawValue,
+           let error = appState.playbackError,
+           let failed = appState.lastStartedItem, failed.type == .music,
+           items.contains(where: { $0.id == failed.id || (section == .continueItems && $0.id == failed.parentID) }) {
+            Label("\(failed.title): \(error)", systemImage: "exclamationmark.triangle")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 12)
         }
     }
 
@@ -489,6 +507,7 @@ struct MenuBarContentView: View {
                 ) { child in
                     handleSelection(of: child, in: section, within: children)
                 }
+                inlinePlaybackError(in: section, items: children)
             } else {
                 Text("No items found.")
                     .font(.caption)

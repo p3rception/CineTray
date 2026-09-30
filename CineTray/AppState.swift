@@ -1312,6 +1312,9 @@ final class AppState {
     var volume: Float = 1.0
     /// Non-nil error message to display in the player window when a session fails.
     var playbackError: String?
+    /// The item of the latest `startPlayback`, which `playbackError` refers
+    /// to; `currentItem` is already nil once playback has failed.
+    private(set) var lastStartedItem: MediaItem?
     /// Ordered track list backing the active inline (menu-bar carousel)
     /// session; nil when playback belongs to a player window.
     private(set) var inlinePlaylist: [MediaItem]?
@@ -1352,6 +1355,7 @@ final class AppState {
         let generation = playbackGeneration
         tearDownPlayer()
         currentItem = item
+        lastStartedItem = item
         subtitleOffset = 0
         playbackError = nil
         self.inlinePlaylist = inlinePlaylist
