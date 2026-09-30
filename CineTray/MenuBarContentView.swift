@@ -409,7 +409,6 @@ struct MenuBarContentView: View {
             MediaCarouselView(
                 items: items,
                 selectedID: appState.currentItem?.id ?? appState.drillPath[section]?.first?.id,
-                navigationStep: playerMode == PlayerMode.inline.rawValue ? 1 : nil,
                 nowPlayingItem: (section.supportsInlineMusic && playerMode == PlayerMode.inline.rawValue) ? appState.currentItem : nil,
                 isPlaying: appState.isPlaying,
                 presentsEpisodesByShow: section == .continueItems,
@@ -521,7 +520,6 @@ struct MenuBarContentView: View {
                 MediaCarouselView(
                     items: children,
                     selectedID: appState.drilledChildID(under: parent, in: section),
-                    navigationStep: playerMode == PlayerMode.inline.rawValue ? 1 : nil,
                     nowPlayingItem: (section.supportsInlineMusic && playerMode == PlayerMode.inline.rawValue) ? appState.currentItem : nil,
                     isPlaying: appState.isPlaying,
                     onPlayPause: appState.togglePlayPause,

@@ -9,6 +9,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Stop a download. While an item downloads, its download button becomes a stop button. Stopping a show, season or album, or the episode or track downloading now, stops the rest too. Files that finished downloading stay.
 
+### Changed
+
+- Poster rows no longer have arrows at their sides. Scroll them with the trackpad or the system scroll bar, which follows the Show scroll bars setting in System Settings > Appearance.
+
 ### Fixed
 
 - Downloading a show, season, album or playlist whose contents can't be loaded from the server shows an error. Before, a season that failed to load was skipped without a message, and the show was still marked downloaded.

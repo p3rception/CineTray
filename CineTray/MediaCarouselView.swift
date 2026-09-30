@@ -17,7 +17,6 @@ struct MediaCarouselView: View {
 
     let items: [MediaItem]
     var selectedID: String?
-    var navigationStep: Int?
     var nowPlayingItem: MediaItem?
     var isPlaying: Bool = false
     var isCompact: Bool = false
@@ -49,20 +48,6 @@ struct MediaCarouselView: View {
         let scaledPoster = isCompact ? maxPoster * (Self.compactCellWidth / Self.baseCellWidth) : maxPoster
         return scaledPoster + (isCompact ? 26 : 30)
     }
-
-    /// Index of the leading visible cell (0 when scrolledUniqueID is nil).
-    private var scrolledIndex: Int {
-        guard let uniqueID = scrolledUniqueID,
-              let idx = items.firstIndex(where: { $0.uniqueID == uniqueID }) else { return 0 }
-        return idx
-    }
-
-    private var effectiveNavigationStep: Int {
-        navigationStep ?? visibleCount
-    }
-
-    private var canScrollLeft: Bool { scrolledIndex > 0 }
-    private var canScrollRight: Bool { scrolledIndex + visibleCount < items.count }
 
     /// The item that shows the inline player overlay.
     /// Finds the exact item matching the currently playing track, or its parent (album/playlist).
@@ -115,47 +100,14 @@ struct MediaCarouselView: View {
         .scrollClipDisabled()
         .scrollPosition(id: $scrolledUniqueID)
         .scrollTargetBehavior(.viewAligned)
-        .scrollIndicators(.hidden)
         .frame(width: MediaCarouselView.carouselWidth(for: visibleCount))
         .frame(maxWidth: .infinity)
-        .overlay(alignment: .leading) {
-            if canScrollLeft {
-                pagingButton(systemImage: "chevron.compact.left", delta: -effectiveNavigationStep)
-            }
-        }
-        .overlay(alignment: .trailing) {
-            if canScrollRight {
-                pagingButton(systemImage: "chevron.compact.right", delta: effectiveNavigationStep)
-            }
-        }
         .onChange(of: nowPlayingItem?.id) { _, newID in
             guard let newID, let index = items.firstIndex(where: { $0.id == newID }) else { return }
             let maxLeading = max(0, items.count - visibleCount)
             withAnimation(.snappy) {
                 scrolledUniqueID = items[min(index, maxLeading)].uniqueID
             }
-        }
-    }
-
-    private func pagingButton(systemImage: String, delta: Int) -> some View {
-        Button {
-            page(by: delta)
-        } label: {
-            Image(systemName: systemImage)
-                .font(.title2)
-                .foregroundStyle(.secondary)
-                .frame(width: 16, height: maxCellHeight)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func page(by delta: Int) {
-        guard !items.isEmpty else { return }
-        let current = items.firstIndex { $0.uniqueID == scrolledUniqueID } ?? 0
-        let target = min(max(current + delta, 0), items.count - 1)
-        withAnimation(.snappy) {
-            scrolledUniqueID = items[target].uniqueID
         }
     }
 
