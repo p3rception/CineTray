@@ -668,6 +668,8 @@ nonisolated enum SettingsKeys {
     static let cacheArtwork = "cacheArtwork"
     static let removedCredentialCacheEntries = "removedCredentialCacheEntries"
     static let simpleVisuals = "simpleVisuals"
+    static let carouselVisibleCount = "carouselVisibleCount"
+    static let selectedSettingsTab = "selectedSettingsTab"
     static let playbackProgress = "playbackProgress"
     static let continueTimeout = "continueTimeout"
     static let continueMusic = "continueMusic"

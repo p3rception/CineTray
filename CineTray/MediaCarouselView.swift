@@ -30,7 +30,7 @@ struct MediaCarouselView: View {
     let onSelect: (MediaItem) -> Void
 
     @Environment(AppState.self) private var appState
-    @AppStorage("carouselVisibleCount") private var visibleCount = 3
+    @AppStorage(SettingsKeys.carouselVisibleCount) private var visibleCount = 3
     @AppStorage(SettingsKeys.simpleVisuals) private var simpleVisuals = false
     @State private var scrolledUniqueID: String?
 

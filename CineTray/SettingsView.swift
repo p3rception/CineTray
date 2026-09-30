@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 struct SettingsView: View {
-    @AppStorage("selectedSettingsTab") private var selectedTab = "general"
+    @AppStorage(SettingsKeys.selectedSettingsTab) private var selectedTab = "general"
 
     var body: some View {
         TabView(selection: $selectedTab) {

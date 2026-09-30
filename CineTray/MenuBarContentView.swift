@@ -14,7 +14,7 @@ struct MenuBarContentView: View {
     private let downloadManager = DownloadManager.shared
 
     @FocusState private var searchFocused: Bool
-    @AppStorage("carouselVisibleCount") private var carouselVisibleCount = 3
+    @AppStorage(SettingsKeys.carouselVisibleCount) private var carouselVisibleCount = 3
     @AppStorage(SettingsKeys.playerMode) private var playerMode = PlayerMode.popout.rawValue
     @AppStorage(SettingsKeys.menuShowsMusic) private var showsMusic = false
     @AppStorage(SettingsKeys.radarrURL) private var radarrURL = ""

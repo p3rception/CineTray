@@ -4,7 +4,7 @@ import SwiftUI
 /// shows list at their top level) and sorting.
 struct VisualsSettingsView: View {
     @Environment(AppState.self) private var appState
-    @AppStorage("carouselVisibleCount") private var visibleCount = 3
+    @AppStorage(SettingsKeys.carouselVisibleCount) private var visibleCount = 3
     @AppStorage(SettingsKeys.tvTopLevel) private var tvTopLevel = TVTopLevel.series.rawValue
     @AppStorage(SettingsKeys.sectionEnabled(.playlists)) private var sectionPlaylists = false
     @AppStorage(SettingsKeys.sectionEnabled(.continueItems)) private var sectionContinue = true

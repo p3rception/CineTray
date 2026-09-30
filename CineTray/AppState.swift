@@ -40,7 +40,7 @@ final class AppState {
         Task {
             await ensureLibrarySections()
             if providers().isEmpty {
-                UserDefaults.standard.set("accounts", forKey: "selectedSettingsTab")
+                UserDefaults.standard.set("accounts", forKey: SettingsKeys.selectedSettingsTab)
                 NSApplication.shared.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
             }
         }
