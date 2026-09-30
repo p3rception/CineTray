@@ -110,9 +110,8 @@ struct TMDbClient {
     /// Whether TMDb accepts `key`: true for a valid v3 API key, false when
     /// TMDb rejects it. Throws when TMDb can't be reached.
     static func isValidKey(_ key: String) async throws -> Bool {
-        var components = URLComponents(url: baseURL.appending(path: "/authentication"), resolvingAgainstBaseURL: false)!
-        components.queryItems = [URLQueryItem(name: "api_key", value: key)]
-        let (_, response) = try await URLSession.uncached.data(from: components.url!)
+        let url = baseURL.appending(path: "/authentication").appending(queryItems: [URLQueryItem(name: "api_key", value: key)])
+        let (_, response) = try await URLSession.uncached.data(from: url)
         switch (response as? HTTPURLResponse)?.statusCode {
         case 200: return true
         case 401: return false
@@ -121,9 +120,7 @@ struct TMDbClient {
     }
 
     private func get(path: String, query: [URLQueryItem]) async throws -> Data {
-        var components = URLComponents(url: Self.baseURL.appending(path: path), resolvingAgainstBaseURL: false)!
-        components.queryItems = query
-        let (data, response) = try await URLSession.uncached.data(from: components.url!)
+        let (data, response) = try await URLSession.uncached.data(from: Self.baseURL.appending(path: path).appending(queryItems: query))
         guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
         return data
     }

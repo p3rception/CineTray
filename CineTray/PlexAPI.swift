@@ -198,9 +198,7 @@ struct PlexClient {
     }
 
     private func fetchData(from baseURL: URL, path: String, query: [URLQueryItem]) async throws -> (Data, URLResponse) {
-        var components = URLComponents(url: baseURL.appending(path: path), resolvingAgainstBaseURL: false)!
-        components.queryItems = (components.queryItems ?? []) + query
-        var request = URLRequest(url: components.url!)
+        var request = URLRequest(url: baseURL.appending(path: path).appending(queryItems: query))
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue(config.token, forHTTPHeaderField: "X-Plex-Token")
         request.setValue(Self.clientIdentifier, forHTTPHeaderField: "X-Plex-Client-Identifier")
@@ -680,19 +678,14 @@ struct PlexClient {
 
     /// Poster art scaled server-side by Plex's photo transcoder.
     func imageURL(thumbPath: String) -> URL {
-        var components = URLComponents(
-            url: config.serverURL.appending(path: "/photo/:/transcode"),
-            resolvingAgainstBaseURL: false
-        )!
-        components.queryItems = [
+        config.serverURL.appending(path: "/photo/:/transcode").appending(queryItems: [
             URLQueryItem(name: "width", value: "400"),
             URLQueryItem(name: "height", value: "600"),
             URLQueryItem(name: "minSize", value: "1"),
             URLQueryItem(name: "url", value: thumbPath),
             // No token here: these URLs are saved (Continue list, download
             // index). ArtworkCache sends the token as a header instead.
-        ]
-        return components.url!
+        ])
     }
 
     // MARK: - Playback
@@ -723,9 +716,9 @@ struct PlexClient {
         }
         let (data, _) = try await fetchData(path: "/identity")
         let machineID = try JSONDecoder().decode(Identity.self, from: data).MediaContainer.machineIdentifier
-        var components = URLComponents(url: config.serverURL.appending(path: "/web/index.html"), resolvingAgainstBaseURL: false)!
-        components.fragment = "!/server/\(machineID)/details?key=%2Flibrary%2Fmetadata%2F\(ratingKey)"
-        guard let url = components.url else { throw URLError(.badURL) }
+        var components = URLComponents(url: config.serverURL.appending(path: "/web/index.html"), resolvingAgainstBaseURL: false)
+        components?.fragment = "!/server/\(machineID)/details?key=%2Flibrary%2Fmetadata%2F\(ratingKey)"
+        guard let url = components?.url else { throw URLError(.badURL) }
         return url
     }
 
@@ -735,15 +728,10 @@ struct PlexClient {
         guard let media = (try? await metadata(forRatingKey: ratingKey))?.Media?.first,
               let part = media.Part?.first,
               let partKey = part.key else { return nil }
-        var components = URLComponents(
-            url: config.serverURL.appending(path: partKey),
-            resolvingAgainstBaseURL: false
-        )!
-        components.queryItems = (components.queryItems ?? []) + [
+        return config.serverURL.appending(path: partKey).appending(queryItems: [
             URLQueryItem(name: "download", value: "1"),
             URLQueryItem(name: "X-Plex-Token", value: config.token),
-        ]
-        return components.url
+        ])
     }
 
     /// The original file, for players that read any container (IINA, VLC).
@@ -756,21 +744,15 @@ struct PlexClient {
 
     /// The original file, streamed as-is with no server-side processing.
     private func directFileURL(partKey: String) -> URL {
-        var components = URLComponents(
-            url: config.serverURL.appending(path: partKey),
-            resolvingAgainstBaseURL: false
-        )!
-        components.queryItems = (components.queryItems ?? []) + [
-            URLQueryItem(name: "X-Plex-Token", value: config.token),
-        ]
-        return components.url!
+        config.serverURL.appending(path: partKey)
+            .appending(queryItems: [URLQueryItem(name: "X-Plex-Token", value: config.token)])
     }
 
     /// Direct-plays the original video file when AVFoundation can handle its
     /// container and codecs (AV1 needs the M3-or-newer hardware decoder);
     /// anything else falls back to the universal HLS stream, where the server
     /// remuxes compatible codecs and only transcodes what it must.
-    func videoStreamURL(ratingKey: String) async -> URL {
+    func videoStreamURL(ratingKey: String) async throws -> URL {
         if let media = (try? await metadata(forRatingKey: ratingKey))?.Media?.first,
            let part = media.Part?.first, let partKey = part.key,
            Self.directPlayVideoContainers.contains((part.container ?? media.container ?? "").lowercased()),
@@ -778,19 +760,19 @@ struct PlexClient {
            Self.directPlayAudioCodecs.contains((media.audioCodec ?? "").lowercased()) {
             return directFileURL(partKey: partKey)
         }
-        return hlsStreamURL(ratingKey: ratingKey)
+        return try hlsStreamURL(ratingKey: ratingKey)
     }
 
     /// Same decision for music: direct-play the original track unless its
     /// container/codec needs the server's MP3 fallback.
-    func trackStreamURL(ratingKey: String) async -> URL {
+    func trackStreamURL(ratingKey: String) async throws -> URL {
         if let media = (try? await metadata(forRatingKey: ratingKey))?.Media?.first,
            let part = media.Part?.first, let partKey = part.key,
            Self.directPlayAudioContainers.contains((part.container ?? media.container ?? "").lowercased()),
            Self.directPlayAudioCodecs.contains((media.audioCodec ?? "").lowercased()) {
             return directFileURL(partKey: partKey)
         }
-        return audioStreamURL(ratingKey: ratingKey)
+        return try audioStreamURL(ratingKey: ratingKey)
     }
 
     /// URLComponents.queryItems leaves "&" in values unescaped, which would
@@ -815,15 +797,15 @@ struct PlexClient {
     /// directStream lets the server remux compatible video/audio without
     /// re-encoding; codecs outside the advertised profile get transcoded
     /// to H.264/AAC.
-    func hlsStreamURL(ratingKey: String) -> URL {
+    func hlsStreamURL(ratingKey: String) throws -> URL {
         var components = URLComponents(
             url: config.serverURL.appending(path: "/video/:/transcode/universal/start.m3u8"),
             resolvingAgainstBaseURL: false
-        )!
+        )
         let session = UUID().uuidString
         var videoCodecs = "h264,hevc"
         if Self.supportsAV1 { videoCodecs += ",av1" }
-        components.percentEncodedQuery = Self.encodedQuery([
+        components?.percentEncodedQuery = Self.encodedQuery([
             URLQueryItem(name: "path", value: "/library/metadata/\(ratingKey)"),
             URLQueryItem(name: "mediaIndex", value: "0"),
             URLQueryItem(name: "partIndex", value: "0"),
@@ -854,20 +836,21 @@ struct PlexClient {
             URLQueryItem(name: "X-Plex-Token", value: config.token),
             URLQueryItem(name: "X-Plex-Client-Identifier", value: Self.clientIdentifier),
         ])
-        return components.url!
+        guard let url = components?.url else { throw URLError(.badURL) }
+        return url
     }
 
     /// Universal audio transcode to MP3, the fallback for track codecs
     /// AVFoundation can't play. The explicit music transcode target tells
     /// the server what to produce - without it, an unrecognized client
     /// gets an error instead of a stream.
-    func audioStreamURL(ratingKey: String) -> URL {
+    func audioStreamURL(ratingKey: String) throws -> URL {
         var components = URLComponents(
             url: config.serverURL.appending(path: "/music/:/transcode/universal/start.mp3"),
             resolvingAgainstBaseURL: false
-        )!
+        )
         let session = UUID().uuidString
-        components.percentEncodedQuery = Self.encodedQuery([
+        components?.percentEncodedQuery = Self.encodedQuery([
             URLQueryItem(name: "path", value: "/library/metadata/\(ratingKey)"),
             URLQueryItem(name: "mediaIndex", value: "0"),
             URLQueryItem(name: "partIndex", value: "0"),
@@ -887,7 +870,8 @@ struct PlexClient {
             URLQueryItem(name: "X-Plex-Token", value: config.token),
             URLQueryItem(name: "X-Plex-Client-Identifier", value: Self.clientIdentifier),
         ])
-        return components.url!
+        guard let url = components?.url else { throw URLError(.badURL) }
+        return url
     }
 
     /// Reports playback position so on-deck/resume state stays in sync.
@@ -1097,9 +1081,9 @@ struct PlexMediaProvider: MediaProvider {
     }
 
     func streamURL(for item: MediaItem) async throws -> URL {
-        return item.kind == .track
-            ? await client.trackStreamURL(ratingKey: item.id)
-            : await client.videoStreamURL(ratingKey: item.id)
+        return try await item.kind == .track
+            ? client.trackStreamURL(ratingKey: item.id)
+            : client.videoStreamURL(ratingKey: item.id)
     }
 
     func originalFileURL(for item: MediaItem) async throws -> URL {

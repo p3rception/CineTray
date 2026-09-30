@@ -38,12 +38,7 @@ struct JellyfinClient {
     }
 
     private func request(path: String, query: [URLQueryItem] = []) -> URLRequest {
-        var components = URLComponents(
-            url: config.serverURL.appending(path: path),
-            resolvingAgainstBaseURL: false
-        )!
-        components.queryItems = (components.queryItems ?? []) + query
-        var request = URLRequest(url: components.url!)
+        var request = URLRequest(url: config.serverURL.appending(path: path).appending(queryItems: query))
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue(Self.authorizationHeader(token: config.token), forHTTPHeaderField: "Authorization")
         return request
@@ -568,15 +563,10 @@ struct JellyfinClient {
     }
 
     nonisolated func imageURL(itemID: String) -> URL {
-        var components = URLComponents(
-            url: config.serverURL.appending(path: "/Items/\(itemID)/Images/Primary"),
-            resolvingAgainstBaseURL: false
-        )!
-        components.queryItems = [
+        config.serverURL.appending(path: "/Items/\(itemID)/Images/Primary").appending(queryItems: [
             URLQueryItem(name: "maxWidth", value: "400"),
             URLQueryItem(name: "quality", value: "90"),
-        ]
-        return components.url!
+        ])
     }
 
     private nonisolated func ancestorItem(id: String?, title: String?, kind: MediaKind, type: MediaType, parent: MediaItem? = nil) -> MediaItem? {
@@ -602,12 +592,8 @@ struct JellyfinClient {
     }
 
     func downloadURL(itemID: String) -> URL {
-        var components = URLComponents(
-            url: config.serverURL.appending(path: "/Items/\(itemID)/Download"),
-            resolvingAgainstBaseURL: false
-        )!
-        components.queryItems = [URLQueryItem(name: "api_key", value: config.token)]
-        return components.url!
+        config.serverURL.appending(path: "/Items/\(itemID)/Download")
+            .appending(queryItems: [URLQueryItem(name: "api_key", value: config.token)])
     }
 
     // MARK: - Streaming
@@ -653,10 +639,6 @@ struct JellyfinClient {
         if let source, Self.canDirectPlay(source) {
             return staticStreamURL(itemID: itemID, sourceID: source.Id)
         }
-        var components = URLComponents(
-            url: config.serverURL.appending(path: "/Videos/\(itemID)/master.m3u8"),
-            resolvingAgainstBaseURL: false
-        )!
         var videoCodecs = "h264,hevc"
         if PlexClient.supportsAV1 { videoCodecs += ",av1" }
         let pick = source?.MediaStreams?.first { $0.Type == "Subtitle" && $0.Index == source?.DefaultSubtitleStreamIndex }
@@ -664,7 +646,7 @@ struct JellyfinClient {
         // transcode. Direct-stream produces a VOD-type HLS manifest with #EXT-X-ENDLIST, which
         // gives AVFoundation a fully populated seekableTimeRanges - required for the system PiP
         // scrubber to be interactive.
-        components.queryItems = [
+        var query = [
             URLQueryItem(name: "api_key", value: config.token),
             URLQueryItem(name: "MediaSourceId", value: itemID),
             URLQueryItem(name: "DeviceId", value: Self.deviceID),
@@ -683,9 +665,9 @@ struct JellyfinClient {
         ]
         // Turns on the subtitle the user's Jellyfin settings choose.
         if let index = pick?.Index {
-            components.queryItems! += [URLQueryItem(name: "SubtitleStreamIndex", value: String(index))]
+            query.append(URLQueryItem(name: "SubtitleStreamIndex", value: String(index)))
         }
-        return components.url!
+        return config.serverURL.appending(path: "/Videos/\(itemID)/master.m3u8").appending(queryItems: query)
     }
 
     /// The original file, for players that read any container (IINA, VLC).
@@ -695,16 +677,11 @@ struct JellyfinClient {
     }
 
     private func staticStreamURL(itemID: String, sourceID: String) -> URL {
-        var components = URLComponents(
-            url: config.serverURL.appending(path: "/Videos/\(itemID)/stream"),
-            resolvingAgainstBaseURL: false
-        )!
-        components.queryItems = [
+        config.serverURL.appending(path: "/Videos/\(itemID)/stream").appending(queryItems: [
             URLQueryItem(name: "static", value: "true"),
             URLQueryItem(name: "MediaSourceId", value: sourceID),
             URLQueryItem(name: "api_key", value: config.token),
-        ]
-        return components.url!
+        ])
     }
 
     /// The original file and its separate text subtitle files for CineTray's
@@ -738,9 +715,8 @@ struct JellyfinClient {
                 playback.subtitles.append(file)
             } catch {
                 // Still offered from the server, only named "Track" by VLC.
-                var components = URLComponents(url: config.serverURL.appending(path: path), resolvingAgainstBaseURL: false)!
-                components.queryItems = [URLQueryItem(name: "api_key", value: config.token)]
-                playback.subtitles.append(components.url!)
+                playback.subtitles.append(config.serverURL.appending(path: path)
+                    .appending(queryItems: [URLQueryItem(name: "api_key", value: config.token)]))
             }
             if index == source.DefaultSubtitleStreamIndex { playback.selectedSubtitle = playback.subtitles.last }
         }
@@ -787,11 +763,7 @@ struct JellyfinClient {
     }
 
     private func audioStreamURL(itemID: String) -> URL {
-        var components = URLComponents(
-            url: config.serverURL.appending(path: "/Audio/\(itemID)/universal"),
-            resolvingAgainstBaseURL: false
-        )!
-        components.queryItems = [
+        config.serverURL.appending(path: "/Audio/\(itemID)/universal").appending(queryItems: [
             URLQueryItem(name: "api_key", value: config.token),
             URLQueryItem(name: "UserId", value: config.userID),
             URLQueryItem(name: "DeviceId", value: Self.deviceID),
@@ -799,8 +771,7 @@ struct JellyfinClient {
             URLQueryItem(name: "TranscodingContainer", value: "ts"),
             URLQueryItem(name: "TranscodingProtocol", value: "hls"),
             URLQueryItem(name: "AudioCodec", value: "aac"),
-        ]
-        return components.url!
+        ])
     }
 
     // MARK: - Playback reporting

@@ -154,9 +154,8 @@ struct TraktClient {
 
     private func get(path: String, query: [String: String]) async throws -> Data {
         guard !Self.clientID.isEmpty else { throw TraktError.unauthorized }
-        var components = URLComponents(url: Self.baseURL.appending(path: path), resolvingAgainstBaseURL: false)!
-        components.queryItems = query.map { URLQueryItem(name: $0.key, value: $0.value) }
-        var request = URLRequest(url: components.url!)
+        var request = URLRequest(url: Self.baseURL.appending(path: path)
+            .appending(queryItems: query.map { URLQueryItem(name: $0.key, value: $0.value) }))
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("2", forHTTPHeaderField: "trakt-api-version")
         request.setValue(Self.clientID, forHTTPHeaderField: "trakt-api-key")
@@ -314,9 +313,8 @@ struct LastFMClient {
         let digest = Insecure.MD5.hash(data: Data(signatureBase.utf8))
         all["api_sig"] = digest.map { String(format: "%02x", $0) }.joined()
         all["format"] = "json"
-        var components = URLComponents(url: Self.baseURL, resolvingAgainstBaseURL: false)!
-        components.queryItems = all.map { URLQueryItem(name: $0.key, value: $0.value) }
-        let (data, response) = try await URLSession.uncached.data(from: components.url!)
+        let url = Self.baseURL.appending(queryItems: all.map { URLQueryItem(name: $0.key, value: $0.value) })
+        let (data, response) = try await URLSession.uncached.data(from: url)
         guard (response as? HTTPURLResponse)?.statusCode == 200 else {
             struct Failure: Decodable { let error: Int; let message: String }
             if let failure = try? JSONDecoder().decode(Failure.self, from: data) {
@@ -333,9 +331,8 @@ struct LastFMClient {
         var all = params
         all["api_key"] = Self.apiKey
         all["format"] = "json"
-        var components = URLComponents(url: Self.baseURL, resolvingAgainstBaseURL: false)!
-        components.queryItems = all.map { URLQueryItem(name: $0.key, value: $0.value) }
-        let (data, response) = try await URLSession.uncached.data(from: components.url!)
+        let url = Self.baseURL.appending(queryItems: all.map { URLQueryItem(name: $0.key, value: $0.value) })
+        let (data, response) = try await URLSession.uncached.data(from: url)
         guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
         return data
     }
