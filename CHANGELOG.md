@@ -11,6 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- The Settings window opens taller, so Accounts needs less scrolling. You can still drag it to any height.
 - Poster rows no longer have arrows at their sides. Scroll them with the trackpad or the system scroll bar, which follows the Show scroll bars setting in System Settings > Appearance.
 
 ### Fixed

@@ -28,7 +28,7 @@ struct SettingsView: View {
         // Fixed width, adjustable height, like System Settings; each tab's
         // Form scrolls when it doesn't fit.
         .frame(width: 520)
-        .frame(minHeight: 400, idealHeight: 560, maxHeight: .infinity)
+        .frame(minHeight: 400, idealHeight: 760, maxHeight: .infinity)
         .background(ResizableWindow())
         .onAppear { AppWindowActivation.windowOpened() }
         .onDisappear { AppWindowActivation.windowClosed() }
