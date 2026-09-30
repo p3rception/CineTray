@@ -40,6 +40,7 @@ This is a fork of [KuDoZ007/QP](https://github.com/KuDoZ007/QP). The main differ
 *   **Continue Watching.** Merges the server's own list (Plex Continue Watching, Jellyfin Resume and Next Up) with what you started in CineTray. Movies and episodes resume where you stopped, on any device, and posters show watched checkmarks and progress bars.
 *   **Better search.** Ignores spacing, punctuation and accents ("madmen" finds "Mad Men") and shows only the sections with matches.
 *   **Open in Plex or Jellyfin.** Hover a poster and click the arrow at its top right (or use the player's toolbar button) to open that item in the server's web app: browse in CineTray, watch in Plex or Jellyfin.
+*   **Release calendar.** Connect Radarr and Sonarr in Settings > Accounts, and a calendar button in the menu shows their upcoming movies and episodes: a month view with a dot on each day with releases, and a list of the coming week.
 *   **Your video player.** Play video in CineTray's own player, in IINA or VLC with one click, or in any other installed app, such as QuickTime Player (Settings > Playback). IINA and VLC get the original file, with all its subtitles and audio tracks. The built-in player lets you pick the audio track and subtitles for every format, MKV and AVI included, shift subtitles earlier or later, and set their size. Jellyfin videos list the same subtitles as Jellyfin's web app, subtitle files stored next to the video included.
 *   **Scrobbling and artwork set up in the app.** Trakt and Last.fm sign-in are back. Their API keys go in Settings > Accounts instead of a source file you edit before building, and [Scrobbling and artwork](#scrobbling-and-artwork) says where to get them. Your own music gets covers and artist photos from Deezer, MusicBrainz, Last.fm, TheAudioDB or Discogs; turn each one on or off.
 *   **Easier sign-in.** Jellyfin Quick Connect (approve a code from another signed-in device, no password). Server addresses work without `http://` or `https://`; the app uses HTTPS, and falls back to HTTP only for addresses on your local network. The TMDb API key field checks the key as you type.
@@ -118,6 +119,12 @@ Optional. Each service needs a free account of your own. The keys go in Settings
     <td align="center"><img src="Screenshots/Inline-Music-Player.png" width="247" alt="The Music pane with playback controls on the album poster"><br><sub>Music pane with inline player</sub></td>
     <td align="center"><img src="Screenshots/Compact-Mode.png" width="244" alt="The menu with Show Posters off, with titles instead of posters"><br><sub>Show Posters off</sub></td>
     <td align="center"><img src="Screenshots/Customisation.png" width="187" alt="The Visuals tab in Settings"><br><sub>Settings</sub></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td align="center"><img src="Screenshots/Release-Calendar.png" width="205" alt="The release calendar: a month view with dots on days with releases, and the week's movies and episodes from Radarr and Sonarr"><br><sub>Release calendar from Radarr and Sonarr</sub></td>
   </tr>
 </table>
 

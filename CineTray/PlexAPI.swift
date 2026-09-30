@@ -44,7 +44,8 @@ final class NetworkChangeMonitor {
 }
 
 /// URLSession drops Authorization when a server redirects to another
-/// address, but keeps custom headers, so the Plex token is dropped here.
+/// address, but keeps custom headers, so the Plex token and the Radarr and
+/// Sonarr API key are dropped here.
 nonisolated final class PlexTokenRedirectGuard: NSObject, URLSessionTaskDelegate {
     static let shared = PlexTokenRedirectGuard()
 
@@ -54,6 +55,7 @@ nonisolated final class PlexTokenRedirectGuard: NSObject, URLSessionTaskDelegate
         var request = request
         if let from = response.url, let to = request.url, ArtworkCache.addressKey(from) != ArtworkCache.addressKey(to) {
             request.setValue(nil, forHTTPHeaderField: "X-Plex-Token")
+            request.setValue(nil, forHTTPHeaderField: "X-Api-Key")
         }
         completionHandler(request)
     }

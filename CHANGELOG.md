@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Release calendar for Radarr and Sonarr. Connect them in Settings > Accounts with their API key, then click the calendar button at the top of the menu. A month view marks the days with releases, orange for movies and blue for episodes, and below it the selected day and the six after it list each movie release (in cinemas, digital or physical) and each episode with its air time. A green tick marks what is already downloaded. Click the button again, or start typing a search, to return to your libraries.
 - IINA and VLC buttons next to Play Video In in Settings > Playback, to switch to either player in one click. CineTray switches back to the built-in player. A player that isn't installed has its button dimmed and is named below Play Video In.
 - Keyboard control for MKV, AVI and other videos in CineTray's player that play in the VLC engine: Space plays or pauses, Left and Right Arrow skip back and forward 10 seconds, as in other videos.
 

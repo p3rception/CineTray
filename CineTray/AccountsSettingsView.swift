@@ -3,7 +3,7 @@ import AuthenticationServices
 
 /// Sign-in for the media servers (Plex PIN flow, Jellyfin username/password
 /// or Quick Connect, Navidrome username/password, TorrServer optional
-/// HTTP Basic auth)
+/// HTTP Basic auth, Radarr and Sonarr API keys)
 /// and the scrobblers (Trakt OAuth, Last.fm web auth). Secrets are kept in the
 /// Keychain; only non-secret settings use UserDefaults.
 struct AccountsSettingsView: View {
@@ -18,6 +18,8 @@ struct AccountsSettingsView: View {
     @AppStorage(SettingsKeys.navidromeSalt) private var navidromeSalt = ""
     @AppStorage(SettingsKeys.torrServerURL) private var torrServerURL = ""
     @AppStorage(SettingsKeys.torrServerUsername) private var torrServerUsername = ""
+    @AppStorage(SettingsKeys.radarrURL) private var radarrURL = ""
+    @AppStorage(SettingsKeys.sonarrURL) private var sonarrURL = ""
     @AppStorage(SettingsKeys.disabledMusicArtworkSources) private var disabledMusicArtworkSources = ""
 
     // Connected Plex servers; tokens live in the Keychain, one per server.
@@ -45,6 +47,9 @@ struct AccountsSettingsView: View {
     @State private var torrServerAddress = UserDefaults.standard.string(forKey: SettingsKeys.torrServerURL) ?? ""
     @State private var torrServerPassword = ""
     @State private var torrServerStatus = ""
+    @State private var arrAddresses = Dictionary(uniqueKeysWithValues: ArrApp.allCases.map { ($0, UserDefaults.standard.string(forKey: $0.urlKey) ?? "") })
+    @State private var arrAPIKeys: [ArrApp: String] = [:]
+    @State private var arrStatuses: [ArrApp: String] = [:]
     @State private var pinCode = ""
     @State private var plexStatus = ""
     @State private var plexAdvancedExpanded = false
@@ -72,6 +77,8 @@ struct AccountsSettingsView: View {
             jellyfinSection
             navidromeSection
             torrServerSection
+            arrSection(.radarr, connectedURL: $radarrURL)
+            arrSection(.sonarr, connectedURL: $sonarrURL)
             traktSection
             lastfmSection
             tmdbSection
@@ -654,6 +661,78 @@ struct AccountsSettingsView: View {
                 return
             }
             torrServerStatus = "Connection failed: \(lastError?.localizedDescription ?? "server not reachable.")"
+        }
+    }
+
+    // MARK: - Radarr and Sonarr
+
+    private func arrSection(_ app: ArrApp, connectedURL: Binding<String>) -> some View {
+        Section(app.rawValue) {
+            LabeledContent("Server URL") {
+                TextField("Server URL", text: Binding { arrAddresses[app] ?? "" } set: { arrAddresses[app] = $0 })
+                    .underlinedField()
+            }
+            LabeledContent("API Key") {
+                SecureField(connectedURL.wrappedValue.isEmpty ? "API Key" : "Saved", text: Binding { arrAPIKeys[app] ?? "" } set: { arrAPIKeys[app] = $0 })
+                    .underlinedField()
+            }
+            HStack {
+                Button("Connect") { connect(app, connectedURL: connectedURL) }
+                    .disabled((arrAddresses[app] ?? "").isEmpty || (arrAPIKeys[app] ?? "").isEmpty)
+                if !connectedURL.wrappedValue.isEmpty {
+                    Button("Disconnect") {
+                        connectedURL.wrappedValue = ""
+                        KeychainStore.set(nil, for: app.apiKeyKey)
+                        arrStatuses[app] = "Disconnected."
+                    }
+                }
+            }
+            if !connectedURL.wrappedValue.isEmpty {
+                Text("Connected to \(connectedURL.wrappedValue).")
+                    .font(.callout)
+                    .foregroundStyle(.green)
+            }
+            statusText(arrStatuses[app] ?? "")
+            Text("Shows upcoming \(app == .radarr ? "movies" : "episodes") in the menu's calendar. The API key is in \(app.rawValue) under Settings > General.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    /// Checks the key at each candidate address (HTTPS first) and keeps the
+    /// address that worked.
+    private func connect(_ app: ArrApp, connectedURL: Binding<String>) {
+        arrStatuses[app] = "Connecting…"
+        Task {
+            let candidates = serverURLCandidates(arrAddresses[app] ?? "")
+            guard !candidates.isEmpty else {
+                arrStatuses[app] = "Invalid server URL."
+                return
+            }
+            let apiKey = (arrAPIKeys[app] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            var lastError: Error?
+            for url in candidates {
+                do {
+                    try await ArrClient(app: app, serverURL: url, apiKey: apiKey).checkStatus()
+                } catch let error as ArrClient.ServerError {
+                    // The server answered, so the other scheme won't help.
+                    arrStatuses[app] = "Connection failed: \(error.localizedDescription)"
+                    return
+                } catch {
+                    lastError = error
+                    continue
+                }
+                guard KeychainStore.set(apiKey, for: app.apiKeyKey) else {
+                    arrStatuses[app] = "Couldn't save the API key in the Keychain."
+                    return
+                }
+                connectedURL.wrappedValue = url.absoluteString
+                arrAddresses[app] = url.absoluteString
+                arrAPIKeys[app] = ""
+                arrStatuses[app] = ""
+                return
+            }
+            arrStatuses[app] = "Connection failed: \(lastError?.localizedDescription ?? "server not reachable.")"
         }
     }
 

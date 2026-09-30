@@ -655,6 +655,9 @@ nonisolated enum SettingsKeys {
     /// Set once Connect succeeds; the password is in the Keychain.
     static let torrServerURL = "torrServerURL"
     static let torrServerUsername = "torrServerUsername"
+    /// Set once Connect succeeds; the API key is in the Keychain.
+    static let radarrURL = "radarrURL"
+    static let sonarrURL = "sonarrURL"
 
     static let tvTopLevel = "tvTopLevel"
     /// Whether the menu shows the Music pane instead of the Video pane.
@@ -737,6 +740,8 @@ enum KeychainKeys {
     static let navidromeToken = "navidromeToken"
     /// TorrServer only does HTTP Basic auth, so the password itself is kept.
     static let torrServerPassword = "torrServerPassword"
+    static let radarrAPIKey = "radarrAPIKey"
+    static let sonarrAPIKey = "sonarrAPIKey"
     static let traktClientID = "traktClientID"
     static let traktClientSecret = "traktClientSecret"
     static let traktAccessToken = "traktAccessToken"

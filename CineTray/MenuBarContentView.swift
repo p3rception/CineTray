@@ -17,6 +17,9 @@ struct MenuBarContentView: View {
     @AppStorage("carouselVisibleCount") private var carouselVisibleCount = 3
     @AppStorage(SettingsKeys.playerMode) private var playerMode = PlayerMode.popout.rawValue
     @AppStorage(SettingsKeys.menuShowsMusic) private var showsMusic = false
+    @AppStorage(SettingsKeys.radarrURL) private var radarrURL = ""
+    @AppStorage(SettingsKeys.sonarrURL) private var sonarrURL = ""
+    @State private var showsCalendar = false
 
     private var contentWidth: CGFloat {
         MediaCarouselView.carouselWidth(for: carouselVisibleCount) + 24
@@ -27,71 +30,75 @@ struct MenuBarContentView: View {
             header
             Divider()
 
-            let activeDownloads = downloadManager.downloadingItems
-            if !activeDownloads.isEmpty {
-                VStack(alignment: .leading, spacing: 0) {
-                    HStack {
-                        Image(systemName: "arrow.down.circle")
-                            .frame(width: 20)
-                        Text("Downloading")
-                        Spacer()
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    
-                    MediaCarouselView(
-                        items: activeDownloads,
-                        selectedID: nil,
-                        isCompact: true,
-                        onSelect: { item in
-                            if !item.kind.isExpandable { openPlayer(for: item) }
+            if showsCalendar && hasCalendar {
+                ReleaseCalendarView()
+            } else {
+                let activeDownloads = downloadManager.downloadingItems
+                if !activeDownloads.isEmpty {
+                    VStack(alignment: .leading, spacing: 0) {
+                        HStack {
+                            Image(systemName: "arrow.down.circle")
+                                .frame(width: 20)
+                            Text("Downloading")
+                            Spacer()
                         }
-                    )
-                    .padding(.bottom, 10)
-                }
-                Divider()
-            }
-
-            if appState.librarySections == nil {
-                ProgressView("Loading libraries…")
-                    .controlSize(.small)
-                    .font(.caption)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                Divider()
-            } else if let error = appState.librarySectionsError {
-                VStack(spacing: 6) {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                    Button("Retry") { appState.resetCatalog() }
-                        .controlSize(.small)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                Divider()
-            }
-
-            // Filtered and sorted once per redraw, shared by the match check,
-            // the count and the carousel.
-            let pane = musicPane
-            let sections = appState.enabledSections.filter { section in
-                pane.map { section == .continueItems || section.isMusic == $0 } ?? true
-            }
-            let itemsBySection = Dictionary(uniqueKeysWithValues: sections.map { ($0, visibleItems(for: $0)) })
-            // While a query is typed, show only the sections with matches.
-            let shown = appState.isFiltering
-                ? sections.filter { itemsBySection[$0]??.isEmpty == false }
-                : sections
-            ForEach(shown) { section in
-                self.section(for: section, items: itemsBySection[section] ?? nil)
-                if section != shown.last {
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        
+                        MediaCarouselView(
+                            items: activeDownloads,
+                            selectedID: nil,
+                            isCompact: true,
+                            onSelect: { item in
+                                if !item.kind.isExpandable { openPlayer(for: item) }
+                            }
+                        )
+                        .padding(.bottom, 10)
+                    }
                     Divider()
                 }
-            }
-            if appState.isFiltering {
-                searchStatus(hasResults: !shown.isEmpty)
+
+                if appState.librarySections == nil {
+                    ProgressView("Loading libraries…")
+                        .controlSize(.small)
+                        .font(.caption)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                    Divider()
+                } else if let error = appState.librarySectionsError {
+                    VStack(spacing: 6) {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                        Button("Retry") { appState.resetCatalog() }
+                            .controlSize(.small)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    Divider()
+                }
+
+                // Filtered and sorted once per redraw, shared by the match check,
+                // the count and the carousel.
+                let pane = musicPane
+                let sections = appState.enabledSections.filter { section in
+                    pane.map { section == .continueItems || section.isMusic == $0 } ?? true
+                }
+                let itemsBySection = Dictionary(uniqueKeysWithValues: sections.map { ($0, visibleItems(for: $0)) })
+                // While a query is typed, show only the sections with matches.
+                let shown = appState.isFiltering
+                    ? sections.filter { itemsBySection[$0]??.isEmpty == false }
+                    : sections
+                ForEach(shown) { section in
+                    self.section(for: section, items: itemsBySection[section] ?? nil)
+                    if section != shown.last {
+                        Divider()
+                    }
+                }
+                if appState.isFiltering {
+                    searchStatus(hasResults: !shown.isEmpty)
+                }
             }
         }
         .frame(width: contentWidth)
@@ -128,6 +135,10 @@ struct MenuBarContentView: View {
         hasPanes && !appState.isFiltering ? showsMusic : nil
     }
 
+    private var hasCalendar: Bool {
+        !radarrURL.isEmpty || !sonarrURL.isEmpty
+    }
+
     private var header: some View {
         HStack(spacing: 10) {
             if hasPanes {
@@ -142,6 +153,15 @@ struct MenuBarContentView: View {
                 }
             }
             searchField
+            if hasCalendar {
+                Button("Release Calendar", systemImage: "calendar") {
+                    withAnimation(.snappy(duration: 0.2)) { showsCalendar.toggle() }
+                }
+                .buttonStyle(.plain)
+                .labelStyle(.iconOnly)
+                .foregroundStyle(showsCalendar ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.secondary))
+                .help(showsCalendar ? "Hide Release Calendar" : "Show Release Calendar")
+            }
             Button("Offline Mode", systemImage: "airplane") {
                 appState.isOfflineMode.toggle()
             }
@@ -224,7 +244,10 @@ struct MenuBarContentView: View {
         .frame(maxWidth: .infinity)
         .onChange(of: appState.searchText) {
             if !appState.searchText.isEmpty {
-                withAnimation(.snappy(duration: 0.2)) { appState.activateSearch() }
+                withAnimation(.snappy(duration: 0.2)) {
+                    showsCalendar = false
+                    appState.activateSearch()
+                }
             }
             appState.scheduleDeepSearch()
         }
