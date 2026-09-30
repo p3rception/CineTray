@@ -1,6 +1,6 @@
 # Changelog
 
-Changes in this fork compared to [KuDoZ007/QP](https://github.com/KuDoZ007/QP).
+All notable changes to CineTray are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## 2026-09-30
