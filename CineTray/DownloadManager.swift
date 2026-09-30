@@ -84,7 +84,8 @@ final class DownloadManager {
             if index.values.contains(where: { $0.item != $0.item.removingPlexTokens }) {
                 dirty = true
             }
-            if dirty { Self.writeIndex(index, to: folder) }
+            // Retried on the next launch, and lookups check that the files exist.
+            if dirty { try? Self.writeIndex(index, to: folder) }
         }
     }
 
@@ -190,7 +191,13 @@ final class DownloadManager {
         for entry in entries {
             index[entry.item.id] = entry
         }
-        writeIndex(index, to: folder)
+        do {
+            try writeIndex(index, to: folder)
+        } catch {
+            // The next scan rebuilds it; a read-only library folder still gets
+            // its scan for this session.
+            indexCache[folder.path] = index
+        }
     }
 
     func localLibraryURL(for item: MediaItem) -> URL? {
@@ -236,8 +243,14 @@ final class DownloadManager {
     
     static func deleteDownloads(for type: MediaType) {
         guard let folder = resolvedFolder(for: type) else { return }
-        var index = readIndexFromFolder(folder)
-        
+        var index: [String: DownloadIndexEntry]
+        do {
+            index = try loadIndex(folder)
+        } catch {
+            alert(title: "Couldn't Delete Downloads", message: error.localizedDescription)
+            return
+        }
+
         for (id, entry) in index {
             if entry.item.source != .local {
                 if let fileURL = entry.filename.flatMap({ fileURL($0, in: folder) }) {
@@ -246,7 +259,11 @@ final class DownloadManager {
                 index.removeValue(forKey: id)
             }
         }
-        writeIndex(index, to: folder)
+        do {
+            try writeIndex(index, to: folder)
+        } catch {
+            alert(title: "Couldn't Delete Downloads", message: error.localizedDescription)
+        }
 
         shared.downloadedIDs[type] = []
         removeArtwork(in: folder)
@@ -297,20 +314,29 @@ final class DownloadManager {
     /// files, so the cache is kept current by writeIndex(_:to:).
     private static var indexCache: [String: [String: DownloadIndexEntry]] = [:]
 
-    private static func readIndexFromFolder(_ folder: URL) -> [String: DownloadIndexEntry] {
+    /// Throws when the index exists but can't be read, so that a write can't
+    /// replace it with one that has lost every earlier download.
+    private static func loadIndex(_ folder: URL) throws -> [String: DownloadIndexEntry] {
         if let cached = indexCache[folder.path] { return cached }
-        let index = (try? Data(contentsOf: indexURL(in: folder)))
-            .flatMap { try? JSONDecoder().decode([String: DownloadIndexEntry].self, from: $0) } ?? [:]
+        let index: [String: DownloadIndexEntry]
+        do {
+            index = try JSONDecoder().decode([String: DownloadIndexEntry].self, from: Data(contentsOf: indexURL(in: folder)))
+        } catch CocoaError.fileReadNoSuchFile {
+            index = [:]
+        }
         indexCache[folder.path] = index
         return index
     }
 
-    private static func writeIndex(_ index: [String: DownloadIndexEntry], to folder: URL) {
+    private static func readIndexFromFolder(_ folder: URL) -> [String: DownloadIndexEntry] {
+        (try? loadIndex(folder)) ?? [:]
+    }
+
+    private static func writeIndex(_ index: [String: DownloadIndexEntry], to folder: URL) throws {
         let index = index.mapValues { DownloadIndexEntry(item: $0.item.removingPlexTokens, filename: $0.filename) }
-        indexCache[folder.path] = index
-        guard let data = try? JSONEncoder().encode(index) else { return }
         // Atomic so a crash mid-write can't leave a truncated index behind.
-        try? data.write(to: indexURL(in: folder), options: .atomic)
+        try JSONEncoder().encode(index).write(to: indexURL(in: folder), options: .atomic)
+        indexCache[folder.path] = index
     }
 
     static func indexedEntries(for type: MediaType) -> [DownloadIndexEntry] {
@@ -390,12 +416,16 @@ final class DownloadManager {
         let leaves = leavesWithAncestors.map(\.item)
         if leaves.allSatisfy({ isDownloaded($0) }),
            let folder = Self.resolvedFolder(for: item.type) {
-            var index = Self.readIndexFromFolder(folder)
-            index[item.id] = DownloadIndexEntry(item: item, filename: nil)
-            Self.writeIndex(index, to: folder)
-            
+            do {
+                var index = try Self.loadIndex(folder)
+                index[item.id] = DownloadIndexEntry(item: item, filename: nil)
+                try Self.writeIndex(index, to: folder)
+            } catch {
+                Self.alert(title: "Couldn't Save Download List", message: error.localizedDescription)
+            }
+
             if let firstLeaf = leavesWithAncestors.first,
-               let leafEntry = index[firstLeaf.item.id],
+               let leafEntry = Self.readIndexFromFolder(folder)[firstLeaf.item.id],
                let filename = leafEntry.filename {
                 let leafURL = folder.appending(path: filename)
                 let leafFolder = leafURL.deletingLastPathComponent()
@@ -484,6 +514,8 @@ final class DownloadManager {
             }
 
             let (temporary, response) = try await downloadFileWithProgress(url: url, itemID: item.id)
+            // Only still there when something below failed; it can be many gigabytes.
+            defer { try? FileManager.default.removeItem(at: temporary) }
             
             let fileExtension = response.suggestedFilename.flatMap { name -> String? in
                 let ext = (name as NSString).pathExtension
@@ -493,6 +525,7 @@ final class DownloadManager {
             let relativePath = Self.relativePath(for: item, ancestors: ancestors, fileExtension: fileExtension)
             let destination = folder.appending(path: relativePath)
 
+            var index = try Self.loadIndex(folder)
             try FileManager.default.createDirectory(
                 at: destination.deletingLastPathComponent(),
                 withIntermediateDirectories: true
@@ -500,7 +533,6 @@ final class DownloadManager {
             try? FileManager.default.removeItem(at: destination)
             try FileManager.default.moveItem(at: temporary, to: destination)
 
-            var index = Self.readIndexFromFolder(folder)
             index[item.id] = DownloadIndexEntry(item: item, filename: relativePath)
 
             for ancestor in ancestors {
@@ -539,7 +571,14 @@ final class DownloadManager {
                 }
             }
 
-            Self.writeIndex(index, to: folder)
+            do {
+                try Self.writeIndex(index, to: folder)
+            } catch {
+                // Without an index entry the file would take up space that
+                // CineTray can neither show nor delete.
+                try? FileManager.default.removeItem(at: destination)
+                throw error
+            }
 
             downloadedIDs[item.type, default: []].insert(item.id)
 
