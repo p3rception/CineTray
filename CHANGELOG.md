@@ -12,6 +12,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Shows with a single season list their episodes directly, without the season card in between.
 - Subtitle timing in the video player's toolbar is one button. Click it to show - and + and the current value, which stay open while you click; click the value to reset it. The button is filled while the timing is changed.
 
 ### Fixed

@@ -651,8 +651,8 @@ final class AppState {
 
     /// Re-fetches a cached drill-down (a show's seasons, a season's episodes) in place.
     private func refreshChildrenSilently(of container: MediaItem) async {
-        guard childrenByItemID[container.id] != nil,
-              let children = try? await provider(for: container)?.children(of: container) else { return }
+        guard childrenByItemID[container.id] != nil, let provider = provider(for: container),
+              let children = try? await children(of: container, from: provider) else { return }
         childrenByItemID[container.id] = children
         // Close an open level whose item is gone.
         for (section, path) in drillPath {
@@ -677,7 +677,9 @@ final class AppState {
             }
             let containerIDs = [item.parentID, item.attributes["grandparentRatingKey"]].compactMap { $0 }
             for parents in drillPath.values {
-                for parent in parents where containerIDs.contains(parent.id) {
+                // A single-season show lists its episodes, but they name the season as parent.
+                for parent in parents where containerIDs.contains(parent.id)
+                    || childrenByItemID[parent.id]?.contains(where: { $0.id == item.id }) == true {
                     await refreshChildrenSilently(of: parent)
                 }
             }
@@ -916,11 +918,22 @@ final class AppState {
                 guard let provider = provider(for: item) else {
                     throw URLError(.resourceUnavailable)
                 }
-                childrenByItemID[item.id] = try await provider.children(of: item)
+                childrenByItemID[item.id] = try await children(of: item, from: provider)
             } catch {
                 childErrorsByItemID[item.id] = error.localizedDescription
             }
         }
+    }
+
+    /// A show with a single season lists that season's episodes directly.
+    /// Episodes keep the season as their parent, so auto-continue and
+    /// Continue Watching still find their siblings through it.
+    private func children(of item: MediaItem, from provider: any MediaProvider) async throws -> [MediaItem] {
+        let children = try await provider.children(of: item)
+        guard item.kind == .show, children.count == 1, let season = children.first, season.kind == .season else { return children }
+        let episodes = try await provider.children(of: season)
+        childrenByItemID[season.id] = episodes
+        return episodes
     }
 
     func streamURL(for item: MediaItem) async throws -> URL {
