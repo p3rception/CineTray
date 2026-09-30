@@ -24,7 +24,7 @@ Connect servers in Settings > Accounts and choose folders in Settings > Data.
 
 ## About CineTray
 
-CineTray is a macOS menu bar app for movies, shows and music from your media servers and your own folders.
+CineTray is a macOS menu bar app for movies, shows and music from your media servers and your own folders. It started as a fork of [KuDoZ007/QP](https://github.com/KuDoZ007/QP) and is now developed as its own project, because the original was abandoned after its initial commit.
 
 *   **Navidrome support.** Music from a Navidrome server, next to Plex, Jellyfin and your own folders.
 *   **TorrServer support.** Movies and shows from a TorrServer. Releases of the same show are grouped into one poster, with seasons and episodes read from the file names.
