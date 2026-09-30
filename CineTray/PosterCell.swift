@@ -330,8 +330,13 @@ private struct DownloadButton: View {
         if downloadsEnabled, levelEnabled {
             Group {
                 if DownloadManager.shared.downloadingIDs.contains(item.id) {
-                    ProgressView()
-                        .controlSize(.mini)
+                    Button("Stop download", systemImage: "stop.circle.fill") {
+                        DownloadManager.shared.cancelDownload(item)
+                    }
+                    .buttonStyle(.plain)
+                    .labelStyle(.iconOnly)
+                    .foregroundStyle(.white, .black.opacity(0.55))
+                    .help("Stop download")
                 } else if DownloadManager.shared.isDownloaded(item) {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(.green)

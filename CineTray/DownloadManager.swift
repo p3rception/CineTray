@@ -1,5 +1,6 @@
 import AppKit
 import Observation
+import Synchronization
 
 /// One entry in the per-type download index.
 struct DownloadIndexEntry: Codable {
@@ -26,6 +27,10 @@ final class DownloadManager {
     
     /// Tracks download progress (0.0 to 1.0) for active downloads by item ID.
     var downloadProgress: [String: Double] = [:]
+
+    /// Running downloads, under the item the user started and, for a show or
+    /// album, also under the item downloading now, so either one can stop it.
+    private var downloadTasks: [String: Task<Void, Never>] = [:]
 
     /// In-memory cache of downloaded item IDs per type, populated on launch and
     /// updated on each download completion. Used by sortedItems for O(1) Local First
@@ -377,13 +382,18 @@ final class DownloadManager {
 
     func download(_ item: MediaItem, appState: AppState) {
         guard !downloadingIDs.contains(item.id) else { return }
-        Task {
+        downloadTasks[item.id] = Task {
             if item.kind.isExpandable {
                 await downloadContainer(item, appState: appState)
             } else {
                 await downloadLeaf(item, appState: appState, showAlerts: true)
             }
+            downloadTasks[item.id] = nil
         }
+    }
+
+    func cancelDownload(_ item: MediaItem) {
+        downloadTasks[item.id]?.cancel()
     }
 
     private func downloadContainer(_ item: MediaItem, appState: AppState) async {
@@ -402,7 +412,9 @@ final class DownloadManager {
             leavesWithAncestors = try await appState.downloadLeaves(of: item)
         } catch {
             // Downloading the rest would mark the whole container downloaded.
-            Self.alert(title: "Download Failed", message: "\(item.title) couldn't be listed: \(error.localizedDescription)")
+            if !Task.isCancelled {
+                Self.alert(title: "Download Failed", message: "\(item.title) couldn't be listed: \(error.localizedDescription)")
+            }
             return
         }
         guard !leavesWithAncestors.isEmpty else { return }
@@ -411,6 +423,7 @@ final class DownloadManager {
         for (leaf, ancestors) in leavesWithAncestors where !isDownloaded(leaf) {
             let ok = await downloadLeaf(leaf, ancestors: ancestors, appState: appState, showAlerts: false)
             if !ok { failCount += 1 }
+            if Task.isCancelled { return }
         }
 
         let leaves = leavesWithAncestors.map(\.item)
@@ -487,11 +500,13 @@ final class DownloadManager {
         downloadingIDs.insert(item.id)
         downloadingItems.append(item)
         downloadProgress[item.id] = 0.0
+        downloadTasks[item.id] = downloadTasks[ancestors.first?.id ?? item.id]
         
         defer {
             downloadingIDs.remove(item.id)
             downloadingItems.removeAll { $0.id == item.id }
             downloadProgress.removeValue(forKey: item.id)
+            downloadTasks.removeValue(forKey: item.id)
         }
         
         do {
@@ -628,44 +643,57 @@ final class DownloadManager {
 
             return true
         } catch {
-            if showAlerts {
+            if showAlerts, !Task.isCancelled {
                 Self.alert(title: "Download Failed", message: error.localizedDescription)
             }
             return false
         }
     }
     
+    /// Stops when the Swift task is cancelled. Not the async download API,
+    /// which leaves the partial file of a cancelled download behind.
     private func downloadFileWithProgress(url: URL, itemID: String) async throws -> (URL, URLResponse) {
-        return try await withCheckedThrowingContinuation { continuation in
-            let task = URLSession.shared.downloadTask(with: url) { tempURL, response, error in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                    return
+        let running = Mutex<URLSessionDownloadTask?>(nil)
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                let task = URLSession.shared.downloadTask(with: url) { tempURL, response, error in
+                    if let error = error {
+                        continuation.resume(throwing: error)
+                        return
+                    }
+                    guard let tempURL = tempURL, let response = response else {
+                        continuation.resume(throwing: URLError(.badServerResponse))
+                        return
+                    }
+                    let stableTemp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+                    do {
+                        try? FileManager.default.removeItem(at: stableTemp)
+                        try FileManager.default.moveItem(at: tempURL, to: stableTemp)
+                        continuation.resume(returning: (stableTemp, response))
+                    } catch {
+                        continuation.resume(throwing: error)
+                    }
                 }
-                guard let tempURL = tempURL, let response = response else {
-                    continuation.resume(throwing: URLError(.badServerResponse))
-                    return
+
+                let observation = task.progress.observe(\.fractionCompleted) { [weak self] progress, _ in
+                    let fraction = progress.fractionCompleted
+                    DispatchQueue.main.async {
+                        // A late update must not bring back the entry of a finished or stopped download.
+                        if self?.downloadProgress[itemID] != nil {
+                            self?.downloadProgress[itemID] = fraction
+                        }
+                    }
                 }
-                let stableTemp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-                do {
-                    try? FileManager.default.removeItem(at: stableTemp)
-                    try FileManager.default.moveItem(at: tempURL, to: stableTemp)
-                    continuation.resume(returning: (stableTemp, response))
-                } catch {
-                    continuation.resume(throwing: error)
-                }
+
+                objc_setAssociatedObject(task, "progressObservation", observation, .OBJC_ASSOCIATION_RETAIN)
+
+                running.withLock { $0 = task }
+                task.resume()
+                // onCancel ran before the task existed if the download was stopped early.
+                if Task.isCancelled { task.cancel() }
             }
-            
-            let observation = task.progress.observe(\.fractionCompleted) { [weak self] progress, _ in
-                let fraction = progress.fractionCompleted
-                DispatchQueue.main.async {
-                    self?.downloadProgress[itemID] = fraction
-                }
-            }
-            
-            objc_setAssociatedObject(task, "progressObservation", observation, .OBJC_ASSOCIATION_RETAIN)
-            
-            task.resume()
+        } onCancel: {
+            running.withLock { $0?.cancel() }
         }
     }
 

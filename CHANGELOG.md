@@ -5,6 +5,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## 2026-10-01
 
+### Added
+
+- Stop a download. While an item downloads, its download button becomes a stop button. Stopping a show, season or album, or the episode or track downloading now, stops the rest too. Files that finished downloading stay.
+
 ### Fixed
 
 - Downloading a show, season, album or playlist whose contents can't be loaded from the server shows an error. Before, a season that failed to load was skipped without a message, and the show was still marked downloaded.
