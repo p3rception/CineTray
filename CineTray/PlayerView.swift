@@ -889,7 +889,9 @@ private struct WindowLevelAccessor: NSViewRepresentable {
     var onChromeVisibilityChange: ((Bool) -> Void)? = nil
 
     func makeNSView(context: Context) -> ToolbarVisibilityView {
-        return ToolbarVisibilityView()
+        let view = ToolbarVisibilityView()
+        view.fadesChrome = chromeOverlaysContent
+        return view
     }
 
     func updateNSView(_ nsView: ToolbarVisibilityView, context: Context) {
@@ -958,6 +960,10 @@ private class ToolbarVisibilityView: NSView {
     private weak var trackedContentView: NSView?
     private var chromeHidden = false
     private var autoHideTask: Task<Void, Never>?
+
+    /// Off when the titlebar sits above the content (music): moving onto it
+    /// counts as leaving the content view, which would hide it under the mouse.
+    var fadesChrome = true
 
     /// Reports chrome visibility so SwiftUI overlays (the PiP-style
     /// controls) can fade in sync with the toolbar.
@@ -1087,7 +1093,7 @@ private class ToolbarVisibilityView: NSView {
     /// and the letterbox space that drifted in at small sizes.
     private func setChromeHidden(_ hidden: Bool, animated: Bool) {
         guard let window = self.window, !window.styleMask.contains(.fullScreen) else { return }
-        guard hidden != chromeHidden else { return }
+        guard hidden != chromeHidden, fadesChrome || !hidden else { return }
         chromeHidden = hidden
         if let onChromeVisibilityChange {
             let visible = !hidden
