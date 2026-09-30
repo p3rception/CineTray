@@ -17,3 +17,6 @@ internal_docs/
 
 # Your own signing team for Xcode builds (see Signing.xcconfig)
 Local.xcconfig
+
+# Created when Xcode opens Package.swift
+.swiftpm/
