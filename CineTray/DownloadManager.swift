@@ -333,6 +333,33 @@ final class DownloadManager {
         return index
     }
 
+    /// Checked before a download starts, since a damaged index can't be
+    /// written over. Offers to move it to the Trash so downloads work again.
+    private static func indexIsUsable(in folder: URL) -> Bool {
+        do {
+            _ = try loadIndex(folder)
+            return true
+        } catch is DecodingError {
+            let alert = NSAlert()
+            alert.messageText = "Download List Is Damaged"
+            alert.informativeText = "CineTray can't read its list of downloads in the folder \(folder.lastPathComponent), so it can't add new downloads to it. Move the list to the Trash to start a new one. Downloaded files stay in the folder, but CineTray won't show them anymore."
+            alert.addButton(withTitle: "Move to Trash")
+            alert.addButton(withTitle: "Cancel")
+            NSApplication.shared.activate()
+            guard alert.runModal() == .alertFirstButtonReturn else { return false }
+            do {
+                try FileManager.default.trashItem(at: indexURL(in: folder), resultingItemURL: nil)
+                return true
+            } catch {
+                Self.alert(title: "Couldn't Move to Trash", message: error.localizedDescription)
+                return false
+            }
+        } catch {
+            Self.alert(title: "Download Failed", message: error.localizedDescription)
+            return false
+        }
+    }
+
     private static func readIndexFromFolder(_ folder: URL) -> [String: DownloadIndexEntry] {
         (try? loadIndex(folder)) ?? [:]
     }
@@ -382,6 +409,7 @@ final class DownloadManager {
 
     func download(_ item: MediaItem, appState: AppState) {
         guard !downloadingIDs.contains(item.id) else { return }
+        if let folder = Self.resolvedFolder(for: item.type), !Self.indexIsUsable(in: folder) { return }
         downloadTasks[item.id] = Task {
             if item.kind.isExpandable {
                 await downloadContainer(item, appState: appState)
