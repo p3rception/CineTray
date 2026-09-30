@@ -13,7 +13,7 @@ swift build -c release --disable-keychain
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp .build/arm64-apple-macosx/release/CineTray "$APP/Contents/MacOS/CineTray"
+cp "$(swift build -c release --show-bin-path)/CineTray" "$APP/Contents/MacOS/CineTray"
 cp CineTray/AppIcon.icns "$APP/Contents/Resources/"
 
 # Start from CineTray/Info.plist (URL scheme, ATS, Bonjour) and add the keys

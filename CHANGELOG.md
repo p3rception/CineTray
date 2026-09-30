@@ -23,6 +23,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - A TorrServer release whose name doesn't give the season, such as one added from Lampa, gets its own card in its show, with the date it was added and its size. It is woken only when you open it; its episodes then join their season. Before, its season could be missing, and the seasons changed between opens.
 - TorrServer release names with the season number first, as in "5 сезон: 1-5 серии", are placed in season 5.
 - An open season closes when a refresh removes it, instead of staying open without its card.
+- `make` and `./build.sh` work with Xcode 27 (Swift 6.4), which puts the built app in a different folder.
 - Playing a TorrServer release that nobody shares anymore shows an error after 20 seconds, instead of loading forever.
 - A video or song that CineTray's player can't open, or that fails while playing, shows the error in the player window instead of loading forever.
 - With Music Player set to Inline, a song that can't be played shows the error under its carousel in the menu. Before, it disappeared without a message.
