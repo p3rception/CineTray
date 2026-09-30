@@ -1,0 +1,10 @@
+// Xcode builds sign to run locally, so they need no Apple account. To sign
+// with your own team, create Local.xcconfig next to this file (git ignores it):
+//
+//   DEVELOPMENT_TEAM = YOUR_TEAM_ID
+//   CODE_SIGN_IDENTITY = Apple Development
+
+CODE_SIGN_STYLE = Automatic
+CODE_SIGN_IDENTITY = -
+
+#include? "Local.xcconfig"

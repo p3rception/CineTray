@@ -13,6 +13,7 @@
 /* Begin PBXFileReference section */
 		000000000000000000000120 /* CineTray.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CineTray.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D2B33E52301475B10070F726 /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
+		D2F0000000000000000000A1 /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -51,6 +52,7 @@
 			children = (
 				000000000000000000000010 /* CineTray */,
 				D2B33E52301475B10070F726 /* CLAUDE.md */,
+				D2F0000000000000000000A1 /* Signing.xcconfig */,
 				000000000000000000000020 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -275,11 +277,9 @@
 		};
 		000000000000000111000000 /* Debug configuration for PBXNativeTarget "CineTray" */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D2F0000000000000000000A1 /* Signing.xcconfig */;
 			buildSettings = {
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = H5P4QLARZ9;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -316,11 +316,9 @@
 		};
 		000000000000000112000000 /* Release configuration for PBXNativeTarget "CineTray" */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D2F0000000000000000000A1 /* Signing.xcconfig */;
 			buildSettings = {
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = H5P4QLARZ9;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;

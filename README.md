@@ -68,7 +68,7 @@ make
 
 Without an Apple Development certificate the app is signed ad-hoc, so macOS asks again for Keychain access after each rebuild.
 
-For development, `./build.sh` builds `dist/CineTray.app` and opens it without installing. With Xcode, open `CineTray.xcodeproj`, select your own development team under Signing & Capabilities, and run.
+For development, `./build.sh` builds `dist/CineTray.app` and opens it without installing. With Xcode, open `CineTray.xcodeproj` and run; it signs to run locally, with no Apple account. To sign with your own team, add a `Local.xcconfig` next to `Signing.xcconfig`, as described in that file. Git ignores it, so your team ID stays on your Mac.
 
 ### Scrobbling and artwork
 
