@@ -371,7 +371,14 @@ final class DownloadManager {
         downloadingIDs.insert(item.id)
         defer { downloadingIDs.remove(item.id) }
 
-        let leavesWithAncestors = await appState.downloadLeaves(of: item)
+        let leavesWithAncestors: [(item: MediaItem, ancestors: [MediaItem])]
+        do {
+            leavesWithAncestors = try await appState.downloadLeaves(of: item)
+        } catch {
+            // Downloading the rest would mark the whole container downloaded.
+            Self.alert(title: "Download Failed", message: "\(item.title) couldn't be listed: \(error.localizedDescription)")
+            return
+        }
         guard !leavesWithAncestors.isEmpty else { return }
 
         var failCount = 0

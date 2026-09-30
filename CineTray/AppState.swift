@@ -1045,19 +1045,15 @@ final class AppState {
     /// Returns all playable (non-expandable) descendants of a container, each paired
     /// with its ancestor chain (outermost container first). Used by DownloadManager
     /// to build hierarchical file paths that mirror the Plex/CineTray library hierarchy.
-    func downloadLeaves(of item: MediaItem, ancestors: [MediaItem] = []) async -> [(item: MediaItem, ancestors: [MediaItem])] {
+    func downloadLeaves(of item: MediaItem, ancestors: [MediaItem] = []) async throws -> [(item: MediaItem, ancestors: [MediaItem])] {
         guard item.kind.isExpandable else { return [(item, ancestors)] }
-        guard let provider = provider(for: item) else { return [] }
-        do {
-            let children = try await provider.children(of: item)
-            var results: [(MediaItem, [MediaItem])] = []
-            for child in children {
-                results += await downloadLeaves(of: child, ancestors: ancestors + [item])
-            }
-            return results
-        } catch {
-            return []
+        guard let provider = provider(for: item) else { throw URLError(.resourceUnavailable) }
+        let children = try await provider.children(of: item)
+        var results: [(MediaItem, [MediaItem])] = []
+        for child in children {
+            results += try await downloadLeaves(of: child, ancestors: ancestors + [item])
         }
+        return results
     }
 
     // MARK: - Queue & auto-continue

@@ -3,6 +3,12 @@
 All notable changes to CineTray are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-10-01
+
+### Fixed
+
+- Downloading a show, season, album or playlist whose contents can't be loaded from the server shows an error. Before, a season that failed to load was skipped without a message, and the show was still marked downloaded.
+
 ## 2026-09-30
 
 ### Added
