@@ -1024,24 +1024,6 @@ final class AppState {
         return try await provider.downloadURL(for: item)
     }
 
-    /// All playable (non-expandable) descendants of a container, fetched by
-    /// recursing through the provider's children hierarchy. Used by
-    /// DownloadManager to expand a container download into individual files.
-    func playableDescendants(of item: MediaItem) async -> [MediaItem] {
-        guard item.kind.isExpandable else { return [item] }
-        guard let provider = provider(for: item) else { return [] }
-        do {
-            let children = try await provider.children(of: item)
-            var leaves: [MediaItem] = []
-            for child in children {
-                leaves += await playableDescendants(of: child)
-            }
-            return leaves
-        } catch {
-            return []
-        }
-    }
-
     /// Returns all playable (non-expandable) descendants of a container, each paired
     /// with its ancestor chain (outermost container first). Used by DownloadManager
     /// to build hierarchical file paths that mirror the Plex/CineTray library hierarchy.
