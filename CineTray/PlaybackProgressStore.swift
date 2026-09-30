@@ -11,8 +11,7 @@ struct PlaybackProgress: Codable {
 
 /// Local record of in-progress playback, persisted in UserDefaults. An item
 /// appears once it's meaningfully started (>5%) and disappears once
-/// essentially finished (>92%) - for any backend, including the sample
-/// catalog.
+/// essentially finished (>92%) - for any backend.
 enum PlaybackProgressStore {
     private static let startedFraction = 0.05
     private static let finishedFraction = 0.92
