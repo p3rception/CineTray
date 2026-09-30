@@ -1325,6 +1325,7 @@ final class AppState {
     /// superseded session can detect it should bail out.
     private var playbackGeneration = 0
     private var endObservationTask: Task<Void, Never>?
+    private var stallTask: Task<Void, Never>?
     /// Notification posted by the SwiftVLC event watcher when playback ends
     /// naturally; PlayerView.watchForPlaybackEnd listens for it.
     static let vlcPlaybackEndedNotification = NSNotification.Name("CineTray.VLCPlaybackEnded")
@@ -1409,6 +1410,7 @@ final class AppState {
                     Task { @MainActor [weak self] in
                         guard let self, let player = self.player else { return }
                         self.isPlaying = player.timeControlStatus == .playing
+                        self.watchForStall(of: player, generation: generation)
                         let state: PlaybackState? = switch player.timeControlStatus {
                         case .playing: .playing
                         case .paused: .paused
@@ -1631,9 +1633,30 @@ final class AppState {
         stopPlayback()
     }
 
+    /// A server that stops sending data but keeps the connection open leaves
+    /// AVPlayer waiting with no error, so a long wait counts as a failure.
+    private func watchForStall(of player: AVPlayer, generation: Int) {
+        guard player.timeControlStatus == .waitingToPlayAtSpecifiedRate else {
+            stallTask?.cancel()
+            stallTask = nil
+            return
+        }
+        guard stallTask == nil else { return }
+        stallTask = Task { [weak self] in
+            // ponytail: fixed 30 s; slow torrents that buffer longer mid-play get cut off, then resume from Continue.
+            try? await Task.sleep(for: .seconds(30))
+            guard let self, !Task.isCancelled, generation == self.playbackGeneration,
+                  self.player?.timeControlStatus == .waitingToPlayAtSpecifiedRate else { return }
+            self.stopPlayback()
+            self.playbackError = "No data received for 30 seconds"
+        }
+    }
+
     private func tearDownPlayer() {
         endObservationTask?.cancel()
         endObservationTask = nil
+        stallTask?.cancel()
+        stallTask = nil
         if let player, let timeObserver {
             player.removeTimeObserver(timeObserver)
         }

@@ -24,6 +24,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Playing a TorrServer release that nobody shares anymore shows an error after 20 seconds, instead of loading forever.
 - A video or song that CineTray's player can't open, or that fails while playing, shows the error in the player window instead of loading forever.
 - With Music Player set to Inline, a song that can't be played shows the error under its carousel in the menu. Before, it disappeared without a message.
+- A streamed video or song whose server stops sending data stops with an error after 30 seconds of waiting, instead of loading forever.
 - The music player's title bar, with the window buttons and the pin, stays visible when you move the mouse onto it. Before, it disappeared while music played.
 
 ## 2026-09-29
