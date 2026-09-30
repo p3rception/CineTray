@@ -91,18 +91,23 @@ struct TorrServerClient {
         (fetchedFiles[torrent.hash] ?? torrent.file_stats ?? metadata(of: torrent)?.TorrServer?.Files).flatMap { $0.isEmpty ? nil : $0 }
     }
 
-    /// The torrent's files. Asking the server wakes an idle torrent, and it
-    /// answers only once it has found peers: up to 90 seconds, then a 500.
     func files(of torrent: Torrent) async throws -> [File] {
         if let files = Self.knownFiles(of: torrent) { return files }
-        var request = request("stream", query: [URLQueryItem(name: "link", value: torrent.hash), URLQueryItem(name: "stat", value: nil)])
+        return try await stat(torrent.hash)
+    }
+
+    /// The torrent's files, from the server. Asking wakes an idle torrent,
+    /// and the server answers only once it has found peers: up to 90
+    /// seconds, then a 500.
+    func stat(_ hash: String) async throws -> [File] {
+        var request = request("stream", query: [URLQueryItem(name: "link", value: hash), URLQueryItem(name: "stat", value: nil)])
         // The server keeps looking for peers after we stop waiting, so a
         // retry a minute later finds the files.
         request.timeoutInterval = 20
-        let notReady = ServerError(message: "TorrServer is still looking for peers for this release. Try again in a minute.")
+        let notReady = ServerError(message: "TorrServer can't find peers for this release. Try again in a minute, or pick another release.")
         do {
             guard let files = try await load(request, as: Torrent.self).file_stats, !files.isEmpty else { throw notReady }
-            Self.fetchedFiles[torrent.hash] = files
+            Self.fetchedFiles[hash] = files
             return files
         } catch let error as URLError where error.code == .timedOut || error.code == .badServerResponse {
             throw notReady
@@ -200,15 +205,18 @@ struct TorrServerMediaProvider: MediaProvider {
         }
     }
 
+    /// Asks the server for the files first: a player given the stream of a
+    /// torrent without peers waits until the server gives up, or forever.
     func streamURL(for item: MediaItem) async throws -> URL {
         if item.kind == .episode, let dash = item.id.lastIndex(of: "-"),
            let fileID = Int(item.id[item.id.index(after: dash)...]), let path = item.attributes["originalPath"] {
+            _ = try await client.stat(String(item.id[..<dash]))
             return client.streamURL(hash: String(item.id[..<dash]), fileID: fileID, path: path)
         }
         guard item.kind == .movie, let torrent = try await client.torrents().first(where: { $0.hash == item.id }) else {
             throw URLError(.resourceUnavailable)
         }
-        let videos = try await client.files(of: torrent).filter(Self.isVideo)
+        let videos = try await client.stat(torrent.hash).filter(Self.isVideo)
         guard let file = videos.max(by: { ($0.length ?? 0) < ($1.length ?? 0) }) else {
             throw URLError(.resourceUnavailable)
         }
