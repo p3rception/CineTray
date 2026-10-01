@@ -747,11 +747,9 @@ private struct MusicPlayerLayout: View {
         ZStack {
             RoundedRectangle(cornerRadius: 12)
                 .fill(.quaternary)
-            if let url = item.posterURL {
-                ArtworkImage(url: url) {
-                    ProgressView()
-                }
-            } else {
+            ArtworkImage(url: item.posterURL) {
+                ProgressView()
+            } fallback: {
                 Image(systemName: "music.note")
                     .font(.system(size: 48))
                     .foregroundStyle(.secondary)
@@ -842,10 +840,10 @@ private struct MusicPlayerLayout: View {
     private func queueThumb(for track: MediaItem) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: 4).fill(.quaternary)
-            if let url = track.posterURL {
-                ArtworkImage(url: url) {
-                    Image(systemName: "music.note").font(.caption2).foregroundStyle(.secondary)
-                }
+            ArtworkImage(url: track.posterURL) {
+                EmptyView()
+            } fallback: {
+                Image(systemName: "music.note").font(.caption2).foregroundStyle(.secondary)
             }
         }
         .frame(width: 28, height: 28)

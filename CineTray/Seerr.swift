@@ -281,12 +281,10 @@ private struct SeerrPosterCell: View {
         ZStack {
             RoundedRectangle(cornerRadius: 8)
                 .fill(.quaternary)
-            if let url = title.posterPath.flatMap(TMDbClient.posterURL(path:)) {
-                ArtworkImage(url: url) {
-                    ProgressView()
-                        .controlSize(.small)
-                }
-            } else {
+            ArtworkImage(url: title.posterPath.flatMap(TMDbClient.posterURL(path:))) {
+                ProgressView()
+                    .controlSize(.small)
+            } fallback: {
                 Image(systemName: "questionmark.square.dashed")
                     .font(.largeTitle)
                     .foregroundStyle(.secondary)

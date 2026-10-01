@@ -218,12 +218,10 @@ struct PosterCell: View {
         ZStack {
             RoundedRectangle(cornerRadius: 8)
                 .fill(.quaternary)
-            if let url = showsByShow ? item.showPosterURL : item.posterURL {
-                ArtworkImage(url: url) {
-                    ProgressView()
-                        .controlSize(.small)
-                }
-            } else {
+            ArtworkImage(url: showsByShow ? item.showPosterURL : item.posterURL) {
+                ProgressView()
+                    .controlSize(.small)
+            } fallback: {
                 Image(systemName: item.kind == .playlist ? "music.note.list" : "questionmark.square.dashed")
                     .font(isCompact ? .title : .largeTitle)
                     .foregroundStyle(.secondary)

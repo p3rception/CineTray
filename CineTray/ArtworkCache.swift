@@ -61,7 +61,9 @@ nonisolated enum ArtworkCache {
         if let auth = navidromeAuth.withLock({ $0 }), auth.address == addressKey(url), url.path().contains("/rest/") {
             url.append(queryItems: auth.query)
         }
-        var request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad)
+        // A server that never answers would otherwise keep the placeholder
+        // spinning for the default 60 seconds.
+        var request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 15)
         if let token = plexTokens.withLock({ $0[addressKey(url)] }) {
             request.setValue(token, forHTTPHeaderField: "X-Plex-Token")
         }
@@ -120,11 +122,15 @@ nonisolated enum ArtworkCache {
 
 /// Replacement for `AsyncImage(request:)` + `.asyncImageURLSession(_:)`,
 /// which only exist on macOS 27. Loads through `ArtworkCache` on macOS 26+.
-struct ArtworkImage<Placeholder: View>: View {
-    let url: URL
+/// Shows `placeholder` while loading and `fallback` when there is no URL or
+/// the image can't be loaded, e.g. a Jellyfin item without a poster (404).
+struct ArtworkImage<Placeholder: View, Fallback: View>: View {
+    let url: URL?
     @ViewBuilder var placeholder: () -> Placeholder
+    @ViewBuilder var fallback: () -> Fallback
 
     @State private var image: CGImage?
+    @State private var failed = false
 
     var body: some View {
         Group {
@@ -132,13 +138,18 @@ struct ArtworkImage<Placeholder: View>: View {
                 Image(decorative: image, scale: 1)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
+            } else if url == nil || failed {
+                fallback()
             } else {
                 placeholder()
             }
         }
         .task(id: url) {
             image = nil
+            failed = false
+            guard let url else { return }
             image = await ArtworkCache.image(at: url)
+            failed = image == nil
         }
     }
 }
