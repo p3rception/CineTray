@@ -19,19 +19,19 @@ Requires macOS 26. No Xcode needed; see [Install and update](#install-and-update
 
 | Play from | |
 |:-|:-|
-| <img src="Icons/plex.png" width="20" height="20" alt=""> **Plex** | Movies, shows and music, from one or more servers |
-| <img src="Icons/jellyfin.png" width="20" height="20" alt=""> **Jellyfin** | Movies, shows and music |
-| <img src="Icons/navidrome.png" width="20" height="20" alt=""> **Navidrome** | Music |
-| <img src="Icons/torrserver.png" width="20" height="20" alt=""> **TorrServer** | Movies and shows, with releases of the same show grouped into one poster |
-| <img src="Icons/folder.png" width="20" height="20" alt=""> **Your own folders** | Movies, shows and music |
+| <img src="Icons/plex.png" width="20" height="20" align="absmiddle" alt=""> **Plex** | Movies, shows and music, from one or more servers |
+| <img src="Icons/jellyfin.png" width="20" height="20" align="absmiddle" alt=""> **Jellyfin** | Movies, shows and music |
+| <img src="Icons/navidrome.png" width="20" height="20" align="absmiddle" alt=""> **Navidrome** | Music |
+| <img src="Icons/torrserver.png" width="20" height="20" align="absmiddle" alt=""> **TorrServer** | Movies and shows, with releases of the same show grouped into one poster |
+| <img src="Icons/folder.png" width="20" height="20" align="absmiddle" alt=""> **Your own folders** | Movies, shows and music |
 
 | Connect (all optional) | |
 |:-|:-|
-| <img src="Icons/radarr.png" width="20" height="20" alt=""> **Radarr** <img src="Icons/sonarr.png" width="20" height="20" alt=""> **Sonarr** | Release calendar |
-| <img src="Icons/seerr.png" width="20" height="20" alt=""> **Seerr** | Request movies and shows you don't have |
-| <img src="Icons/trakt.png" width="20" height="20" alt=""> **Trakt** <img src="Icons/lastfm.png" width="20" height="20" alt=""> **Last.fm** | Scrobbling, plus artwork for your own files |
-| <img src="Icons/tmdb.png" width="20" height="20" alt=""> **TMDb** | Posters for your own movies and shows |
-| <img src="Icons/deezer.png" width="20" height="20" alt=""> **Deezer** <img src="Icons/musicbrainz.png" width="20" height="20" alt=""> **MusicBrainz** <img src="Icons/theaudiodb.png" width="20" height="20" alt=""> **TheAudioDB** <img src="Icons/discogs.png" width="20" height="20" alt=""> **Discogs** | Covers and artist photos for your own music |
+| <img src="Icons/radarr.png" width="20" height="20" align="absmiddle" alt=""> **Radarr** <img src="Icons/sonarr.png" width="20" height="20" align="absmiddle" alt=""> **Sonarr** | Release calendar |
+| <img src="Icons/seerr.png" width="20" height="20" align="absmiddle" alt=""> **Seerr** | Request movies and shows you don't have |
+| <img src="Icons/trakt.png" width="20" height="20" align="absmiddle" alt=""> **Trakt** <img src="Icons/lastfm.png" width="20" height="20" align="absmiddle" alt=""> **Last.fm** | Scrobbling, plus artwork for your own files |
+| <img src="Icons/tmdb.png" width="20" height="20" align="absmiddle" alt=""> **TMDb** | Posters for your own movies and shows |
+| <img src="Icons/deezer.png" width="20" height="20" align="absmiddle" alt=""> **Deezer** <img src="Icons/musicbrainz.png" width="20" height="20" align="absmiddle" alt=""> **MusicBrainz** <img src="Icons/theaudiodb.png" width="20" height="20" align="absmiddle" alt=""> **TheAudioDB** <img src="Icons/discogs.png" width="20" height="20" align="absmiddle" alt=""> **Discogs** | Covers and artist photos for your own music |
 
 Connect servers and services in Settings > Accounts, and choose folders in Settings > Data.
 
