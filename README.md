@@ -13,6 +13,12 @@ CineTray puts your movies, shows and music in the macOS menu bar. Browse Plex, J
 git clone https://github.com/p3rception/CineTray.git && cd CineTray && make
 ```
 
+Or with Homebrew, on Apple Silicon:
+
+```sh
+brew install p3rception/tap/cinetray
+```
+
 Requires macOS 26. No Xcode needed; see [Install and update](#install-and-update).
 
 ## Works with
@@ -58,7 +64,7 @@ Connect servers and services in Settings > Accounts, and choose folders in Setti
 *   **Security.** The Plex token is never sent over plain HTTP to remote servers or saved inside poster URLs, and all tokens and API keys are stored in the Keychain.
 *   **Fast.** Sources load in parallel, Plex checks all server addresses at once, the menu refreshes in the background when opened, and Jellyfin plays compatible files directly, so videos start in under a second.
 *   **Keyboard shortcuts in windows.** While a player or Settings is open, CineTray gets a Dock icon and a menu bar, so Full Screen, Hide and Close shortcuts work.
-*   **Builds without Xcode.** Clone and run `make`: it builds, signs and installs the app using only the Command Line Tools.
+*   **Homebrew, or build without Xcode.** Install with `brew install p3rception/tap/cinetray`, or clone and run `make`: it builds, signs and installs the app using only the Command Line Tools.
 
 </details>
 
@@ -120,6 +126,20 @@ Choose which libraries appear and drag them into any order in Settings > Librari
 </table>
 
 ## Install and update
+
+### With Homebrew
+
+Requires macOS 26 or later on an Apple Silicon Mac.
+
+```sh
+brew install p3rception/tap/cinetray
+```
+
+Update with `brew upgrade cinetray`, remove with `brew uninstall cinetray`. Settings, accounts and downloads stay.
+
+CineTray is not notarized, so macOS blocks the first launch. Open System Settings > Privacy & Security and click Open Anyway.
+
+### From source
 
 Requirements: macOS 26 or later, plus either the Command Line Tools (`xcode-select --install`) or Xcode 26.4 or later. The SwiftVLC package requires Swift 6.3.
 
