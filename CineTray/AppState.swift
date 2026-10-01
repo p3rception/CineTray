@@ -3,6 +3,12 @@ import Observation
 import AVFoundation
 import MediaPlayer
 import AppKit
+import OSLog
+
+/// Failures CineTray caught, shown in Console.app and exported from Settings >
+/// General. Messages are public so the export can read them, so never log
+/// URLs (Navidrome credentials ride in the query) or tokens.
+nonisolated let logger = Logger(subsystem: "CineTray", category: "errors")
 
 /// Shared app state managing UI sections, drill-down paths, and catalogs.
 /// Merges Plex, Jellyfin, Navidrome, TorrServer and local library providers.
@@ -348,6 +354,7 @@ final class AppState {
             case .failure(let error):
                 failures.append("\(provider.source.rawValue): \(error.localizedDescription)")
                 failuresBySource[provider.source] = error.localizedDescription
+                logger.error("\(provider.source.rawValue, privacy: .public) libraries: \(error.localizedDescription, privacy: .public)")
             }
         }
         sectionLibraries = mapping
@@ -634,6 +641,7 @@ final class AppState {
                 serverItems += sourceItems
             case .failure(let error):
                 failures.append("\(source.provider.source.rawValue): \(error.localizedDescription)")
+                logger.error("\(source.provider.source.rawValue, privacy: .public) \(section.title, privacy: .public): \(error.localizedDescription, privacy: .public)")
             }
         }
         // De-dupe: local items only appear when no server item with the same
@@ -1308,7 +1316,13 @@ final class AppState {
     private(set) var subtitleCues: SubtitleCues?
     var volume: Float = 1.0
     /// Non-nil error message to display in the player window when a session fails.
-    var playbackError: String?
+    var playbackError: String? {
+        didSet {
+            if let playbackError {
+                logger.error("Playback of \(self.lastStartedItem?.title ?? "an item", privacy: .public) failed: \(playbackError, privacy: .public)")
+            }
+        }
+    }
     /// The item of the latest `startPlayback`, which `playbackError` refers
     /// to; `currentItem` is already nil once playback has failed.
     private(set) var lastStartedItem: MediaItem?

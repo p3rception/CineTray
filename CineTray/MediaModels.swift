@@ -679,6 +679,8 @@ nonisolated enum SettingsKeys {
     static let playerMode = "playerMode"
     /// Path of the app that plays video; empty for CineTray's own player.
     static let videoPlayerApp = "videoPlayerApp"
+    /// Folder Export Logs saves into without asking; empty to ask each time.
+    static let logFolder = "logFolder"
     /// Subtitle size as a scale factor, 1 for Medium.
     static let subtitleSize = "subtitleSize"
     static let richMedia = "richMedia"

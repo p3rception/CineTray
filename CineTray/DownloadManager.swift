@@ -1,5 +1,6 @@
 import AppKit
 import Observation
+import OSLog
 import Synchronization
 
 /// One entry in the per-type download index.
@@ -843,6 +844,7 @@ final class DownloadManager {
     }
 
     private static func alert(title: String, message: String) {
+        logger.error("\(title, privacy: .public): \(message, privacy: .public)")
         let alert = NSAlert()
         alert.messageText = title
         alert.informativeText = message
