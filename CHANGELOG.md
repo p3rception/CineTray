@@ -6,6 +6,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-01
+
 ### Added
 
 - Version numbers, starting with 1.0.0. Each release lists its changes on the [Releases](https://github.com/p3rception/CineTray/releases) page.
