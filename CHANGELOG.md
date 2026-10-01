@@ -12,11 +12,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- The Settings window opens taller, so Accounts needs less scrolling. You can still drag it to any height.
 - Poster rows no longer have arrows at their sides. Scroll them with the trackpad or the system scroll bar, which follows the Show scroll bars setting in System Settings > Appearance.
 
 ### Fixed
 
+- The Settings window can be made taller or shorter again by dragging its top or bottom edge. CineTray remembers the height.
 - Downloading a show, season, album or playlist whose contents can't be loaded from the server shows an error. Before, a season that failed to load was skipped without a message, and the show was still marked downloaded.
 - A download whose folder can't be written to, such as a full or read-only disk, shows an error and doesn't leave the file behind. Before, it appeared downloaded, but after a restart CineTray no longer knew about the file, which still took up space. An unreadable download list is no longer replaced, which would have made CineTray forget every earlier download. If the list is damaged, starting a download offers to move it to the Trash and start a new one.
 

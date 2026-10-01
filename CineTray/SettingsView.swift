@@ -28,7 +28,7 @@ struct SettingsView: View {
         // Fixed width, adjustable height, like System Settings; each tab's
         // Form scrolls when it doesn't fit.
         .frame(width: 520)
-        .frame(minHeight: 400, idealHeight: 760, maxHeight: .infinity)
+        .frame(minHeight: 400, idealHeight: 560, maxHeight: .infinity)
         .background(ResizableWindow())
         .onAppear { AppWindowActivation.windowOpened() }
         .onDisappear { AppWindowActivation.windowClosed() }
@@ -49,15 +49,22 @@ extension View {
 
 /// The Settings scene's window ignores .windowResizability, so this reaches
 /// the hosting NSWindow and makes it resizable; the frame above keeps the
-/// width fixed.
+/// width fixed. SwiftUI clears .resizable again after the window appears, so
+/// it is put back whenever it goes. No .defaultSize on the scene: it would
+/// override the height macOS remembers from the last resize.
 private struct ResizableWindow: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView { WindowHook() }
     func updateNSView(_ nsView: NSView, context: Context) {}
 
     private final class WindowHook: NSView {
+        private var observation: NSKeyValueObservation?
+
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
             window?.styleMask.insert(.resizable)
+            observation = window?.observe(\.styleMask) { window, _ in
+                if !window.styleMask.contains(.resizable) { window.styleMask.insert(.resizable) }
+            }
         }
     }
 }
