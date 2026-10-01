@@ -116,6 +116,26 @@ Match the comment density of the surrounding code.
   things you did not do.
 - Include a screenshot for UI changes.
 
+## 9. Versions and releases
+
+Versions follow [Semantic Versioning](https://semver.org/). Commits do not
+change the version; a release does, and only the maintainer cuts one.
+
+- Every user-visible change goes under `## [Unreleased]` in `CHANGELOG.md`,
+  in the Keep a Changelog categories: Added, Changed, Removed, Fixed,
+  Security.
+- **Patch** (1.2.0 to 1.2.1): `[Unreleased]` holds only Fixed or Security
+  entries.
+- **Minor** (1.2.1 to 1.3.0): it holds anything else.
+- **Major** (1.3.0 to 2.0.0): a release that makes existing users lose
+  something or redo setup: a higher minimum macOS, a removed feature or
+  service, or settings, accounts or downloads that no longer carry over.
+- Release a fix for a crash or data loss on its own, the same day. Other
+  changes wait for the next release; release only finished, tested work.
+- `./release.sh` picks patch or minor from these rules, dates the section,
+  commits and tags. For a major release, pass the version:
+  `./release.sh 2.0.0`. `git push --follow-tags` then publishes it.
+
 ## Checklist
 
 Before opening a pull request:

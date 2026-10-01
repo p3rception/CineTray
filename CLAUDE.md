@@ -10,6 +10,7 @@ Two build paths. Both must keep working.
 
 - **Install:** `make` runs `./build.sh build` and copies `dist/CineTray.app` to `/Applications`. This is the path the README gives users.
 - **SwiftPM (no Xcode needed):** `./build.sh` builds, bundles `dist/CineTray.app`, ad-hoc signs and launches it. `./build.sh build` skips the launch. Compile only: `swift build -c release --disable-keychain`.
+- **Release:** `./release.sh [x.y.z]` tags a version (rules in AGENTS.md section 9); pushing the tag runs `.github/workflows/release.yml`, which builds on a `macos-26` runner, publishes the GitHub release with its CHANGELOG section and updates the cask in `p3rception/homebrew-tap` (needs the `TAP_TOKEN` secret). `build.sh` reads the version from the last `v*` tag and the build number from the commit count; the Xcode project's `MARKETING_VERSION` is for local builds only.
 - **Xcode:** `CineTray.xcodeproj`. When Xcode MCP tools are available, prefer `BuildProject`, `XcodeRefreshCodeIssuesInFile` and `GetBuildLog`. Project paths are `CineTray/<File>.swift`. `XcodeUpdate` does not always flush to disk; verify with a filesystem `Read` and fall back to `Edit`.
 
 Build settings live in two places and must stay in sync: `Package.swift` (`swiftSettings`) and the target in `project.pbxproj`. Both use Swift 5 language mode, default actor isolation `MainActor`, and the upcoming features `InferIsolatedConformances`, `NonisolatedNonsendingByDefault`, `MemberImportVisibility` and bare-slash regex literals.

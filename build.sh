@@ -25,8 +25,11 @@ set_key CFBundleExecutable string CineTray
 set_key CFBundleIdentifier string "$BUNDLE_ID"
 set_key CFBundleName string CineTray
 set_key CFBundlePackageType string APPL
-set_key CFBundleShortVersionString string 1.0
-set_key CFBundleVersion string 1
+# The last release tag, and the commit count as build number, so any build
+# can be traced to its commit.
+VERSION=$(git describe --tags --match 'v[0-9]*' --abbrev=0 2>/dev/null || echo v0.0.0)
+set_key CFBundleShortVersionString string "${VERSION#v}"
+set_key CFBundleVersion string "$(git rev-list --count HEAD 2>/dev/null || echo 1)"
 set_key LSMinimumSystemVersion string 26.0
 set_key NSPrincipalClass string NSApplication
 set_key NSHighResolutionCapable bool YES

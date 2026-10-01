@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # build.sh reads the version from tags and the build number from history
+
+      - name: Build
+        run: ./build.sh build
+
+      - name: Package
+        run: |
+          ditto -c -k --keepParent dist/CineTray.app CineTray.zip
+          echo "SHA256=$(shasum -a 256 CineTray.zip | cut -d' ' -f1)" >> "$GITHUB_ENV"
+          echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          awk -v h="## [$VERSION]" 'index($0, h) == 1 { f = 1; next } /^## / { f = 0 } f' CHANGELOG.md > notes.md
+          grep -q . notes.md || { echo "CHANGELOG.md has no section for $VERSION"; exit 1; }
+          gh release create "$GITHUB_REF_NAME" CineTray.zip --verify-tag --title "CineTray $VERSION" --notes-file notes.md
+
+      - name: Update Homebrew cask
+        env:
+          TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
+        run: |
+          git clone --depth 1 "https://x-access-token:$TAP_TOKEN@github.com/p3rception/homebrew-tap.git" tap
+          sed -i '' -e "s/^  version \".*\"/  version \"$VERSION\"/" -e "s/^  sha256 \".*\"/  sha256 \"$SHA256\"/" tap/Casks/cinetray.rb
+          git -C tap -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -am "Update CineTray to $VERSION"
+          git -C tap push
