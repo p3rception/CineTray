@@ -58,6 +58,10 @@ struct GeneralSettingsView: View {
             }
 
             Section {
+                LabeledContent("Version") {
+                    Text(Self.appVersion)
+                        .textSelection(.enabled)
+                }
                 Toggle("Check for Updates", isOn: $checkForUpdates)
                     .onChange(of: checkForUpdates) { Task { await appState.checkForUpdate() } }
             } header: {
@@ -162,6 +166,12 @@ struct GeneralSettingsView: View {
         }
     }
 
+    /// Version and build number, e.g. "1.1.0 (135)".
+    nonisolated private static let appVersion: String = {
+        let info = Bundle.main.infoDictionary
+        return "\(info?["CFBundleShortVersionString"] as? String ?? "?") (\(info?["CFBundleVersion"] as? String ?? "?"))"
+    }()
+
     /// An app can read only its own process's log, so entries from before
     /// the last launch aren't included.
     @concurrent nonisolated private static func logText() async throws -> String {
@@ -169,8 +179,7 @@ struct GeneralSettingsView: View {
         let entries = try store.getEntries(matching: NSPredicate(format: "subsystem == %@", "CineTray"))
             .compactMap { $0 as? OSLogEntryLog }
             .map { "\($0.date.formatted(.iso8601)) \($0.composedMessage)" }
-        let info = Bundle.main.infoDictionary
-        let header = "CineTray \(info?["CFBundleShortVersionString"] as? String ?? "?") (\(info?["CFBundleVersion"] as? String ?? "?")), macOS \(ProcessInfo.processInfo.operatingSystemVersionString)"
+        let header = "CineTray \(appVersion), macOS \(ProcessInfo.processInfo.operatingSystemVersionString)"
         return ([header] + (entries.isEmpty ? ["No errors since CineTray was opened."] : entries)).joined(separator: "\n") + "\n"
     }
 

@@ -6,6 +6,10 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Settings > General shows the installed version and build number, next to Check for Updates.
+
 ## [1.1.0] - 2026-10-02
 
 ### Added
