@@ -7,11 +7,13 @@ import UniformTypeIdentifiers
 /// General app preferences. Currently exposes launch-at-login, backed by the
 /// modern `SMAppService` login-item API, media keys and local network access.
 struct GeneralSettingsView: View {
+    @Environment(AppState.self) private var appState
     @State private var launchAtLogin = false
     @State private var requiresApproval = false
     @State private var networkMonitor = LocalNetworkAccessMonitor()
     @AppStorage(SettingsKeys.useMediaKeys) private var useMediaKeys = false
     @AppStorage(SettingsKeys.logFolder) private var logFolder = ""
+    @AppStorage(SettingsKeys.checkForUpdates) private var checkForUpdates = true
     @State private var logExportError: String?
     @State private var exportedLog: URL?
 
@@ -52,6 +54,16 @@ struct GeneralSettingsView: View {
                     info: networkMonitor.status == .granted
                         ? "CineTray has local network access and can discover servers on your network. Media keys let you play/pause and skip tracks globally."
                         : "Grant CineTray access to find and connect to Plex and Jellyfin servers on your local network."
+                )
+            }
+
+            Section {
+                Toggle("Check for Updates", isOn: $checkForUpdates)
+                    .onChange(of: checkForUpdates) { Task { await appState.checkForUpdate() } }
+            } header: {
+                SectionInfoHeader(
+                    title: "Updates",
+                    info: "Once a day, CineTray asks GitHub for the latest version. When a newer one is out, the menu bar icon turns blue and the menu shows how to update."
                 )
             }
 
@@ -183,6 +195,7 @@ struct GeneralSettingsView: View {
 #if !SWIFT_PACKAGE // Previews need Xcode; SwiftPM builds skip them.
 #Preview("General") {
     GeneralSettingsView()
+        .environment(AppState())
         .frame(width: 520, height: 560)
 }
 #endif

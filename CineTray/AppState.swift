@@ -50,6 +50,12 @@ final class AppState {
                 NSApplication.shared.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
             }
         }
+        Task {
+            while !Task.isCancelled {
+                await checkForUpdate()
+                try? await Task.sleep(for: .seconds(24 * 60 * 60))
+            }
+        }
     }
 
     private func setupMediaKeys() {
@@ -295,6 +301,49 @@ final class AppState {
         // ponytail: ids of libraries not listed right now (server offline) move to the end
         // and lose their place; keep per-id positions if that turns out to annoy.
         sectionOrder = ids + sectionOrder.filter { !ids.contains($0) }
+    }
+
+    // MARK: - Updates
+
+    /// A newer release on GitHub; turns the menu bar icon blue and shows a
+    /// notice in the menu.
+    private(set) var availableUpdate: String?
+
+    /// Homebrew updates the app itself; a build from source needs the release page.
+    let isHomebrewInstall = FileManager.default.fileExists(atPath: "/opt/homebrew/Caskroom/cinetray")
+
+    func checkForUpdate() async {
+        let defaults = UserDefaults.standard
+        guard defaults.object(forKey: SettingsKeys.checkForUpdates) as? Bool ?? true, !isOfflineMode else {
+            availableUpdate = nil
+            return
+        }
+        struct Release: Decodable { let tag_name: String }
+        do {
+            let (data, response) = try await URLSession.uncached.data(from: URL(string: "https://api.github.com/repos/p3rception/CineTray/releases/latest")!)
+            guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
+            let latest = String(try JSONDecoder().decode(Release.self, from: data).tag_name.trimmingPrefix("v"))
+            let current = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
+            availableUpdate = Self.isVersion(latest, newerThan: current)
+                && latest != defaults.string(forKey: SettingsKeys.dismissedUpdateVersion) ? latest : nil
+        } catch {
+            logger.error("Update check: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    func dismissUpdate() {
+        UserDefaults.standard.set(availableUpdate, forKey: SettingsKeys.dismissedUpdateVersion)
+        availableUpdate = nil
+    }
+
+    /// Compares numerically, so 1.10 is newer than 1.9 and 1.0 equals 1.0.0.
+    nonisolated static func isVersion(_ version: String, newerThan other: String) -> Bool {
+        let numbers = { (string: String) in string.split(separator: ".").map { Int($0) ?? 0 } }
+        var lhs = numbers(version), rhs = numbers(other)
+        let count = max(lhs.count, rhs.count)
+        lhs += Array(repeating: 0, count: count - lhs.count)
+        rhs += Array(repeating: 0, count: count - rhs.count)
+        return rhs.lexicographicallyPrecedes(lhs)
     }
 
     // MARK: - Library sections

@@ -681,6 +681,9 @@ nonisolated enum SettingsKeys {
     static let videoPlayerApp = "videoPlayerApp"
     /// Folder Export Logs saves into without asking; empty to ask each time.
     static let logFolder = "logFolder"
+    static let checkForUpdates = "checkForUpdates"
+    /// The release whose menu notice was closed; a newer one shows again.
+    static let dismissedUpdateVersion = "dismissedUpdateVersion"
     /// Subtitle size as a scale factor, 1 for Medium.
     static let subtitleSize = "subtitleSize"
     static let richMedia = "richMedia"

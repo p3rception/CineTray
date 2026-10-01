@@ -18,7 +18,11 @@ import AppKit
             MenuBarContentView()
                 .environment(appState)
         } label: {
-            Image(systemName: "play.square.stack")
+            if appState.availableUpdate != nil, let icon = Self.updateIcon {
+                Image(nsImage: icon)
+            } else {
+                Image(systemName: "play.square.stack")
+            }
         }
         .menuBarExtraStyle(.window)
 
@@ -45,6 +49,18 @@ import AppKit
                 .environment(appState)
         }
     }
+
+    /// The menu bar draws SF Symbols as monochrome templates, so the blue
+    /// icon is a non-template image.
+    private static let updateIcon: NSImage? = {
+        // One color per layer; with fewer, the stack layers aren't drawn.
+        // Default size, as for the template icon: larger gets clipped on 22 pt menu bars.
+        let configuration = NSImage.SymbolConfiguration(paletteColors: Array(repeating: .controlAccentColor, count: 3))
+        let image = NSImage(systemSymbolName: "play.square.stack", accessibilityDescription: "CineTray, update available")?
+            .withSymbolConfiguration(configuration)
+        image?.isTemplate = false
+        return image
+    }()
 }
 
 /// CineTray is a menu bar app (.accessory), so its windows get no app menus

@@ -8,6 +8,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Update notices. Once a day CineTray checks GitHub for a new version. When one is out, the menu bar icon turns blue and the menu shows a line: with Homebrew it copies `brew upgrade cinetray` for you to paste in Terminal, otherwise it opens the release page. Close the line to hide it until the next version, or turn off Check for Updates in Settings > General.
 - Export Logs in Settings > General. It saves the errors CineTray ran into since it was opened, such as a server it couldn't reach, playback that failed or a download that didn't finish, as a text file to attach to a bug report. To skip the save dialog, choose a folder under Save Logs To; each export then gets its own file there. After saving, Settings names the file and offers Show in Finder. They also appear in Console.app under the subsystem `CineTray`.
 
 ### Fixed

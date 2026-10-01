@@ -21,6 +21,7 @@ struct MenuBarContentView: View {
     @AppStorage(SettingsKeys.sonarrURL) private var sonarrURL = ""
     @AppStorage(SettingsKeys.seerrURL) private var seerrURL = ""
     @State private var showsCalendar = false
+    @State private var copiedUpgradeCommand = false
 
     private var contentWidth: CGFloat {
         MediaCarouselView.carouselWidth(for: carouselVisibleCount) + 24
@@ -30,6 +31,11 @@ struct MenuBarContentView: View {
         VStack(alignment: .leading, spacing: 0) {
             header
             Divider()
+
+            if let update = appState.availableUpdate {
+                updateNotice(update)
+                Divider()
+            }
 
             if showsCalendar && hasCalendar {
                 ReleaseCalendarView()
@@ -112,6 +118,7 @@ struct MenuBarContentView: View {
         .onChange(of: appearsActive, initial: true) { _, active in
             guard active else { return }
             appState.menuDidOpen()
+            copiedUpgradeCommand = false
             // Ready to type; set on the next run loop turn, once the window is key.
             Task { searchFocused = true }
         }
@@ -122,6 +129,56 @@ struct MenuBarContentView: View {
                 withAnimation(.snappy(duration: 0.2)) { appState.deactivateSearch() }
             }
         }
+    }
+
+    // MARK: - Update notice
+
+    /// Homebrew installs copy the upgrade command; others open the release page.
+    private func updateNotice(_ version: String) -> some View {
+        HStack(spacing: 8) {
+            Button {
+                if appState.isHomebrewInstall {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString("brew upgrade cinetray", forType: .string)
+                    copiedUpgradeCommand = true
+                } else if let url = URL(string: "https://github.com/p3rception/CineTray/releases/latest") {
+                    NSWorkspace.shared.open(url)
+                    dismiss()
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: copiedUpgradeCommand ? "checkmark.circle.fill" : "arrow.down.circle.fill")
+                    Text("CineTray \(version) is available")
+                        .fontWeight(.semibold)
+                    Spacer(minLength: 4)
+                    Text(appState.isHomebrewInstall
+                         ? (copiedUpgradeCommand ? "Copied, paste in Terminal" : "Copy brew upgrade")
+                         : "Download")
+                }
+                .font(.system(size: 12))
+                .foregroundStyle(.tint)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                // Darkened with black on top of the glass: a dark tint color
+                // drifts toward green once the glass blends it.
+                .background(.black.opacity(0.3), in: .capsule)
+                .glassEffect(.regular.tint(.accentColor.opacity(0.18)).interactive(), in: .capsule)
+                .overlay(Capsule().strokeBorder(.tint.opacity(0.5), lineWidth: 1))
+                .contentShape(.capsule)
+            }
+            .buttonStyle(.plain)
+            .help(appState.isHomebrewInstall ? "Copies brew upgrade cinetray. Paste it in Terminal to update." : "Opens the release on GitHub")
+
+            Button("Dismiss", systemImage: "xmark") {
+                withAnimation(.snappy(duration: 0.2)) { appState.dismissUpdate() }
+            }
+            .buttonStyle(.plain)
+            .labelStyle(.iconOnly)
+            .foregroundStyle(.secondary)
+            .help("Hide until the next version")
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
     }
 
     // MARK: - Header

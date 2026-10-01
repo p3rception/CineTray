@@ -63,6 +63,7 @@ Connect servers and services in Settings > Accounts, and choose folders in Setti
 *   **Easy sign-in.** Jellyfin Quick Connect (approve a code from another signed-in device, no password). Server addresses work without `http://` or `https://`; the app uses HTTPS, and falls back to HTTP only for addresses on your local network. The TMDb API key field checks the key as you type.
 *   **Security.** The Plex token is never sent over plain HTTP to remote servers or saved inside poster URLs, and all tokens and API keys are stored in the Keychain.
 *   **Fast.** Sources load in parallel, Plex checks all server addresses at once, the menu refreshes in the background when opened, and Jellyfin plays compatible files directly, so videos start in under a second.
+*   **Update notices.** When a new version is out, the menu bar icon turns blue and a line in the menu copies `brew upgrade cinetray`, or opens the release page if you built CineTray yourself.
 *   **Logs for bug reports.** Settings > General > Export Logs saves the errors CineTray ran into since it was opened, such as a server it couldn't reach or playback that failed, as a text file. They also appear in Console.app under the subsystem `CineTray`.
 *   **Keyboard shortcuts in windows.** While a player or Settings is open, CineTray gets a Dock icon and a menu bar, so Full Screen, Hide and Close shortcuts work.
 *   **Homebrew, or build without Xcode.** Install with `brew install p3rception/tap/cinetray`, or clone and run `make`: it builds, signs and installs the app using only the Command Line Tools.
@@ -127,6 +128,8 @@ Choose which libraries appear and drag them into any order in Settings > Librari
 </table>
 
 ## Install and update
+
+CineTray checks GitHub once a day for a new version. When one is out, the menu bar icon turns blue and the menu shows how to update. Turn this off in Settings > General.
 
 ### With Homebrew
 
