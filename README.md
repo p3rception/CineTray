@@ -3,6 +3,7 @@
 ## Contents
 
 *   [Supported servers](#supported-servers)
+*   [Connected services](#connected-services)
 *   [About CineTray](#about-cinetray)
     *   [Building CineTray](#building-cinetray)
     *   [Scrobbling and artwork](#scrobbling-and-artwork)
@@ -19,6 +20,23 @@
 | <img src="Icons/folder.png" width="48" height="48" alt=""><br>Your own folders | ✓ | ✓ | ✓ |
 
 Connect servers in Settings > Accounts and choose folders in Settings > Data.
+
+## Connected services
+
+| Service | Release calendar | Requests | Scrobbling | Artwork |
+|:-:|:-:|:-:|:-:|:-:|
+| <img src="Icons/radarr.png" width="48" height="48" alt=""><br>Radarr | ✓ | | | |
+| <img src="Icons/sonarr.png" width="48" height="48" alt=""><br>Sonarr | ✓ | | | |
+| <img src="Icons/seerr.png" width="48" height="48" alt=""><br>Seerr | | ✓ | | |
+| <img src="Icons/trakt.png" width="48" height="48" alt=""><br>Trakt | | | ✓ | ✓ |
+| <img src="Icons/lastfm.png" width="48" height="48" alt=""><br>Last.fm | | | ✓ | ✓ |
+| <img src="Icons/tmdb.png" width="48" height="48" alt=""><br>TMDb | | | | ✓ |
+| <img src="Icons/deezer.png" width="48" height="48" alt=""><br>Deezer | | | | ✓ |
+| <img src="Icons/musicbrainz.png" width="48" height="48" alt=""><br>MusicBrainz | | | | ✓ |
+| <img src="Icons/theaudiodb.png" width="48" height="48" alt=""><br>TheAudioDB | | | | ✓ |
+| <img src="Icons/discogs.png" width="48" height="48" alt=""><br>Discogs | | | | ✓ |
+
+All optional. Connect them in Settings > Accounts; [Scrobbling and artwork](#scrobbling-and-artwork) says where to get the keys. Deezer, MusicBrainz and TheAudioDB need no key.
 
 ## About CineTray
 
