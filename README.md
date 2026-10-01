@@ -117,5 +117,6 @@ Optional. Each service needs a free account of your own. The keys go in Settings
 <table>
   <tr>
     <td align="center"><img src="Screenshots/Release-Calendar.png" width="205" alt="The release calendar: a month view with dots on days with releases, and the week's movies and episodes from Radarr and Sonarr"><br><sub>Release calendar from Radarr and Sonarr</sub></td>
+    <td align="center"><img src="Screenshots/Seerr-Requests.png" width="208" alt="Searching for Kung Fu Panda: the Seerr row lists the movies not in the library, with Request on the first poster"><br><sub>Requests with Seerr</sub></td>
   </tr>
 </table>
