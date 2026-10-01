@@ -101,4 +101,4 @@ MediaType (movies / tvShows / music)
 - New settings keys go in `SettingsKeys` or `KeychainKeys`, never as inline string literals.
 - Never put tokens in URLs that get saved (poster URLs end up in UserDefaults and download indexes). Load Plex artwork through `ArtworkCache.request(for:)`, which adds the token as a header.
 - The app name is **CineTray**. Avoid "QuickPlex" in user-facing strings and comments.
-- Every user-visible change updates `CHANGELOG.md` and, when it changes what CineTray offers or how to build it, the "About CineTray" section of `README.md`, in the same commit.
+- Every user-visible change updates `CHANGELOG.md` and, when it changes what CineTray offers or how to build it, the "Works with", "A quick tour" or "Install and update" section of `README.md`, and the "All features" list, in the same commit.
