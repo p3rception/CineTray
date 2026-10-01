@@ -6,6 +6,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-02
+
 ### Added
 
 - Update notices. Once a day CineTray checks GitHub for a new version. When one is out, the menu bar icon turns blue and the menu shows a line: with Homebrew it copies `brew upgrade cinetray` for you to paste in Terminal, otherwise it opens the release page. Close the line to hide it until the next version, or turn off Check for Updates in Settings > General.
