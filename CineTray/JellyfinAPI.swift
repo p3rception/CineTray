@@ -22,6 +22,18 @@ struct JellyfinLibrary: Identifiable, Hashable, Codable {
     }
 }
 
+enum JellyfinError: LocalizedError {
+    case unauthorized
+    case http(Int)
+
+    var errorDescription: String? {
+        switch self {
+        case .unauthorized: "Jellyfin rejected the sign-in. Sign in again in Settings > Accounts."
+        case .http(let status): "The Jellyfin server returned an error (HTTP \(status))."
+        }
+    }
+}
+
 /// Minimal Jellyfin server client, mirroring PlexClient's role. Authenticates
 /// with username/password to obtain an access token and user ID.
 struct JellyfinClient {
@@ -42,6 +54,16 @@ struct JellyfinClient {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue(Self.authorizationHeader(token: config.token), forHTTPHeaderField: "Authorization")
         return request
+    }
+
+    /// Turns non-2xx responses into readable errors instead of letting them
+    /// surface later as JSON decoding failures.
+    private func fetch(_ request: URLRequest) async throws -> Data {
+        let (data, response) = try await URLSession.shared.data(for: request)
+        if let status = (response as? HTTPURLResponse)?.statusCode, !(200..<300).contains(status) {
+            throw status == 401 ? JellyfinError.unauthorized : JellyfinError.http(status)
+        }
+        return data
     }
 
     // MARK: - Authentication
@@ -155,9 +177,7 @@ struct JellyfinClient {
             let CollectionType: String?
         }
         struct Response: Decodable { let Items: [Item] }
-        let (data, _) = try await URLSession.shared.data(
-            for: request(path: "/Users/\(config.userID)/Views")
-        )
+        let data = try await fetch(request(path: "/Users/\(config.userID)/Views"))
         return try JSONDecoder().decode(Response.self, from: data).Items.map {
             JellyfinLibrary(id: $0.Id, name: $0.Name, collectionType: $0.CollectionType)
         }
@@ -235,7 +255,7 @@ struct JellyfinClient {
     private struct ItemsResponse: Decodable { let Items: [Item] }
 
     private func queryItems(_ query: [URLQueryItem]) async throws -> [Item] {
-        let (data, _) = try await URLSession.shared.data(for: request(
+        let data = try await fetch(request(
             path: "/Users/\(config.userID)/Items",
             query: query
         ))
@@ -454,7 +474,7 @@ struct JellyfinClient {
                     URLQueryItem(name: "Limit", value: "20"),
                 ]),
             ] {
-                let (data, _) = try await URLSession.shared.data(for: request(path: path, query: query + parent + [fields]))
+                let data = try await fetch(request(path: path, query: query + parent + [fields]))
                 entries += try JSONDecoder().decode(ItemsResponse.self, from: data).Items
             }
         }
@@ -476,9 +496,7 @@ struct JellyfinClient {
     // MARK: - Auto-continue queries
 
     private func itemDetail(id: String) async throws -> Item {
-        let (data, _) = try await URLSession.shared.data(
-            for: request(path: "/Users/\(config.userID)/Items/\(id)")
-        )
+        let data = try await fetch(request(path: "/Users/\(config.userID)/Items/\(id)"))
         return try JSONDecoder().decode(Item.self, from: data)
     }
 
@@ -618,7 +636,7 @@ struct JellyfinClient {
     private func firstChildID(parentID: String, itemType: String) async throws -> String? {
         struct Item: Decodable { let Id: String }
         struct Response: Decodable { let Items: [Item] }
-        let (data, _) = try await URLSession.shared.data(for: request(
+        let data = try await fetch(request(
             path: "/Users/\(config.userID)/Items",
             query: [
                 URLQueryItem(name: "ParentId", value: parentID),
@@ -741,7 +759,7 @@ struct JellyfinClient {
 
     private func mediaSource(itemID: String) async throws -> PlaybackSource? {
         struct Item: Decodable { let MediaSources: [PlaybackSource]? }
-        let (data, _) = try await URLSession.shared.data(for: request(path: "/Users/\(config.userID)/Items/\(itemID)"))
+        let data = try await fetch(request(path: "/Users/\(config.userID)/Items/\(itemID)"))
         return try JSONDecoder().decode(Item.self, from: data).MediaSources?.first
     }
 

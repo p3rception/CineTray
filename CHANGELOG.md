@@ -6,6 +6,11 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- When a server can't list its libraries, the menu says so above the libraries that did load, with a Retry button. Before, the message appeared only when every server failed, so a single failing server disappeared without a word, and the Video and Music switch could disappear with it.
+- When Jellyfin no longer accepts your sign-in, for example after a server update, the menu, playback and Settings > Accounts say so and ask you to sign in again. Before, playback failed with "The data couldn't be read because it isn't in the correct format", and Settings still showed "Signed in as" in green. Navidrome errors also replace "Signed in as" in Settings.
+
 ## [1.0.0] - 2026-10-01
 
 ### Added

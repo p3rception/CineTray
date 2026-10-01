@@ -430,9 +430,15 @@ struct AccountsSettingsView: View {
                 }
             }
             if !jellyfinUserID.isEmpty {
-                Text("Signed in as \(jellyfinUsername).")
-                    .font(.callout)
-                    .foregroundStyle(.green)
+                if let failure = appState.librarySectionFailures[.jellyfin] {
+                    Text(failure)
+                        .font(.callout)
+                        .foregroundStyle(.red)
+                } else {
+                    Text("Signed in as \(jellyfinUsername).")
+                        .font(.callout)
+                        .foregroundStyle(.green)
+                }
             }
             statusText(jellyfinStatus)
         }
@@ -550,9 +556,15 @@ struct AccountsSettingsView: View {
                 }
             }
             if !navidromeSalt.isEmpty {
-                Text("Signed in as \(navidromeUsername).")
-                    .font(.callout)
-                    .foregroundStyle(.green)
+                if let failure = appState.librarySectionFailures[.navidrome] {
+                    Text(failure)
+                        .font(.callout)
+                        .foregroundStyle(.red)
+                } else {
+                    Text("Signed in as \(navidromeUsername).")
+                        .font(.callout)
+                        .foregroundStyle(.green)
+                }
             }
             statusText(navidromeStatus)
         }

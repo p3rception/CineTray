@@ -299,8 +299,10 @@ final class AppState {
     /// The servers behind the music (true) and the video (false) libraries,
     /// in provider order.
     private(set) var serverNamesByPane: [Bool: [String]] = [:]
-    /// Shown instead of sections when no provider could list its libraries.
+    /// Shown above the sections when a provider couldn't list its libraries.
     private(set) var librarySectionsError: String?
+    /// Why each source couldn't list its libraries, for Settings > Accounts.
+    private(set) var librarySectionFailures: [MediaSource: String] = [:]
     /// The provider libraries behind each library section.
     @ObservationIgnored private var sectionLibraries: [MenuSection.ID: [(providerID: String, library: MediaLibrary)]] = [:]
     @ObservationIgnored private var librarySectionsTask: Task<Void, Never>?
@@ -324,6 +326,7 @@ final class AppState {
         var sections: [MenuSection] = []
         var mapping: [MenuSection.ID: [(providerID: String, library: MediaLibrary)]] = [:]
         var failures: [String] = []
+        var failuresBySource: [MediaSource: String] = [:]
         var serverNames: [Bool: [String]] = [:]
         let musicLibraryNames = Set(results.flatMap { (try? $0.get()) ?? [] }.filter { $0.type == .music }.map { $0.name.lowercased() })
         for (provider, result) in zip(sources, results) {
@@ -344,12 +347,14 @@ final class AppState {
                 }
             case .failure(let error):
                 failures.append("\(provider.source.rawValue): \(error.localizedDescription)")
+                failuresBySource[provider.source] = error.localizedDescription
             }
         }
         sectionLibraries = mapping
         librarySections = sections
         serverNamesByPane = serverNames
-        librarySectionsError = sections.isEmpty && !failures.isEmpty ? failures.joined(separator: " • ") : nil
+        librarySectionsError = failures.isEmpty ? nil : failures.joined(separator: " • ")
+        librarySectionFailures = failuresBySource
         librarySectionsTask = nil
 
         // Refill what was open before the sections were (re)loaded.
@@ -703,6 +708,7 @@ final class AppState {
         librarySectionsTask = nil
         librarySections = nil
         librarySectionsError = nil
+        librarySectionFailures = [:]
         sectionLibraries = [:]
         Task { await ensureLibrarySections() }
         itemsBySection = [:]
