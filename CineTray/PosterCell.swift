@@ -15,7 +15,8 @@ struct PosterCell: View {
     @Environment(AppState.self) private var appState
     @AppStorage(SettingsKeys.simpleVisuals) private var simpleVisuals = false
     @AppStorage(SettingsKeys.richMedia) private var richMedia = false
-    
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     @State private var isHovering = false
     @State private var showingInfo = false
 
@@ -66,7 +67,10 @@ struct PosterCell: View {
                         .overlay(alignment: .topLeading) { infoButton }
                         .overlay(alignment: .topTrailing) { openInWebAppButton }
                         .overlay(alignment: .topTrailing) { watchedBadge }
-                    MarqueeText(text: displayTitle, font: isCompact ? .system(size: 11) : .caption)
+                    HStack(spacing: 3) {
+                        MarqueeText(text: displayTitle, font: titleFont)
+                        downloadedMark
+                    }
                     MarqueeText(text: displaySubtitle ?? " ", font: isCompact ? .system(size: 9) : .caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -83,7 +87,7 @@ struct PosterCell: View {
                 }
             }
         }
-        .scaleEffect(isHovering ? 1.04 : 1)
+        .scaleEffect(isHovering && !reduceMotion ? 1.04 : 1)
         .animation(.snappy(duration: 0.15), value: isHovering)
         .onHover { isHovering = $0 }
         .help(item.title)
@@ -104,25 +108,39 @@ struct PosterCell: View {
             Button("Open in \(name)", systemImage: "arrow.up.forward.circle.fill") {
                 appState.openInWebApp(item)
             }
-            .buttonStyle(.plain)
-            .labelStyle(.iconOnly)
-            .foregroundStyle(.white, .black.opacity(0.55))
+            .buttonStyle(PosterControlStyle())
             .font(.system(size: isCompact ? 10 : 14))
-            .padding(isCompact ? 2 : 3)
             .help("Open in \(name)")
         }
     }
 
-    /// White on a dark disc, like the other poster controls, so it isn't
-    /// confused with the green Downloaded mark. Hidden while hovering, when
-    /// the Open in Plex/Jellyfin button takes its corner.
+    /// Next to the title rather than on the artwork, where no color stays
+    /// visible on every poster. It also can't be confused with the Download
+    /// button, which disappears once the item is downloaded.
+    @ViewBuilder
+    private var downloadedMark: some View {
+        if DownloadManager.shared.isDownloaded(item) {
+            Image(systemName: "arrow.down.circle.fill")
+                .font(titleFont)
+                .foregroundStyle(.green)
+                .help("Downloaded")
+                .accessibilityLabel("Downloaded")
+        }
+    }
+
+    private var titleFont: Font {
+        isCompact ? .system(size: 11) : .caption
+    }
+
+    /// White on a dark disc, like the other poster controls. Hidden while
+    /// hovering, when the Open in Plex/Jellyfin button takes its corner.
     @ViewBuilder
     private var watchedBadge: some View {
         if item.isWatched == true, !isHovering {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(.white, .black.opacity(0.55))
                 .font(.system(size: isCompact ? 10 : 14))
-                .padding(isCompact ? 2 : 3)
+                .frame(width: 20, height: 20)
                 .help("Watched")
                 .accessibilityLabel("Watched")
         }
@@ -154,11 +172,8 @@ struct PosterCell: View {
             Button("Info", systemImage: "info.circle.fill") {
                 showingInfo = true
             }
-            .buttonStyle(.plain)
-            .labelStyle(.iconOnly)
-            .foregroundStyle(.white, .black.opacity(0.55))
+            .buttonStyle(PosterControlStyle())
             .font(.system(size: isCompact ? 10 : 14))
-            .padding(isCompact ? 2 : 3)
             .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 8) {
@@ -177,9 +192,13 @@ struct PosterCell: View {
 
     private var compactBox: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(displayTitle)
-                .font(isCompact ? .system(size: 11) : .caption)
-                .lineLimit(2, reservesSpace: true)
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text(displayTitle)
+                    .font(titleFont)
+                    .lineLimit(2, reservesSpace: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                downloadedMark
+            }
             Text(displaySubtitle ?? " ")
                 .font(isCompact ? .system(size: 9) : .caption2)
                 .foregroundStyle(.secondary)
@@ -261,14 +280,27 @@ struct PosterCell: View {
 
 
 /// A text view that automatically scrolls horizontally back and forth if its
-/// content is wider than its container.
+/// content is wider than its container. With Reduce Motion on, it truncates
+/// instead.
 struct MarqueeText: View {
     let text: String
     let font: Font
-    
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var offset: CGFloat = 0
-    
+
     var body: some View {
+        if reduceMotion {
+            Text(text)
+                .font(font)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            marquee
+        }
+    }
+
+    private var marquee: some View {
         Text(text)
             .font(font)
             .lineLimit(1)
@@ -331,26 +363,30 @@ private struct DownloadButton: View {
                     Button("Stop download", systemImage: "stop.circle.fill") {
                         DownloadManager.shared.cancelDownload(item)
                     }
-                    .buttonStyle(.plain)
-                    .labelStyle(.iconOnly)
-                    .foregroundStyle(.white, .black.opacity(0.55))
+                    .buttonStyle(PosterControlStyle())
                     .help("Stop download")
-                } else if DownloadManager.shared.isDownloaded(item) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                        .help("Downloaded")
-                } else {
+                } else if !DownloadManager.shared.isDownloaded(item) {
                     Button("Download for offline use", systemImage: "arrow.down.circle.fill") {
                         DownloadManager.shared.download(item, appState: appState)
                     }
-                    .buttonStyle(.plain)
-                    .labelStyle(.iconOnly)
-                    .foregroundStyle(.white, .black.opacity(0.55))
+                    .buttonStyle(PosterControlStyle())
                     .help("Download for offline use")
                 }
             }
             .font(.system(size: isCompact ? 10 : 14))
-            .padding(isCompact ? 2 : 3)
         }
+    }
+}
+
+/// The icon buttons on a poster's corners: white on a dark disc, with a
+/// 20 pt click target, the HIG minimum, which still fits a compact poster.
+private struct PosterControlStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .labelStyle(.iconOnly)
+            .foregroundStyle(.white, .black.opacity(0.55))
+            .frame(width: 20, height: 20)
+            .contentShape(.rect)
+            .opacity(configuration.isPressed ? 0.7 : 1)
     }
 }

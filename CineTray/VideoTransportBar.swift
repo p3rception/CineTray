@@ -102,6 +102,26 @@ struct VideoTransportBar: View {
             )
         }
         .frame(height: 16)
+        .scrubberAccessibility(fraction: progress, duration: totalDuration) { onSeek($0 * totalDuration) }
+    }
+}
+
+extension View {
+    /// The scrubbers are drawn shapes with a drag gesture, which VoiceOver
+    /// can neither read nor move. This makes one an adjustable element that
+    /// steps 10 seconds, like the skip buttons.
+    func scrubberAccessibility(fraction: Double, duration: Double, seek: @escaping (_ fraction: Double) -> Void) -> some View {
+        accessibilityElement()
+            .accessibilityLabel("Playback position")
+            .accessibilityValue("\(timeString(fraction * duration)) of \(timeString(duration))")
+            .accessibilityAdjustableAction { direction in
+                guard duration > 0 else { return }
+                switch direction {
+                case .increment: seek(min(fraction + 10 / duration, 1))
+                case .decrement: seek(max(fraction - 10 / duration, 0))
+                @unknown default: break
+                }
+            }
     }
 }
 

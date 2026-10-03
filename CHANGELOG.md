@@ -9,6 +9,13 @@ and versions follow [Semantic Versioning](https://semver.org/).
 ### Added
 
 - Settings > General shows the installed version and build number, next to Check for Updates.
+- VoiceOver can read and change the playback position in the video player and in music played in the menu, 10 seconds at a time.
+
+### Changed
+
+- The buttons at the top of the menu and on posters are easier to click. Offline Mode and the Release Calendar button also get a background while on, and VoiceOver reads them as selected.
+- Downloaded items show a green download arrow next to their title instead of a green tick on the poster, where it was hard to see on some artwork and looked like the Watched checkmark. It now also shows when downloads are turned off in Settings.
+- With Reduce Motion on, long titles under posters no longer scroll back and forth, and posters no longer grow when you point at them.
 
 ## [1.1.0] - 2026-10-02
 

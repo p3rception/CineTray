@@ -53,7 +53,7 @@ Preferences are read from `UserDefaults` via `SettingsKeys` and secrets from the
 2. `JellyfinMediaProvider`, if configured
 3. `LocalMediaProvider`, when a library folder is set (`hasContent`)
 
-In Offline Mode only `LocalMediaProvider` is used, with `includeDownloads: true`; online it serves library folders only, since downloads already appear (with a green tick) in their server's sections. There is no sample provider; `MediaSource.sample` is kept only so old saved data decodes.
+In Offline Mode only `LocalMediaProvider` is used, with `includeDownloads: true`; online it serves library folders only, since downloads already appear (with a green download mark next to the title) in their server's sections. There is no sample provider; `MediaSource.sample` is kept only so old saved data decodes.
 
 Items from multiple Plex servers are routed back to their server via the `plexServerID` attribute (`PlexMediaProvider.serverIDAttribute`). Local items are de-duplicated against server item IDs in `AppState.load`.
 

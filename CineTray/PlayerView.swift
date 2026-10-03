@@ -702,6 +702,7 @@ private struct PiPControlsOverlay: View {
             )
         }
         .frame(height: 16)
+        .scrubberAccessibility(fraction: progress, duration: totalDuration) { onSeek($0 * totalDuration) }
     }
 }
 

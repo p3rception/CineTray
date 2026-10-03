@@ -74,6 +74,7 @@ struct MediaCarouselView: View {
                                 progress: { [appState] in
                                     appState.totalDuration > 0 ? appState.currentTime / appState.totalDuration : 0
                                 },
+                                duration: { [appState] in appState.totalDuration },
                                 canGoPrevious: appState.hasInlineNeighbor(-1),
                                 canGoNext: appState.hasInlineNeighbor(1),
                                 onPlayPause: onPlayPause,

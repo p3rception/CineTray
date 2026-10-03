@@ -8,6 +8,8 @@ struct InlinePlayerOverlay: View {
     /// Read inside this view's body, so the twice-a-second playback time
     /// updates redraw only the overlay, not the whole carousel.
     var progress: () -> Double = { 0 }
+    /// Track length in seconds, for VoiceOver's scrubber value and steps.
+    var duration: () -> Double = { 0 }
     var canGoPrevious = false
     var canGoNext = false
     let onPlayPause: () -> Void
@@ -36,7 +38,7 @@ struct InlinePlayerOverlay: View {
                 HStack(spacing: simpleVisuals ? 4 : 8) {
                     transportButton("backward.fill", label: "Previous",
                                     glyphSize: simpleVisuals ? 8 : 10,
-                                    diameter: simpleVisuals ? 18 : 24,
+                                    diameter: simpleVisuals ? 20 : 24,
                                     enabled: canGoPrevious, action: onPrevious)
                     
                     transportButton(isPlaying ? "pause.fill" : "play.fill",
@@ -47,7 +49,7 @@ struct InlinePlayerOverlay: View {
                     
                     transportButton("forward.fill", label: "Next",
                                     glyphSize: simpleVisuals ? 8 : 10,
-                                    diameter: simpleVisuals ? 18 : 24,
+                                    diameter: simpleVisuals ? 20 : 24,
                                     enabled: canGoNext, action: onNext)
                 }
             }
@@ -112,6 +114,7 @@ struct InlinePlayerOverlay: View {
             )
         }
         .frame(height: 14)
+        .scrubberAccessibility(fraction: displayProgress, duration: duration(), seek: onScrub)
         .padding(.horizontal, 4)
         .padding(.vertical, 3)
         .glassEffect()

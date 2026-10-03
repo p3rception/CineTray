@@ -214,39 +214,49 @@ struct MenuBarContentView: View {
                 }
             }
             searchField
-            if hasCalendar {
-                Button("Release Calendar", systemImage: "calendar") {
-                    withAnimation(.snappy(duration: 0.2)) { showsCalendar.toggle() }
+            // The 24 pt targets carry their own padding, so the glyphs keep
+            // their usual 10 pt gaps.
+            HStack(spacing: 2) {
+                if hasCalendar {
+                    headerButton("Release Calendar", systemImage: "calendar", isOn: showsCalendar) {
+                        withAnimation(.snappy(duration: 0.2)) { showsCalendar.toggle() }
+                    }
+                    .help(showsCalendar ? "Hide Release Calendar" : "Show Release Calendar")
                 }
-                .buttonStyle(.plain)
-                .labelStyle(.iconOnly)
-                .foregroundStyle(showsCalendar ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.secondary))
-                .help(showsCalendar ? "Hide Release Calendar" : "Show Release Calendar")
+                headerButton("Offline Mode", systemImage: "airplane", isOn: appState.isOfflineMode) {
+                    appState.isOfflineMode.toggle()
+                }
+                .help(appState.isOfflineMode ? "Disable Offline Mode" : "Enable Offline Mode")
+                headerButton("Settings", systemImage: "gearshape") {
+                    openSettings()
+                    NSApplication.shared.activate()
+                    dismiss()
+                }
+                .help("Settings")
+                headerButton("Quit CineTray", systemImage: "power") {
+                    NSApplication.shared.terminate(nil)
+                }
+                .help("Quit CineTray")
             }
-            Button("Offline Mode", systemImage: "airplane") {
-                appState.isOfflineMode.toggle()
-            }
-            .buttonStyle(.plain)
-            .labelStyle(.iconOnly)
-            .foregroundStyle(appState.isOfflineMode ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.secondary))
-            .help(appState.isOfflineMode ? "Disable Offline Mode" : "Enable Offline Mode")
-            Button("Settings", systemImage: "gearshape") {
-                openSettings()
-                NSApplication.shared.activate()
-                dismiss()
-            }
-            .buttonStyle(.plain)
-            .labelStyle(.iconOnly)
-            .help("Settings")
-            Button("Quit CineTray", systemImage: "power") {
-                NSApplication.shared.terminate(nil)
-            }
-            .buttonStyle(.plain)
-            .labelStyle(.iconOnly)
-            .help("Quit CineTray")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+
+    /// An icon button with a 24 pt click target (the HIG minimum is 20). A
+    /// toggle (isOn not nil) also marks its on state with a background, so
+    /// the state doesn't rest on the accent color alone.
+    private func headerButton(_ title: String, systemImage: String, isOn: Bool? = nil, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .labelStyle(.iconOnly)
+                .frame(width: 24, height: 24)
+                .background(.quaternary.opacity(isOn == true ? 1 : 0), in: .rect(cornerRadius: 6))
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(isOn.map { $0 ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.secondary) } ?? AnyShapeStyle(.primary))
+        .accessibilityAddTraits(isOn == true ? .isSelected : [])
     }
 
     /// The header title names the pane shown; clicking it switches to the other.
