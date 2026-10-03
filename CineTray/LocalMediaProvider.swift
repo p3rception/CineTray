@@ -10,7 +10,7 @@ struct LocalMediaProvider: MediaProvider {
     var musicTopLevel: MusicTopLevel = .album
     /// Whether downloads are served here too. Only in Offline Mode: online,
     /// downloaded items already show in their server's sections (with a
-    /// green tick), and here they couldn't be placed in the right library.
+    /// green download mark), and here they couldn't be placed in the right library.
     var includeDownloads = false
 
     var source: MediaSource { .local }

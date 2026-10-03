@@ -86,6 +86,17 @@ struct PosterCell: View {
                     action()
                 }
             }
+            if item.kind != .playlist, DownloadManager.shared.isDownloaded(item),
+               !DownloadManager.shared.downloadingIDs.contains(item.id) {
+                Button("Remove Download", systemImage: "trash", role: .destructive) {
+                    // Offline sections list downloads, so the removed item has to go.
+                    if DownloadManager.shared.removeDownload(item), appState.isOfflineMode {
+                        for section in appState.itemsBySection.keys {
+                            Task { await appState.load(section, force: true) }
+                        }
+                    }
+                }
+            }
         }
         .scaleEffect(isHovering && !reduceMotion ? 1.04 : 1)
         .animation(.snappy(duration: 0.15), value: isHovering)

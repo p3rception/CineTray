@@ -10,6 +10,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 - Settings > General shows the installed version and build number, next to Check for Updates.
 - VoiceOver can read and change the playback position in the video player and in music played in the menu, 10 seconds at a time.
+- Remove Download in a poster's right-click menu deletes that download, or for a show, season, artist or album everything downloaded from it. Before, downloads could only be deleted all at once in Settings > Data. Playlists don't have it yet.
 
 ### Changed
 

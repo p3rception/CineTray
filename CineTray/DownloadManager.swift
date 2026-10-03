@@ -293,6 +293,103 @@ final class DownloadManager {
         }
     }
     
+    /// Asks first, since in Offline Mode the file can be the only copy left.
+    /// Removes a show, season, artist or album with everything downloaded
+    /// below it. Not for playlists: the index doesn't record which tracks
+    /// came from one. Returns whether anything was removed.
+    @discardableResult
+    func removeDownload(_ item: MediaItem) -> Bool {
+        guard let folder = Self.resolvedFolder(for: item.type) else { return false }
+        let index: [String: DownloadIndexEntry]
+        do {
+            index = try Self.loadIndex(folder)
+        } catch {
+            Self.alert(title: "Couldn't Remove Download", message: error.localizedDescription)
+            return false
+        }
+
+        let confirmation = NSAlert()
+        confirmation.messageText = "Remove the download of \(item.title)?"
+        confirmation.informativeText = item.kind.isExpandable
+            ? "Everything downloaded from it is deleted from the download folder. You can download it again at any time."
+            : "The file is deleted from the download folder. You can download it again at any time."
+        confirmation.addButton(withTitle: "Remove Download")
+        confirmation.addButton(withTitle: "Cancel")
+        confirmation.buttons.first?.hasDestructiveAction = true
+        NSApplication.shared.activate()
+        guard confirmation.runModal() == .alertFirstButtonReturn else { return false }
+
+        var remaining = index
+        var failure: Error?
+        for (id, entry) in index where id == item.id || Self.ancestorIDs(of: entry.item, in: index).contains(item.id) {
+            if let fileURL = entry.filename.flatMap({ Self.fileURL($0, in: folder) }) {
+                do {
+                    do { try FileManager.default.removeItem(at: fileURL) } catch CocoaError.fileNoSuchFile {}
+                } catch {
+                    // Keeps the entry, so the file stays listed and can be removed later.
+                    failure = error
+                    continue
+                }
+                for ext in ["jpg", "png"] {
+                    try? FileManager.default.removeItem(at: fileURL.deletingPathExtension().appendingPathExtension(ext))
+                }
+                Self.pruneFolders(from: fileURL.deletingLastPathComponent(), in: folder)
+            }
+            remaining.removeValue(forKey: id)
+        }
+        // A season, show or album stays listed while anything below it is still downloaded.
+        let leaves = remaining.values.filter { $0.filename != nil }
+        for ancestorID in Self.ancestorIDs(of: item, in: index)
+        where !leaves.contains(where: { Self.ancestorIDs(of: $0.item, in: remaining).contains(ancestorID) }) {
+            remaining.removeValue(forKey: ancestorID)
+        }
+
+        // Files go first: a stale entry is dropped on the next launch, while a
+        // file without an entry would take up space CineTray can't show or delete.
+        do {
+            try Self.writeIndex(remaining, to: folder)
+        } catch {
+            failure = error
+        }
+        downloadedIDs[item.type] = Set(remaining.keys).intersection(downloadedIDs[item.type] ?? [])
+        if let failure {
+            Self.alert(title: "Couldn't Remove Download", message: failure.localizedDescription)
+        }
+        return remaining.count < index.count
+    }
+
+    /// Parent, grandparent and so on, as far as the index knows them.
+    private static func ancestorIDs(of item: MediaItem, in index: [String: DownloadIndexEntry]) -> [String] {
+        var ids: [String] = []
+        var current = item
+        while let parentID = current.parentID, !parentID.isEmpty, !ids.contains(parentID) {
+            ids.append(parentID)
+            guard let parent = index[parentID]?.item else { break }
+            current = parent
+        }
+        // An episode downloaded on its own knows its show only from this attribute.
+        if let showID = item.attributes["grandparentRatingKey"], !showID.isEmpty, !ids.contains(showID) {
+            ids.append(showID)
+        }
+        return ids
+    }
+
+    /// Deletes folders left holding only artwork, and the poster saved next
+    /// to each, up to but not including the download folder.
+    private static func pruneFolders(from start: URL, in root: URL) {
+        let rootPath = root.standardizedFileURL.path
+        var folder = start.standardizedFileURL
+        while folder.path.hasPrefix(rootPath + "/") {
+            guard let contents = try? FileManager.default.contentsOfDirectory(atPath: folder.path),
+                  contents.allSatisfy({ $0.hasPrefix(".") || ["jpg", "jpeg", "png"].contains(($0 as NSString).pathExtension.lowercased()) }),
+                  (try? FileManager.default.removeItem(at: folder)) != nil else { return }
+            for ext in ["jpg", "png"] {
+                try? FileManager.default.removeItem(at: folder.deletingLastPathComponent().appending(path: "\(folder.lastPathComponent).\(ext)"))
+            }
+            folder = folder.deletingLastPathComponent()
+        }
+    }
+
     static func clearDownloadedArtwork() {
         for type in MediaType.allCases {
             if let folder = resolvedFolder(for: type) { removeArtwork(in: folder) }
@@ -381,6 +478,9 @@ final class DownloadManager {
     }
 
     func isDownloaded(_ item: MediaItem) -> Bool {
+        // The index cache isn't observed; this makes views that call it redraw
+        // when a download is added or removed.
+        _ = downloadedIDs[item.type]
         guard let folder = Self.resolvedFolder(for: item.type) else { return false }
         let index = Self.readIndexFromFolder(folder)
         guard let entry = index[item.id] else { return false }
