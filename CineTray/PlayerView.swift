@@ -791,6 +791,7 @@ private struct MusicPlayerLayout: View {
                     .font(.system(size: 42))
             }
             .help(isPlaying ? "Pause" : "Play")
+            .keyboardShortcut(.space, modifiers: [])
             Button(action: onNext) {
                 Image(systemName: "forward.end.fill").font(.title3)
             }

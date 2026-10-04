@@ -233,10 +233,12 @@ struct MenuBarContentView: View {
                     dismiss()
                 }
                 .help("Settings")
+                .keyboardShortcut(",")
                 headerButton("Quit CineTray", systemImage: "power") {
                     NSApplication.shared.terminate(nil)
                 }
                 .help("Quit CineTray")
+                .keyboardShortcut("q")
             }
         }
         .padding(.horizontal, 12)
