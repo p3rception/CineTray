@@ -12,7 +12,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - VoiceOver can read and change the playback position in the video player and in music played in the menu, 10 seconds at a time.
 - Remove Download in a poster's right-click menu deletes that download, or for a show, season, artist or album everything downloaded from it. Before, downloads could only be deleted all at once in Settings > Data. Playlists don't have it yet.
 - VoiceOver says whether a section in the menu is expanded or collapsed.
-- Keyboard shortcuts: Space plays and pauses in the music player window, and in the menu Command-Comma opens Settings and Command-Q quits CineTray.
+- Keyboard shortcuts: Space plays and pauses in the music player window, and in the menu while the search field is empty. In the menu, Command-Comma opens Settings and Command-Q quits CineTray.
 - A poster's right-click menu also has Open in Plex or Jellyfin, Info, and Download or Stop Download, so they work without pointing at the poster, including with Full Keyboard Access and Voice Control.
 - When the menu bar icon is missing, open CineTray again from Spotlight or the Applications folder to get to Settings. Settings > General > Menu Bar has Show Again, which puts the icon back, and a link to the Menu Bar settings in System Settings, where CineTray has to be allowed.
 

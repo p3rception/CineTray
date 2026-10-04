@@ -316,6 +316,14 @@ struct MenuBarContentView: View {
         .background(.quaternary, in: RoundedRectangle(cornerRadius: 7))
         .frame(maxWidth: .infinity)
         .onChange(of: appState.searchText) {
+            // The field has focus whenever the menu is open, so a space typed
+            // into it while empty plays or pauses inline music instead.
+            if appState.searchText == " ", playerMode == PlayerMode.inline.rawValue,
+               appState.currentItem?.type == .music {
+                appState.searchText = ""
+                appState.togglePlayPause()
+                return
+            }
             if !appState.searchText.isEmpty {
                 withAnimation(.snappy(duration: 0.2)) {
                     showsCalendar = false
