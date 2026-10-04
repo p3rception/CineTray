@@ -377,7 +377,8 @@ struct MenuBarContentView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityValue(items.map { "\($0.count) items" } ?? "")
+            .accessibilityValue([items.map { "\($0.count) items" }, isExpanded(section) ? "expanded" : "collapsed"]
+                .compactMap { $0 }.joined(separator: ", "))
             if section.mediaType != nil, isExpanded(section) {
                 sortMenu(for: section)
             }
