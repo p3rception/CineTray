@@ -1,4 +1,5 @@
 import SwiftUI
+import TipKit
 import AuthenticationServices
 
 /// Sign-in for the media servers (Plex PIN flow, Jellyfin username/password
@@ -10,6 +11,7 @@ struct AccountsSettingsView: View {
     @Environment(AppState.self) private var appState
 
     // Non-secret settings.
+    @AppStorage(SettingsKeys.showsTour) private var showsTour = false
     @AppStorage(SettingsKeys.jellyfinServerURL) private var jellyfinServerURL = ""
     @AppStorage(SettingsKeys.jellyfinUsername) private var jellyfinUsername = ""
     @AppStorage(SettingsKeys.jellyfinUserID) private var jellyfinUserID = ""
@@ -74,6 +76,9 @@ struct AccountsSettingsView: View {
 
     var body: some View {
         Form {
+            if showsTour, appState.librarySections?.isEmpty == false {
+                TipView(LibrariesReadyTip())
+            }
             plexSection
             jellyfinSection
             navidromeSection
@@ -103,6 +108,7 @@ struct AccountsSettingsView: View {
                     signInWithPlex()
                 }
                 .disabled(plexSignInTask != nil)
+                .popoverTip(showsTour ? ConnectServerTip() : nil)
                 if !pinCode.isEmpty {
                     CopyableCodeRow(code: pinCode, destination: "plex.tv/link")
                 }

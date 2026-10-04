@@ -1,8 +1,10 @@
 import SwiftUI
+import TipKit
 
 /// Offline downloads (per-type folders and storage allocations) and the
 /// artwork cache.
 struct DataSettingsView: View {
+    @AppStorage(SettingsKeys.showsTour) private var showsTour = false
     @AppStorage(SettingsKeys.downloadsEnabled) private var downloadsEnabled = false
     @AppStorage(SettingsKeys.cacheArtwork) private var cacheArtwork = true
 
@@ -15,6 +17,10 @@ struct DataSettingsView: View {
         Form {
             Section {
                 Toggle("Enable Downloads", isOn: $downloadsEnabled)
+                    .popoverTip(showsTour && !downloadsEnabled ? DownloadsTip() : nil)
+                    .onChange(of: downloadsEnabled) {
+                        if downloadsEnabled { DownloadsTip().invalidate(reason: .actionPerformed) }
+                    }
                 Group {
                     LabeledContent("Movies") {
                         DownloadLevelToggle("Movie", level: .movie)

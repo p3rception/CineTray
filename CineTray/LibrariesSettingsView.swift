@@ -1,10 +1,12 @@
 import SwiftUI
+import TipKit
 import AppKit
 
 /// Multi-select of Plex and Jellyfin libraries to include in the dropdown.
 struct LibrariesSettingsView: View {
     @Environment(AppState.self) private var appState
 
+    @AppStorage(SettingsKeys.showsTour) private var showsTour = false
     @AppStorage(SettingsKeys.plexSelectedLibraries) private var plexSelected = ""
     @AppStorage(SettingsKeys.jellyfinSelectedLibraries) private var jellyfinSelected = ""
 
@@ -121,9 +123,11 @@ struct LibrariesSettingsView: View {
                         .controlSize(.small)
                     } else {
                         Button("Choose Folder") {
+                            LocalFolderTip().invalidate(reason: .actionPerformed)
                             chooseLibraryFolder(for: type)
                         }
                         .controlSize(.small)
+                        .popoverTip(showsTour && type == MediaType.allCases.first { DownloadManager.resolvedLibraryFolder(for: $0) == nil } ? LocalFolderTip() : nil)
                     }
                 }
                 // Use a type-specific ID so SwiftUI can distinguish the three rows.
