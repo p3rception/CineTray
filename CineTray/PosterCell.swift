@@ -86,16 +86,15 @@ struct PosterCell: View {
                     action()
                 }
             }
-            if item.kind != .playlist, DownloadManager.shared.isDownloaded(item),
-               !DownloadManager.shared.downloadingIDs.contains(item.id) {
-                Button("Remove Download", systemImage: "trash", role: .destructive) {
-                    // Offline sections list downloads, so the removed item has to go.
-                    if DownloadManager.shared.removeDownload(item), appState.isOfflineMode {
-                        for section in appState.itemsBySection.keys {
-                            Task { await appState.load(section, force: true) }
-                        }
-                    }
-                }
+            if let name = item.source.webAppName {
+                Button("Open in \(name)", systemImage: "arrow.up.forward.square") { appState.openInWebApp(item) }
+            }
+            if showsInfo {
+                Button("Info", systemImage: "info.circle") { showingInfo = true }
+            }
+            Section {
+                DownloadButton(item: item, isCompact: isCompact, inMenu: true)
+                removeDownloadButton
             }
         }
         .scaleEffect(isHovering && !reduceMotion ? 1.04 : 1)
@@ -110,9 +109,24 @@ struct PosterCell: View {
         }
     }
 
+    @ViewBuilder
+    private var removeDownloadButton: some View {
+        if item.kind != .playlist, DownloadManager.shared.isDownloaded(item),
+           !DownloadManager.shared.downloadingIDs.contains(item.id) {
+            Button("Remove Download", systemImage: "trash", role: .destructive) {
+                // Offline sections list downloads, so the removed item has to go.
+                if DownloadManager.shared.removeDownload(item), appState.isOfflineMode {
+                    for section in appState.itemsBySection.keys {
+                        Task { await appState.load(section, force: true) }
+                    }
+                }
+            }
+        }
+    }
+
     /// Opens the item in Plex or Jellyfin, so the collection can be browsed
-    /// here and watched there. Shown on hover to keep posters clean;
-    /// VoiceOver gets it as an action on the poster instead.
+    /// here and watched there. Shown on hover to keep posters clean; the
+    /// context menu and VoiceOver actions have it too.
     @ViewBuilder
     private var openInWebAppButton: some View {
         if isHovering, let name = item.source.webAppName {
@@ -173,12 +187,12 @@ struct PosterCell: View {
         }
     }
 
+    private var showsInfo: Bool {
+        richMedia && item.summary != nil && item.kind != .track && item.kind != .playlist
+    }
+
     @ViewBuilder
     private var infoButton: some View {
-        let showsInfo = richMedia
-            && item.summary != nil
-            && item.kind != .track
-            && item.kind != .playlist
         if showsInfo {
             Button("Info", systemImage: "info.circle.fill") {
                 showingInfo = true
@@ -356,19 +370,28 @@ struct MarqueeText: View {
 private struct DownloadButton: View {
     let item: MediaItem
     let isCompact: Bool
+    /// Plain menu items for the poster's context menu.
+    var inMenu = false
 
     @Environment(AppState.self) private var appState
     @AppStorage(SettingsKeys.downloadsEnabled) private var downloadsEnabled = false
     @AppStorage private var levelEnabled: Bool
 
-    init(item: MediaItem, isCompact: Bool) {
+    init(item: MediaItem, isCompact: Bool, inMenu: Bool = false) {
         self.item = item
         self.isCompact = isCompact
+        self.inMenu = inMenu
         _levelEnabled = AppStorage(wrappedValue: false, SettingsKeys.downloadLevelEnabled(DownloadLevel(kind: item.kind)))
     }
 
     var body: some View {
-        if downloadsEnabled, levelEnabled {
+        if downloadsEnabled, levelEnabled, inMenu {
+            if DownloadManager.shared.downloadingIDs.contains(item.id) {
+                Button("Stop Download", systemImage: "stop.circle") { DownloadManager.shared.cancelDownload(item) }
+            } else if !DownloadManager.shared.isDownloaded(item) {
+                Button("Download", systemImage: "arrow.down.circle") { DownloadManager.shared.download(item, appState: appState) }
+            }
+        } else if downloadsEnabled, levelEnabled {
             Group {
                 if DownloadManager.shared.downloadingIDs.contains(item.id) {
                     Button("Stop download", systemImage: "stop.circle.fill") {
