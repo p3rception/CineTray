@@ -682,6 +682,9 @@ nonisolated enum SettingsKeys {
     /// Folder Export Logs saves into without asking; empty to ask each time.
     static let logFolder = "logFolder"
     static let checkForUpdates = "checkForUpdates"
+    /// The tour starts the next time the menu opens with libraries. Set when
+    /// CineTray starts with nothing set up, or by Show Tour Again.
+    static let showsTour = "showsTour"
     /// The release whose menu notice was closed; a newer one shows again.
     static let dismissedUpdateVersion = "dismissedUpdateVersion"
     /// Subtitle size as a scale factor, 1 for Medium.

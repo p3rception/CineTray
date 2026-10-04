@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 
 struct SettingsView: View {
+    @Environment(AppState.self) private var appState
     @AppStorage(SettingsKeys.selectedSettingsTab) private var selectedTab = "general"
 
     var body: some View {
@@ -30,6 +31,9 @@ struct SettingsView: View {
         .frame(width: 520)
         .frame(minHeight: 400, idealHeight: 560, maxHeight: .infinity)
         .background(ResizableWindow())
+        .onChange(of: appState.tourStep, initial: true) {
+            if let tab = appState.tourStep?.settingsTab { selectedTab = tab }
+        }
         .onAppear { AppWindowActivation.windowOpened() }
         .onDisappear { AppWindowActivation.windowClosed() }
     }

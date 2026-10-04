@@ -98,7 +98,7 @@ struct MenuBarContentView: View {
                     ? sections.filter { itemsBySection[$0]??.isEmpty == false }
                     : sections
                 ForEach(shown) { section in
-                    self.section(for: section, items: itemsBySection[section] ?? nil)
+                    self.section(for: section, items: itemsBySection[section] ?? nil, in: shown)
                     if section != shown.last {
                         Divider()
                     }
@@ -129,6 +129,23 @@ struct MenuBarContentView: View {
                 withAnimation(.snappy(duration: 0.2)) { appState.deactivateSearch() }
             }
         }
+        .tourOverlay(onNext: [.settings: showSettings])
+        .onChange(of: appState.tourStep) {
+            // The posters step needs an open row to point at.
+            if appState.tourStep == .posters, !appState.enabledSections.contains(where: isExpanded),
+               let first = appState.enabledSections.first(where: { section in
+                   musicPane.map { section == .continueItems || section.isMusic == $0 } ?? true
+               }) {
+                withAnimation(.snappy(duration: 0.2)) { appState.toggleExpansion(of: first) }
+            }
+        }
+    }
+
+    private func showSettings() {
+        if appState.tourStep == .settings { appState.moveTour(by: 1) }
+        openSettings()
+        NSApplication.shared.activate()
+        dismiss()
     }
 
     // MARK: - Update notice
@@ -227,12 +244,10 @@ struct MenuBarContentView: View {
                     appState.isOfflineMode.toggle()
                 }
                 .help(appState.isOfflineMode ? "Disable Offline Mode" : "Enable Offline Mode")
-                headerButton("Settings", systemImage: "gearshape") {
-                    openSettings()
-                    NSApplication.shared.activate()
-                    dismiss()
-                }
+                .tourAnchor(.offline)
+                headerButton("Settings", systemImage: "gearshape", action: showSettings)
                 .help("Settings")
+                .tourAnchor(.settings)
                 .keyboardShortcut(",")
                 headerButton("Quit CineTray", systemImage: "power") {
                     NSApplication.shared.terminate(nil)
@@ -314,6 +329,7 @@ struct MenuBarContentView: View {
         .padding(.horizontal, 7)
         .padding(.vertical, 5)
         .background(.quaternary, in: RoundedRectangle(cornerRadius: 7))
+        .tourAnchor(.search)
         .frame(maxWidth: .infinity)
         .onChange(of: appState.searchText) {
             // The field has focus whenever the menu is open, so a space typed
@@ -373,7 +389,7 @@ struct MenuBarContentView: View {
     }
 
     @ViewBuilder
-    private func section(for section: MenuSection, items: [MediaItem]?) -> some View {
+    private func section(for section: MenuSection, items: [MediaItem]?, in shown: [MenuSection]) -> some View {
         // The sort menu sits between the title and the count, so the row is
         // two buttons around it rather than one button containing a menu.
         HStack(spacing: 6) {
@@ -412,10 +428,12 @@ struct MenuBarContentView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+        .tourAnchor(section == shown.first ? .browse : nil)
 
         if isExpanded(section) {
             sectionContent(for: section, items: items)
                 .padding(.bottom, 10)
+                .tourAnchor(section == shown.first(where: isExpanded) ? .posters : nil)
         }
     }
 

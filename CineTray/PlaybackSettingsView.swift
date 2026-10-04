@@ -38,6 +38,7 @@ struct PlaybackSettingsView: View {
                             .foregroundStyle(.tertiary)
                     }
                 }
+                .tourAnchor(.player)
                 Picker("Subtitle Size", selection: $subtitleSize) {
                     Text("Small").tag(0.75)
                     Text("Medium").tag(1.0)
@@ -90,6 +91,7 @@ struct PlaybackSettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .tourOverlay()
         .sheet(isPresented: $isChoosingPlayer) {
             VideoPlayerPicker { url in
                 isChoosingPlayer = false

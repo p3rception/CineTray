@@ -47,6 +47,7 @@ final class AppState {
             await ensureLibrarySections()
             if providers().isEmpty {
                 UserDefaults.standard.set("accounts", forKey: SettingsKeys.selectedSettingsTab)
+                UserDefaults.standard.set(true, forKey: SettingsKeys.showsTour)
                 settingsRequests += 1
             }
         }
@@ -313,6 +314,23 @@ final class AppState {
     /// Raised to open Settings; MenuBarLabel does it, since only views can.
     private(set) var settingsRequests = 0
 
+    /// The tour's current step, or nil when it isn't running.
+    var tourStep: TourStep?
+
+    func moveTour(by offset: Int) {
+        guard let step = tourStep else { return }
+        if let next = TourStep(rawValue: step.rawValue + offset) {
+            tourStep = next
+        } else {
+            endTour()
+        }
+    }
+
+    func endTour() {
+        tourStep = nil
+        UserDefaults.standard.set(false, forKey: SettingsKeys.showsTour)
+    }
+
     /// Bound to the MenuBarExtra. Not saved: the icon is always put back at launch.
     var showsMenuBarIcon = true
 
@@ -539,6 +557,11 @@ final class AppState {
     /// Continue Watching, and in the background every loaded library section
     /// (and its open drill-downs) not fetched in the last two minutes.
     func menuDidOpen() {
+        // Needs libraries: the first steps explain the rows and posters.
+        if tourStep == nil, UserDefaults.standard.bool(forKey: SettingsKeys.showsTour),
+           librarySections?.isEmpty == false {
+            tourStep = .browse
+        }
         if isContinueExpanded, enabledSections.contains(.continueItems) {
             Task { await load(.continueItems) }
         }

@@ -57,6 +57,7 @@ struct LibrariesSettingsView: View {
             menuOrderSection
         }
         .formStyle(.grouped)
+        .tourOverlay()
         // Re-runs when servers are added/removed in the Accounts tab, so the
         // list refreshes without reopening Settings.
         .task(id: appState.serverConfigurationVersion) { refresh() }
@@ -128,6 +129,7 @@ struct LibrariesSettingsView: View {
                 }
                 // Use a type-specific ID so SwiftUI can distinguish the three rows.
                 .id("\(type.rawValue)-\(localRefresh)")
+                .tourAnchor(.libraries)
             }
             LabeledContent("Index New Files") {
                 if isRefreshing {

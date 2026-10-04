@@ -14,6 +14,7 @@ struct GeneralSettingsView: View {
     @AppStorage(SettingsKeys.useMediaKeys) private var useMediaKeys = false
     @AppStorage(SettingsKeys.logFolder) private var logFolder = ""
     @AppStorage(SettingsKeys.checkForUpdates) private var checkForUpdates = true
+    @AppStorage(SettingsKeys.showsTour) private var showsTour = false
     @State private var logExportError: String?
     @State private var exportedLog: URL?
 
@@ -100,6 +101,14 @@ struct GeneralSettingsView: View {
                 }
                 LabeledContent("Logs") {
                     Button(logFolder.isEmpty ? "Export…" : "Export") { exportLogs() }
+                }
+                LabeledContent("Tour") {
+                    if showsTour {
+                        Text("Starts when you open the menu")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Button("Show Again") { showsTour = true }
+                    }
                 }
                 if let logExportError {
                     Text(logExportError)

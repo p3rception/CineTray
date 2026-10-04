@@ -15,6 +15,7 @@ struct DataSettingsView: View {
         Form {
             Section {
                 Toggle("Enable Downloads", isOn: $downloadsEnabled)
+                    .tourAnchor(.downloads)
                 Group {
                     LabeledContent("Movies") {
                         DownloadLevelToggle("Movie", level: .movie)
@@ -63,6 +64,7 @@ struct DataSettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .tourOverlay()
         .task { updateCacheSize() }
         .confirmationDialog(
             "Delete all downloaded \(confirmingDelete?.title.lowercased() ?? "")?",
