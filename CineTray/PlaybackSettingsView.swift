@@ -12,6 +12,7 @@ struct PlaybackSettingsView: View {
     @AppStorage(SettingsKeys.continueTimeout) private var continueTimeout = ContinueTimeout.forever.rawValue
     @AppStorage(SettingsKeys.videoPlayerApp) private var videoPlayerApp = ""
     @AppStorage(SettingsKeys.subtitleSize) private var subtitleSize = 1.0
+    @State private var isChoosingPlayer = false
 
     var body: some View {
         Form {
@@ -25,7 +26,7 @@ struct PlaybackSettingsView: View {
                             .disabled(iina == nil)
                         Button("VLC") { videoPlayerApp = vlc?.path ?? "" }
                             .disabled(vlc == nil)
-                        Button("Choose…", action: chooseVideoPlayer)
+                        Button("Choose…") { isChoosingPlayer = true }
                     }
                 } label: {
                     Text("Play Video In")
@@ -89,15 +90,76 @@ struct PlaybackSettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .sheet(isPresented: $isChoosingPlayer) {
+            VideoPlayerPicker { url in
+                isChoosingPlayer = false
+                if let url { videoPlayerApp = url == Bundle.main.bundleURL ? "" : url.path }
+            }
+        }
+    }
+}
+
+/// Lists the apps Launch Services says can open movies or MKV files. Other…
+/// still offers any app, for players that don't declare those types.
+private struct VideoPlayerPicker: View {
+    let onDone: (URL?) -> Void
+
+    @State private var apps: [(url: URL, name: String)] = []
+    @State private var query = ""
+
+    var body: some View {
+        let shown = query.isEmpty ? apps : apps.filter {
+            $0.name.localizedCaseInsensitiveContains(query) || $0.url.path.localizedCaseInsensitiveContains(query)
+        }
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Choose Player")
+                    .font(.title3.bold())
+                Spacer()
+                Button("Other…", action: browse)
+                Button("Cancel") { onDone(nil) }
+                    .keyboardShortcut(.cancelAction)
+            }
+            TextField("Search Apps", text: $query)
+                .textFieldStyle(.roundedBorder)
+            List(shown, id: \.url) { app in
+                Button { onDone(app.url) } label: {
+                    HStack {
+                        Image(nsImage: NSWorkspace.shared.icon(forFile: app.url.path))
+                            .resizable()
+                            .frame(width: 28, height: 28)
+                        VStack(alignment: .leading) {
+                            Text(app.name)
+                            Text(app.url.path)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding()
+        .frame(width: 460, height: 520)
+        .onAppear {
+            let types = [UTType.movie, UTType(filenameExtension: "mkv")].compactMap { $0 }
+            apps = Set(types.flatMap { NSWorkspace.shared.urlsForApplications(toOpen: $0) })
+                .map { ($0, FileManager.default.displayName(atPath: $0.path)) }
+                .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        }
     }
 
-    private func chooseVideoPlayer() {
+    private func browse() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.application]
         panel.directoryURL = URL(filePath: "/Applications")
         panel.prompt = "Play Video In This App"
         if panel.runModal() == .OK, let url = panel.url {
-            videoPlayerApp = url == Bundle.main.bundleURL ? "" : url.path
+            onDone(url)
         }
     }
 }

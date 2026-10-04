@@ -19,6 +19,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 - The buttons at the top of the menu and on posters are easier to click. Offline Mode and the Release Calendar button also get a background while on, and VoiceOver reads them as selected.
 - Downloaded items show a green download arrow next to their title instead of a green tick on the poster, where it was hard to see on some artwork and looked like the Watched checkmark. It now also shows when downloads are turned off in Settings.
+- Choose… in Settings > Playback lists the installed apps that play video, with a search field, instead of opening a Finder window. Other… still lets you pick any app.
 - With Reduce Motion on, long titles under posters no longer scroll back and forth, and posters no longer grow when you point at them.
 
 ## [1.1.0] - 2026-10-02
