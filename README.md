@@ -1,8 +1,25 @@
 <p align="center"><img src="Screenshots/Banner.png" alt="CineTray: movies, shows and music from your media servers and your own folders, in the macOS menu bar."></p>
 
-CineTray puts your movies, shows and music in the macOS menu bar. Browse Plex, Jellyfin, Navidrome, TorrServer and your own folders in one menu, pick up where you left off, and play anything, MKV and AVI included.
+<p align="center">
+  Your movies, shows and music in the macOS menu bar.<br>
+  Plex, Jellyfin, Navidrome, TorrServer and your own folders in one menu, MKV and AVI included.
+</p>
 
-<table>
+<p align="center">
+  <a href="#install-and-update">Install</a> |
+  <a href="#works-with">Works with</a> |
+  <a href="#a-quick-tour">Tour</a> |
+  <a href="#all-features">Features</a> |
+  <a href="#connect-trakt-lastfm-tmdb-and-discogs">Services</a> |
+  <a href="CHANGELOG.md">Changelog</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/p3rception/CineTray/releases"><img src="https://img.shields.io/github/v/release/p3rception/CineTray?label=release" alt="Latest release"></a>
+  <a href="#install-and-update"><img src="https://img.shields.io/badge/macOS-26%2B-black" alt="macOS 26 and newer"></a>
+</p>
+
+<table align="center">
   <tr>
     <td align="center"><img src="Screenshots/Welcome-CineTray.png" width="205" alt="The CineTray menu with Continue Watching and Movies carousels"><br><sub>Continue Watching and your libraries</sub></td>
     <td align="center"><img src="Screenshots/Mini-Video-Player.png" width="500" alt="The video player window playing The Matrix"><br><sub>Video player</sub></td>
@@ -10,16 +27,10 @@ CineTray puts your movies, shows and music in the macOS menu bar. Browse Plex, J
 </table>
 
 ```sh
-git clone https://github.com/p3rception/CineTray.git && cd CineTray && make
-```
-
-Or with Homebrew, on Apple Silicon:
-
-```sh
 brew install p3rception/tap/cinetray
 ```
 
-Requires macOS 26. No Xcode needed; see [Install and update](#install-and-update).
+Requires macOS 26 on Apple Silicon. To build from source without Xcode, see [Install and update](#install-and-update).
 
 ## Works with
 
@@ -40,37 +51,6 @@ Requires macOS 26. No Xcode needed; see [Install and update](#install-and-update
 | <img src="Icons/deezer.png" width="20" height="20" align="absmiddle" alt=""> **Deezer** <img src="Icons/musicbrainz.png" width="20" height="20" align="absmiddle" alt=""> **MusicBrainz** <img src="Icons/theaudiodb.png" width="20" height="20" align="absmiddle" alt=""> **TheAudioDB** <img src="Icons/discogs.png" width="20" height="20" align="absmiddle" alt=""> **Discogs** | Covers and artist photos for your own music |
 
 Connect servers and services in Settings > Accounts, and choose folders in Settings > Data.
-
-## All features
-
-<details>
-<summary><strong>Show the full list</strong></summary>
-
-*   **Navidrome support.** Music from a Navidrome server, next to Plex, Jellyfin and your own folders.
-*   **TorrServer support.** Movies and shows from a TorrServer. Releases of the same show are grouped into one poster, with seasons and episodes read from the file names.
-*   **Your libraries, your names.** The menu shows one section per server library, named as on the server (for example Movies, Shows and YouTube). Choose which libraries appear in Settings > Libraries.
-*   **Video and Music panes.** Click the menu title to switch between video and music. The Music pane has Artists, Albums and Playlists sections.
-*   **Players.** Control music from the inline player in the menu, or open a separate music or video player window.
-*   **Sorting.** Movies and shows are sorted by date added, newest first, by default. A small sort button on each open section changes the field and order without opening Settings. Drag the menu's sections into any order in Settings > Libraries.
-*   **Continue Watching.** Merges the server's own list (Plex Continue Watching, Jellyfin Resume and Next Up) with what you started in CineTray. Movies and episodes resume where you stopped, on any device, and posters show watched checkmarks and progress bars.
-*   **Search.** Ignores spacing, punctuation and accents ("madmen" finds "Mad Men") and shows only the sections with matches.
-*   **Open in Plex or Jellyfin.** Hover a poster and click the arrow at its top right (or use the player's toolbar button) to open that item in the server's web app: browse in CineTray, watch in Plex or Jellyfin.
-*   **Release calendar.** Connect Radarr and Sonarr in Settings > Accounts, and a calendar button in the menu shows their upcoming movies and episodes: a month view with a dot on each day with releases, and a list of the coming week.
-*   **Requests with Seerr.** Connect Seerr in Settings > Accounts, and searching also lists the movies and shows you don't have yet. Click a poster, then Request; for a show, pick the seasons.
-*   **Your video player.** Play video in CineTray's own player, in IINA or VLC with one click, or in any other installed app, such as QuickTime Player (Settings > Playback). IINA and VLC get the original file, with all its subtitles and audio tracks. The built-in player lets you pick the audio track and subtitles for every format, MKV and AVI included, shift subtitles earlier or later, and set their size. Jellyfin videos list the same subtitles as Jellyfin's web app, subtitle files stored next to the video included.
-*   **Downloads and Offline Mode.** Download movies, episodes and music to watch and listen without a connection, and remove a download from its right-click menu. Offline Mode plays downloads alone.
-*   **Scrobbling and artwork.** Trakt and Last.fm scrobbling, with API keys entered in Settings > Accounts; [Connect Trakt, Last.fm, TMDb and Discogs](#connect-trakt-lastfm-tmdb-and-discogs) says where to get them. Your own music gets covers and artist photos from Deezer, MusicBrainz, Last.fm, TheAudioDB or Discogs; turn each one on or off.
-*   **Easy sign-in.** Jellyfin Quick Connect (approve a code from another signed-in device, no password). Server addresses work without `http://` or `https://`; the app uses HTTPS, and falls back to HTTP only for addresses on your local network. The TMDb API key field checks the key as you type.
-*   **Security.** The Plex token is never sent over plain HTTP to remote servers or saved inside poster URLs, and all tokens and API keys are stored in the Keychain.
-*   **Fast.** Sources load in parallel, Plex checks all server addresses at once, the menu refreshes in the background when opened, and Jellyfin plays compatible files directly, so videos start in under a second.
-*   **Update notices.** When a new version is out, the menu bar icon turns blue and a line in the menu copies `brew upgrade cinetray`, or opens the release page if you built CineTray yourself.
-*   **Logs for bug reports.** Settings > General > Export Logs saves the errors CineTray ran into since it was opened, such as a server it couldn't reach or playback that failed, as a text file. They also appear in Console.app under the subsystem `CineTray`.
-*   **Keyboard shortcuts in windows.** While a player or Settings is open, CineTray gets a Dock icon and a menu bar, so Full Screen, Hide and Close shortcuts work.
-*   **Homebrew, or build without Xcode.** Install with `brew install p3rception/tap/cinetray`, or clone and run `make`: it builds, signs and installs the app using only the Command Line Tools.
-
-</details>
-
-See [CHANGELOG.md](CHANGELOG.md) for the full history.
 
 ## A quick tour
 
@@ -127,11 +107,40 @@ Choose which libraries appear and drag them into any order in Settings > Librari
   </tr>
 </table>
 
+## All features
+
+<details>
+<summary><strong>Show the full list</strong></summary>
+
+*   **Navidrome support.** Music from a Navidrome server, next to Plex, Jellyfin and your own folders.
+*   **TorrServer support.** Movies and shows from a TorrServer. Releases of the same show are grouped into one poster, with seasons and episodes read from the file names.
+*   **Your libraries, your names.** The menu shows one section per server library, named as on the server (for example Movies, Shows and YouTube). Choose which libraries appear in Settings > Libraries.
+*   **Video and Music panes.** Click the menu title to switch between video and music. The Music pane has Artists, Albums and Playlists sections.
+*   **Players.** Control music from the inline player in the menu, or open a separate music or video player window.
+*   **Sorting.** Movies and shows are sorted by date added, newest first, by default. A small sort button on each open section changes the field and order without opening Settings. Drag the menu's sections into any order in Settings > Libraries.
+*   **Continue Watching.** Merges the server's own list (Plex Continue Watching, Jellyfin Resume and Next Up) with what you started in CineTray. Movies and episodes resume where you stopped, on any device, and posters show watched checkmarks and progress bars.
+*   **Search.** Ignores spacing, punctuation and accents ("madmen" finds "Mad Men") and shows only the sections with matches.
+*   **Open in Plex or Jellyfin.** Hover a poster and click the arrow at its top right (or use the player's toolbar button) to open that item in the server's web app: browse in CineTray, watch in Plex or Jellyfin.
+*   **Release calendar.** Connect Radarr and Sonarr in Settings > Accounts, and a calendar button in the menu shows their upcoming movies and episodes: a month view with a dot on each day with releases, and a list of the coming week.
+*   **Requests with Seerr.** Connect Seerr in Settings > Accounts, and searching also lists the movies and shows you don't have yet. Click a poster, then Request; for a show, pick the seasons.
+*   **Your video player.** Play video in CineTray's own player, in IINA or VLC with one click, or in any other installed app, such as QuickTime Player (Settings > Playback). IINA and VLC get the original file, with all its subtitles and audio tracks. The built-in player lets you pick the audio track and subtitles for every format, MKV and AVI included, shift subtitles earlier or later, and set their size. Jellyfin videos list the same subtitles as Jellyfin's web app, subtitle files stored next to the video included.
+*   **Downloads and Offline Mode.** Download movies, episodes and music to watch and listen without a connection, and remove a download from its right-click menu. Offline Mode plays downloads alone.
+*   **Scrobbling and artwork.** Trakt and Last.fm scrobbling, with API keys entered in Settings > Accounts; [Connect Trakt, Last.fm, TMDb and Discogs](#connect-trakt-lastfm-tmdb-and-discogs) says where to get them. Your own music gets covers and artist photos from Deezer, MusicBrainz, Last.fm, TheAudioDB or Discogs; turn each one on or off.
+*   **Easy sign-in.** Jellyfin Quick Connect (approve a code from another signed-in device, no password). Server addresses work without `http://` or `https://`; the app uses HTTPS, and falls back to HTTP only for addresses on your local network. The TMDb API key field checks the key as you type.
+*   **Security.** The Plex token is never sent over plain HTTP to remote servers or saved inside poster URLs, and all tokens and API keys are stored in the Keychain.
+*   **Fast.** Sources load in parallel, Plex checks all server addresses at once, the menu refreshes in the background when opened, and Jellyfin plays compatible files directly, so videos start in under a second.
+*   **Update notices.** When a new version is out, the menu bar icon turns blue and a line in the menu copies `brew upgrade cinetray`, or opens the release page if you built CineTray yourself.
+*   **Logs for bug reports.** Settings > General > Export Logs saves the errors CineTray ran into since it was opened, such as a server it couldn't reach or playback that failed, as a text file. They also appear in Console.app under the subsystem `CineTray`.
+*   **Keyboard shortcuts in windows.** While a player or Settings is open, CineTray gets a Dock icon and a menu bar, so Full Screen, Hide and Close shortcuts work.
+*   **[Homebrew](https://brew.sh), or build without Xcode.** Install with `brew install p3rception/tap/cinetray`, or clone and run `make`: it builds, signs and installs the app using only the Command Line Tools.
+
+</details>
+
 ## Install and update
 
 CineTray checks GitHub once a day for a new version. When one is out, the menu bar icon turns blue and the menu shows how to update. Turn this off in Settings > General.
 
-### With Homebrew
+### With [Homebrew](https://brew.sh)
 
 Requires macOS 26 or later on an Apple Silicon Mac.
 
@@ -199,12 +208,6 @@ Copy the API Key (v3) from https://www.themoviedb.org/settings/api into Settings
 Artwork comes from Deezer, MusicBrainz, Last.fm, TheAudioDB and Discogs, in that order. Discogs needs a personal access token from https://www.discogs.com/settings/developers. Turn sources on or off in Settings > Accounts > Music Artwork.
 
 </details>
-
-## Under the hood
-
-*   **Private.** All tokens and API keys are stored in the Keychain. The Plex token is never sent over plain HTTP to remote servers or saved inside poster URLs.
-*   **Fast.** Sources load in parallel, Plex checks all server addresses at once, and Jellyfin plays compatible files directly, so videos start in under a second.
-*   **Easy sign-in.** Jellyfin Quick Connect needs no password. Server addresses work without `http://` or `https://`; CineTray uses HTTPS, and falls back to HTTP only on your local network.
 
 ## Credits
 
