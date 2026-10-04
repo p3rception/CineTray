@@ -4,6 +4,7 @@ import AppKit
 /// CineTray: Menu bar media player.
 /// Dropdown shows poster carousels; selecting items opens a player window.
 @main struct MyApp: App {
+    @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
     @State private var appState = AppState()
 
     init() {
@@ -14,15 +15,11 @@ import AppKit
     }
 
     var body: some Scene {
-        MenuBarExtra {
+        MenuBarExtra(isInserted: Bindable(appState).showsMenuBarIcon) {
             MenuBarContentView()
                 .environment(appState)
         } label: {
-            if appState.availableUpdate != nil, let icon = Self.updateIcon {
-                Image(nsImage: icon)
-            } else {
-                Image(systemName: "play.square.stack")
-            }
+            MenuBarLabel(hasUpdate: appState.availableUpdate != nil)
         }
         .menuBarExtraStyle(.window)
 
@@ -52,7 +49,7 @@ import AppKit
 
     /// The menu bar draws SF Symbols as monochrome templates, so the blue
     /// icon is a non-template image.
-    private static let updateIcon: NSImage? = {
+    fileprivate static let updateIcon: NSImage? = {
         // One color per layer; with fewer, the stack layers aren't drawn.
         // Default size, as for the template icon: larger gets clipped on 22 pt menu bars.
         let configuration = NSImage.SymbolConfiguration(paletteColors: Array(repeating: .controlAccentColor, count: 3))
@@ -61,6 +58,44 @@ import AppKit
         image?.isTemplate = false
         return image
     }()
+}
+
+/// Opening CineTray again from Spotlight, Finder or Launchpad opens
+/// Settings, the way in when the menu bar icon is hidden: behind the notch,
+/// in a full menu bar, or not allowed in System Settings > Menu Bar.
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        if !hasVisibleWindows {
+            NotificationCenter.default.post(name: MenuBarLabel.openSettingsRequest, object: nil)
+        }
+        return true
+    }
+}
+
+/// The menu bar icon. Also opens Settings for AppDelegate: openSettings is
+/// only available to views, and showSettingsWindow: no longer opens the
+/// Settings scene. The label stays alive while the menu is closed.
+private struct MenuBarLabel: View {
+    static let openSettingsRequest = Notification.Name("CineTrayOpenSettings")
+
+    let hasUpdate: Bool
+    @Environment(\.openSettings) private var openSettings
+
+    var body: some View {
+        Group {
+            if hasUpdate, let icon = MyApp.updateIcon {
+                Image(nsImage: icon)
+            } else {
+                Image(systemName: "play.square.stack")
+            }
+        }
+        .task {
+            for await _ in NotificationCenter.default.notifications(named: Self.openSettingsRequest) {
+                openSettings()
+                NSApplication.shared.activate()
+            }
+        }
+    }
 }
 
 /// CineTray is a menu bar app (.accessory), so its windows get no app menus

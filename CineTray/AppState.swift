@@ -305,6 +305,20 @@ final class AppState {
 
     // MARK: - Updates
 
+    /// Bound to the MenuBarExtra. Not saved: the icon is always put back at launch.
+    var showsMenuBarIcon = true
+
+    /// Takes the menu bar icon out and puts it back, which creates a new
+    /// status item, for when macOS has lost or misplaced it.
+    func reinsertMenuBarIcon() {
+        showsMenuBarIcon = false
+        Task {
+            // Set back in the same update, the change would never reach the menu bar.
+            try? await Task.sleep(for: .milliseconds(300))
+            showsMenuBarIcon = true
+        }
+    }
+
     /// A newer release on GitHub; turns the menu bar icon blue and shows a
     /// notice in the menu.
     private(set) var availableUpdate: String?

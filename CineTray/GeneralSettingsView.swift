@@ -58,6 +58,20 @@ struct GeneralSettingsView: View {
             }
 
             Section {
+                LabeledContent("Menu Bar Icon") {
+                    HStack {
+                        Button("Show Again") { appState.reinsertMenuBarIcon() }
+                        Button("Menu Bar Settings…") { openMenuBarSettings() }
+                    }
+                }
+            } header: {
+                SectionInfoHeader(
+                    title: "Menu Bar",
+                    info: "If the CineTray icon is missing from the menu bar, click Show Again. If it's still missing, check that CineTray is turned on under Allow in the Menu Bar in Menu Bar Settings, or hide other icons: on a Mac with a notch, icons that don't fit are hidden. Without the icon, open CineTray again from Spotlight or the Applications folder to get here."
+                )
+            }
+
+            Section {
                 LabeledContent("Version") {
                     Text(Self.appVersion)
                         .textSelection(.enabled)
@@ -116,6 +130,12 @@ struct GeneralSettingsView: View {
         }
         .onDisappear {
             networkMonitor.stop()
+        }
+    }
+
+    private func openMenuBarSettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.ControlCenter-Settings.extension") {
+            NSWorkspace.shared.open(url)
         }
     }
 
