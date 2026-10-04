@@ -1,12 +1,10 @@
 import SwiftUI
-import TipKit
 import AppKit
 import UniformTypeIdentifiers
 
 struct PlaybackSettingsView: View {
     @Environment(AppState.self) private var appState
 
-    @AppStorage(SettingsKeys.showsTour) private var showsTour = false
     @AppStorage(SettingsKeys.movieAutoContinue) private var movieAutoContinue = MovieAutoContinue.off.rawValue
     @AppStorage(SettingsKeys.tvAutoContinue) private var tvAutoContinue = false
     @AppStorage(SettingsKeys.musicAutoContinue) private var musicAutoContinue = MusicAutoContinue.off.rawValue
@@ -30,10 +28,6 @@ struct PlaybackSettingsView: View {
                             .disabled(vlc == nil)
                         Button("Choose…") { isChoosingPlayer = true }
                     }
-                    .popoverTip(showsTour ? VideoPlayerTip() : nil)
-                    // The row's trailing alignment would otherwise reach the tip's text.
-                    .multilineTextAlignment(.leading)
-                    .onChange(of: videoPlayerApp) { VideoPlayerTip().invalidate(reason: .actionPerformed) }
                 } label: {
                     Text("Play Video In")
                     Text(videoPlayerApp.isEmpty ? "CineTray" : FileManager.default.displayName(atPath: videoPlayerApp))

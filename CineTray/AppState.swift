@@ -4,7 +4,6 @@ import AVFoundation
 import MediaPlayer
 import AppKit
 import OSLog
-import TipKit
 
 /// Failures CineTray caught, shown in Console.app and exported from Settings >
 /// General. Messages are public so the export can read them, so never log
@@ -48,7 +47,6 @@ final class AppState {
             await ensureLibrarySections()
             if providers().isEmpty {
                 UserDefaults.standard.set("accounts", forKey: SettingsKeys.selectedSettingsTab)
-                UserDefaults.standard.set(true, forKey: SettingsKeys.showsTour)
                 settingsRequests += 1
             }
         }
@@ -432,9 +430,6 @@ final class AppState {
         }
         sectionLibraries = mapping
         librarySections = sections
-        if !sections.isEmpty {
-            ConnectServerTip().invalidate(reason: .actionPerformed)
-        }
         serverNamesByPane = serverNames
         librarySectionsError = failures.isEmpty ? nil : failures.joined(separator: " • ")
         librarySectionFailures = failuresBySource
@@ -544,7 +539,6 @@ final class AppState {
     /// Continue Watching, and in the background every loaded library section
     /// (and its open drill-downs) not fetched in the last two minutes.
     func menuDidOpen() {
-        LibrariesReadyTip().invalidate(reason: .actionPerformed)
         if isContinueExpanded, enabledSections.contains(.continueItems) {
             Task { await load(.continueItems) }
         }

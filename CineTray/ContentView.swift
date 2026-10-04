@@ -1,6 +1,5 @@
 import SwiftUI
 import AppKit
-import TipKit
 
 /// CineTray: Menu bar media player.
 /// Dropdown shows poster carousels; selecting items opens a player window.
@@ -13,8 +12,6 @@ import TipKit
         // element and switched to .regular later isn't activated by clicks on
         // its windows until its Dock icon is clicked.
         NSApplication.shared.setActivationPolicy(.accessory)
-        // Tips are optional; without a datastore the tour just doesn't show.
-        try? Tips.configure()
     }
 
     var body: some Scene {
