@@ -19,7 +19,7 @@ import AppKit
             MenuBarContentView()
                 .environment(appState)
         } label: {
-            MenuBarLabel(hasUpdate: appState.availableUpdate != nil)
+            MenuBarLabel(hasUpdate: appState.availableUpdate != nil, settingsRequests: appState.settingsRequests)
         }
         .menuBarExtraStyle(.window)
 
@@ -64,21 +64,22 @@ import AppKit
 /// Settings, the way in when the menu bar icon is hidden: behind the notch,
 /// in a full menu bar, or not allowed in System Settings > Menu Bar.
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    static let reopened = Notification.Name("CineTrayReopened")
+
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
         if !hasVisibleWindows {
-            NotificationCenter.default.post(name: MenuBarLabel.openSettingsRequest, object: nil)
+            NotificationCenter.default.post(name: Self.reopened, object: nil)
         }
         return true
     }
 }
 
-/// The menu bar icon. Also opens Settings for AppDelegate: openSettings is
-/// only available to views, and showSettingsWindow: no longer opens the
+/// The menu bar icon. Also opens Settings when AppState asks: openSettings
+/// is only available to views, and showSettingsWindow: no longer opens the
 /// Settings scene. The label stays alive while the menu is closed.
 private struct MenuBarLabel: View {
-    static let openSettingsRequest = Notification.Name("CineTrayOpenSettings")
-
     let hasUpdate: Bool
+    let settingsRequests: Int
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
@@ -89,11 +90,11 @@ private struct MenuBarLabel: View {
                 Image(systemName: "play.square.stack")
             }
         }
-        .task {
-            for await _ in NotificationCenter.default.notifications(named: Self.openSettingsRequest) {
-                openSettings()
-                NSApplication.shared.activate()
-            }
+        // Initial too: at first launch the request can come before the label appears.
+        .onChange(of: settingsRequests, initial: true) {
+            guard settingsRequests > 0 else { return }
+            openSettings()
+            NSApplication.shared.activate()
         }
     }
 }

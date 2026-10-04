@@ -23,6 +23,10 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - Choose… in Settings > Playback lists the installed apps that play video, with a search field, instead of opening a Finder window. Other… still lets you pick any app.
 - With Reduce Motion on, long titles under posters no longer scroll back and forth, and posters no longer grow when you point at them.
 
+### Fixed
+
+- The first time CineTray opens without a server or library, it opens Settings on the Accounts tab again. On recent macOS versions it showed nothing.
+
 ## [1.1.0] - 2026-10-02
 
 ### Added

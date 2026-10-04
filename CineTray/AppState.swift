@@ -47,7 +47,12 @@ final class AppState {
             await ensureLibrarySections()
             if providers().isEmpty {
                 UserDefaults.standard.set("accounts", forKey: SettingsKeys.selectedSettingsTab)
-                NSApplication.shared.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                settingsRequests += 1
+            }
+        }
+        Task {
+            for await _ in NotificationCenter.default.notifications(named: AppDelegate.reopened) {
+                settingsRequests += 1
             }
         }
         Task {
@@ -304,6 +309,9 @@ final class AppState {
     }
 
     // MARK: - Updates
+
+    /// Raised to open Settings; MenuBarLabel does it, since only views can.
+    private(set) var settingsRequests = 0
 
     /// Bound to the MenuBarExtra. Not saved: the icon is always put back at launch.
     var showsMenuBarIcon = true
