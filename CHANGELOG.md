@@ -6,6 +6,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-06
+
 ### Added
 
 - A tour of 8 steps the first time the menu shows your libraries. It highlights one control at a time and explains it: browsing, search, right-clicking a poster, Offline Mode and Settings in the menu, then your own media folders, the video player and downloads in Settings. Back and Next move between steps, Skip Tour ends it, and Settings > General > Tour > Show Again starts it again.
