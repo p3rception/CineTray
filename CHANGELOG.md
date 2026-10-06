@@ -27,6 +27,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 ### Fixed
 
 - The first time CineTray opens without a server or library, it opens Settings on the Accounts tab again. On recent macOS versions it showed nothing.
+- Refresh in Settings > Libraries removes files that were deleted or moved out of a library folder. Before, they stayed in the menu and failed to play.
 
 ## [1.1.0] - 2026-10-02
 

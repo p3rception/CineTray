@@ -193,7 +193,9 @@ final class DownloadManager {
 
     static func mergeLibraryIndex(_ entries: [DownloadIndexEntry], for type: MediaType) {
         guard let folder = resolvedLibraryFolder(for: type) else { return }
-        var index = readIndexFromFolder(folder)
+        // The scan is the whole library, so local entries it no longer finds are
+        // gone. Server downloads stay: a folder can be both kinds at once.
+        var index = readIndexFromFolder(folder).filter { $0.value.item.source != .local }
         for entry in entries {
             index[entry.item.id] = entry
         }
