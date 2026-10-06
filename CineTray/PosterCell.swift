@@ -419,13 +419,29 @@ private struct DownloadButton: View {
 
 /// The icon buttons on a poster's corners: white on a dark disc, with a
 /// 20 pt click target, the HIG minimum, which still fits a compact poster.
-private struct PosterControlStyle: ButtonStyle {
+/// The disc darkens and grows under the pointer.
+struct PosterControlStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .labelStyle(.iconOnly)
-            .foregroundStyle(.white, .black.opacity(0.55))
-            .frame(width: 20, height: 20)
-            .contentShape(.rect)
-            .opacity(configuration.isPressed ? 0.7 : 1)
+        Control(configuration: configuration)
+    }
+
+    // A ButtonStyle can't hold @State, so hover is tracked in a view.
+    private struct Control: View {
+        let configuration: Configuration
+
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
+        @State private var isHovering = false
+
+        var body: some View {
+            configuration.label
+                .labelStyle(.iconOnly)
+                .foregroundStyle(.white, .black.opacity(isHovering ? 0.85 : 0.55))
+                .frame(width: 20, height: 20)
+                .contentShape(.rect)
+                .scaleEffect(isHovering && !reduceMotion ? 1.1 : 1)
+                .opacity(configuration.isPressed ? 0.7 : 1)
+                .animation(.snappy(duration: 0.15), value: isHovering)
+                .onHover { isHovering = $0 }
+        }
     }
 }

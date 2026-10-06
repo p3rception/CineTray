@@ -342,11 +342,9 @@ private struct SeerrPosterCell: View {
             Button("Open in Seerr", systemImage: "arrow.up.forward.circle.fill") {
                 NSWorkspace.shared.open(pageURL)
             }
-            .buttonStyle(.plain)
-            .labelStyle(.iconOnly)
-            .foregroundStyle(.white, .black.opacity(0.55))
+            .buttonStyle(PosterControlStyle())
             .font(.system(size: 14))
-            .padding(3)
+            .padding(1.5)
             .help("Open in Seerr")
         } else if let label = status?.label {
             Image(systemName: status == .partiallyAvailable ? "circle.lefthalf.filled" : "clock")
