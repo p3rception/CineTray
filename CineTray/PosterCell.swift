@@ -92,6 +92,11 @@ struct PosterCell: View {
             if showsInfo {
                 Button("Info", systemImage: "info.circle") { showingInfo = true }
             }
+            // Only Continue presents episodes by show. Plex and Jellyfin keep
+            // their own list, which would bring the item back.
+            if presentsEpisodesByShow, !item.source.keepsWatchState {
+                Button("Remove from Continue", systemImage: "xmark.circle") { appState.removeFromContinue(item) }
+            }
             Section {
                 DownloadButton(item: item, isCompact: isCompact, inMenu: true)
                 removeDownloadButton

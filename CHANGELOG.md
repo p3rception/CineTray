@@ -16,6 +16,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - Keyboard shortcuts: Space plays and pauses in the music player window, and in the menu while the search field is empty. In the menu, Command-Comma opens Settings and Command-Q quits CineTray.
 - A poster's right-click menu also has Open in Plex or Jellyfin, Info, and Download or Stop Download, so they work without pointing at the poster, including with Full Keyboard Access and Voice Control.
 - When the menu bar icon is missing, open CineTray again from Spotlight or the Applications folder to get to Settings. Settings > General > Menu Bar has Show Again, which puts the icon back, and a link to the Menu Bar settings in System Settings, where CineTray has to be allowed.
+- Remove from Continue in a poster's right-click menu in the Continue section, for Navidrome, TorrServer and local media. For a grouped album or playlist it removes all its tracks.
 
 ### Changed
 
@@ -28,6 +29,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 - The first time CineTray opens without a server or library, it opens Settings on the Accounts tab again. On recent macOS versions it showed nothing.
 - Refresh in Settings > Libraries removes files that were deleted or moved out of a library folder. Before, they stayed in the menu and failed to play.
+- Navidrome tracks the server no longer has leave the Continue section.
 
 ## [1.1.0] - 2026-10-02
 

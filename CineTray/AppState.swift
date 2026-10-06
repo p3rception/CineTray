@@ -644,6 +644,24 @@ final class AppState {
         let results = await concurrently(providers()) { try await $0.continueWatching() }
         serverContinueItems = results.flatMap { (try? $0.get()) ?? [] }
         serverContinueFetchedAt = results.allSatisfy { (try? $0.get()) != nil } ? started : nil
+        // Navidrome has no Continue list to compare with, so ask for each track.
+        if let navidrome = sources.navidrome {
+            let client = NavidromeClient(config: navidrome)
+            let ids = PlaybackProgressStore.all().filter { $0.item.source == .navidrome }.map(\.item.id)
+            let found = await concurrently(ids) { try await client.trackExists(id: $0) }
+            for (id, result) in zip(ids, found) where (try? result.get()) == false {
+                PlaybackProgressStore.remove(itemID: id)
+            }
+        }
+    }
+
+    /// Forgets the saved position of `item`, or of every track of a grouped
+    /// album or playlist.
+    func removeFromContinue(_ item: MediaItem) {
+        for entry in PlaybackProgressStore.all() where entry.item.id == item.id || entry.item.parentID == item.id {
+            PlaybackProgressStore.remove(itemID: entry.item.id)
+        }
+        itemsBySection[.continueItems] = continueDisplayItems()
     }
 
     /// Synthesises the album/playlist cell that stands in for an in-progress

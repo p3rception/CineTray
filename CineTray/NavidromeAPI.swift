@@ -27,6 +27,7 @@ struct NavidromeClient {
 
     struct ServerError: LocalizedError {
         let message: String
+        var code: Int? = nil
         var errorDescription: String? { message }
     }
 
@@ -47,7 +48,7 @@ struct NavidromeClient {
     }
 
     private struct Status: Decodable {
-        struct Failure: Decodable { let message: String? }
+        struct Failure: Decodable { let code: Int?; let message: String? }
         let status: String
         let error: Failure?
     }
@@ -58,7 +59,7 @@ struct NavidromeClient {
         // Errors, wrong credentials included, arrive with HTTP 200.
         let status = try JSONDecoder().decode(Envelope<Status>.self, from: data).body
         guard status.status == "ok" else {
-            throw ServerError(message: status.error?.message ?? "The server reported an error.")
+            throw ServerError(message: status.error?.message ?? "The server reported an error.", code: status.error?.code)
         }
         return try JSONDecoder().decode(Envelope<Body>.self, from: data).body
     }
@@ -212,6 +213,16 @@ struct NavidromeClient {
             return (artist.map { [$0] } ?? []) + [album, trackItem(song, parent: album)]
         }
         return artists + albums + songs
+    }
+
+    /// False when the server no longer has the track.
+    func trackExists(id: String) async throws -> Bool {
+        do {
+            _ = try await get("getSong", [URLQueryItem(name: "id", value: id)], as: Status.self)
+            return true
+        } catch let error as ServerError where error.code == 70 {
+            return false
+        }
     }
 
     /// A random other track by the same artist, from one of their albums.
