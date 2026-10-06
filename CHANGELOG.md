@@ -6,6 +6,10 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Continue no longer shows an episode, movie or track watched offline from a download after the download is deleted. Playing it failed with an error.
+
 ## [1.2.0] - 2026-10-06
 
 ### Added

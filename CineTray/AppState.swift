@@ -624,8 +624,14 @@ final class AppState {
     /// that its server no longer lists (finished or removed elsewhere) is
     /// dropped, unless it was played after the list was fetched. Items the
     /// server lists without a play date (next episodes) are never too old.
+    /// A local item whose file is gone (download deleted) is hidden but kept,
+    /// in case its folder is only unmounted.
     private func mergedContinueItems() -> [MediaItem] {
-        let local = PlaybackProgressStore.all()
+        let local = PlaybackProgressStore.all().filter { entry in
+            entry.item.source != .local
+                || DownloadManager.shared.localURL(for: entry.item) != nil
+                || DownloadManager.shared.localLibraryURL(for: entry.item) != nil
+        }
         let server = serverContinueItems ?? []
         let serverIDs = Set(server.map(\.id))
         let localDates = Dictionary(local.map { ($0.item.id, $0.updatedAt) }, uniquingKeysWith: max)
