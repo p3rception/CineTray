@@ -12,10 +12,12 @@ struct InlinePlayerOverlay: View {
     var duration: () -> Double = { 0 }
     var canGoPrevious = false
     var canGoNext = false
+    var isQueueShown = false
     let onPlayPause: () -> Void
     let onPrevious: () -> Void
     let onNext: () -> Void
     let onScrub: (Double) -> Void
+    let onToggleQueue: () -> Void
 
     @AppStorage(SettingsKeys.simpleVisuals) private var simpleVisuals = false
 
@@ -54,6 +56,21 @@ struct InlinePlayerOverlay: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            Button(action: onToggleQueue) {
+                Image(systemName: "list.bullet")
+                    .font(.system(size: simpleVisuals ? 7 : 9, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: simpleVisuals ? 16 : 20, height: simpleVisuals ? 16 : 20)
+                    .background(isQueueShown ? Color.accentColor : .clear, in: .circle)
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .glassEffect(.regular.interactive(), in: .circle)
+            .accessibilityLabel(isQueueShown ? "Hide Up Next" : "Show Up Next")
+            .help(isQueueShown ? "Hide Up Next" : "Show Up Next")
+            .padding(simpleVisuals ? 3 : 5)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
             // Interactive glass scrubber pinned to the bottom - completely hidden when posters are off
             if !simpleVisuals {

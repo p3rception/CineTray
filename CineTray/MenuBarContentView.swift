@@ -550,6 +550,7 @@ struct MenuBarContentView: View {
                 handleSelection(of: item, in: section, within: items)
             }
             inlinePlaybackError(in: section, items: items)
+            inlineQueue(in: section, items: items)
             ForEach(appState.drillPath[section] ?? [], id: \.id) { parent in
                 drillLevel(for: parent, in: section)
             }
@@ -581,6 +582,59 @@ struct MenuBarContentView: View {
         }
     }
 
+    /// Up Next for inline playback, under the carousel holding the track (or,
+    /// in Continue, its album).
+    @ViewBuilder
+    private func inlineQueue(in section: MenuSection, items: [MediaItem]) -> some View {
+        if appState.showsInlineQueue, section.supportsInlineMusic, playerMode == PlayerMode.inline.rawValue,
+           let current = appState.currentItem, current.type == .music,
+           items.contains(where: { $0.id == current.id || (section == .continueItems && $0.id == current.parentID) }) {
+            let queue = appState.upNext
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 10) {
+                    Label("Up Next", systemImage: "arrow.turn.down.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button {
+                        appState.setShuffled(!appState.isShuffled)
+                    } label: {
+                        Image(systemName: "shuffle")
+                            .foregroundStyle(appState.isShuffled ? Color.accentColor : .primary)
+                    }
+                    .help(appState.isShuffled ? "Shuffle On" : "Shuffle Off")
+                    .accessibilityLabel("Shuffle")
+                    .accessibilityValue(appState.isShuffled ? "On" : "Off")
+                    Button {
+                        appState.repeatMode = appState.repeatMode.next
+                    } label: {
+                        Image(systemName: appState.repeatMode.symbol)
+                            .foregroundStyle(appState.repeatMode == .off ? .primary : Color.accentColor)
+                    }
+                    .help(appState.repeatMode.title)
+                    .accessibilityLabel("Repeat")
+                    .accessibilityValue(appState.repeatMode.title)
+                    if !queue.isEmpty {
+                        Button("Clear") { appState.setUpNext([]) }
+                            .foregroundStyle(Color.accentColor)
+                    }
+                }
+                .font(.caption)
+                .buttonStyle(.plain)
+                if queue.isEmpty {
+                    Text("End of the queue.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.vertical, 4)
+                } else {
+                    UpNextList(queue: queue, onPick: { appState.playInlineNeighbor($0 + 1) }, onEdit: appState.setUpNext)
+                        .frame(height: CGFloat(min(queue.count, 5)) * UpNextList.rowHeight)
+                }
+            }
+            .padding(.horizontal, 12)
+        }
+    }
+
     private func handleSelection(of item: MediaItem, in section: MenuSection, within items: [MediaItem]) {
         if section == .continueItems, item.type == .music, item.kind.isExpandable,
            playerMode == PlayerMode.inline.rawValue {
@@ -594,7 +648,7 @@ struct MenuBarContentView: View {
         } else if item.type == .music && playerMode == PlayerMode.inline.rawValue {
             let playlist = items.filter { !$0.kind.isExpandable }
             Task {
-                await appState.startPlayback(item: item, inlinePlaylist: playlist)
+                await appState.playInline(item, in: playlist)
             }
         } else {
             openPlayer(for: item)
@@ -660,6 +714,7 @@ struct MenuBarContentView: View {
                     handleSelection(of: child, in: section, within: children)
                 }
                 inlinePlaybackError(in: section, items: children)
+                inlineQueue(in: section, items: children)
             } else {
                 Text("No items found.")
                     .font(.caption)

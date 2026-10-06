@@ -253,6 +253,28 @@ enum MusicAutoContinue: String, CaseIterable {
     case shuffleByGenre
 }
 
+enum RepeatMode: CaseIterable {
+    case off, all, one
+
+    var next: RepeatMode {
+        switch self {
+        case .off: .all
+        case .all: .one
+        case .one: .off
+        }
+    }
+
+    var symbol: String { self == .one ? "repeat.1" : "repeat" }
+
+    var title: String {
+        switch self {
+        case .off: "Repeat Off"
+        case .all: "Repeat All"
+        case .one: "Repeat One"
+        }
+    }
+}
+
 /// Whether the Continue Watching section lists individual in-progress songs or
 /// collapses them into their parent album/playlist.
 enum ContinueMusicGrouping: String, CaseIterable {

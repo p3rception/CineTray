@@ -75,13 +75,17 @@ struct MediaCarouselView: View {
                                     appState.totalDuration > 0 ? appState.currentTime / appState.totalDuration : 0
                                 },
                                 duration: { [appState] in appState.totalDuration },
-                                canGoPrevious: appState.hasInlineNeighbor(-1),
-                                canGoNext: appState.hasInlineNeighbor(1),
+                                canGoPrevious: appState.canSkip(by: -1),
+                                canGoNext: appState.canSkip(by: 1),
+                                isQueueShown: appState.showsInlineQueue,
                                 onPlayPause: onPlayPause,
                                 onPrevious: handlePrevious,
                                 onNext: handleNext,
                                 onScrub: { fraction in
                                     appState.seek(to: fraction * appState.totalDuration)
+                                },
+                                onToggleQueue: {
+                                    withAnimation(.snappy(duration: 0.2)) { appState.showsInlineQueue.toggle() }
                                 }
                             )
                             // Cover only the artwork, or the entire box when posters are off

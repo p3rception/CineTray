@@ -11,7 +11,6 @@ struct PlayerView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismissWindow
     @State private var isPinned = false
-    @State private var queue: [MediaItem] = []
     @State private var videoAspectRatio: CGFloat?
     @State private var selectedCrop: VideoCrop = .original
     @State private var showsSubtitleTiming = false
@@ -51,7 +50,7 @@ struct PlayerView: View {
                 if item.type == .music {
                     MusicPlayerLayout(
                         item: item,
-                        queue: queue,
+                        queue: appState.upNext,
                         isPlaying: appState.isPlaying,
                         currentTime: Binding(
                             get: { appState.currentTime },
@@ -62,10 +61,17 @@ struct PlayerView: View {
                             get: { appState.isScrubbing },
                             set: { appState.isScrubbing = $0 }
                         ),
+                        isShuffled: appState.isShuffled,
+                        repeatMode: appState.repeatMode,
+                        canGoNext: appState.canSkip(by: 1),
                         onSeek: seek,
                         onPlayPause: appState.togglePlayPause,
+                        onPrevious: { show(appState.previousTrack()) },
                         onNext: playNext,
-                        onPick: { picked in item = picked }
+                        onShuffle: { appState.setShuffled(!appState.isShuffled) },
+                        onRepeat: { appState.repeatMode = appState.repeatMode.next },
+                        onPick: { show(appState.stepQueue(by: $0 + 1)) },
+                        onEditQueue: appState.setUpNext
                     )
                     .frame(minWidth: 300, minHeight: 480)
                     .toolbar {
@@ -100,9 +106,23 @@ struct PlayerView: View {
         ))
         .task(id: item) {
             selectedCrop = .original
-            await appState.startPlayback(item: item)
-            queue = item.type == .music ? await appState.upcomingQueue(after: item) : []
-            await watchForPlaybackEnd()
+            if item.type == .music {
+                await appState.prepareQueue(for: item)
+            }
+            while true {
+                await appState.startPlayback(item: item)
+                guard await watchForPlaybackEnd() else { return }
+                appState.stopPlayback(atEnd: true)
+                let next = item.type == .music
+                    ? await appState.nextTrack(skipping: false)
+                    : await appState.autoContinueItem(after: item)
+                guard let next else { return }
+                // Repeat One returns the same track, which wouldn't restart this task.
+                guard next.id == item.id else {
+                    item = next
+                    return
+                }
+            }
         }
         .onChange(of: appState.currentItem?.id) {
             // Another playback session (window or inline) took over: only one
@@ -121,7 +141,11 @@ struct PlayerView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CineTray.MediaKeyPrevious"))) { _ in
             if appState.currentItem?.id == item.id {
-                appState.seek(to: 0) // Basic previous logic for windowed mode
+                if item.type == .music {
+                    show(appState.previousTrack())
+                } else {
+                    appState.seek(to: 0)
+                }
             }
         }
     }
@@ -390,7 +414,9 @@ struct PlayerView: View {
 
     // MARK: - Playback lifecycle
 
-    private func watchForPlaybackEnd() async {
+    /// Waits until the item plays to its end; false when the task was
+    /// cancelled or nothing is playing.
+    private func watchForPlaybackEnd() async -> Bool {
         if appState.player != nil {
             // AVPlayer path: wait for the standard end-of-item notification.
             var lastPlayerItem: AVPlayerItem?
@@ -418,23 +444,27 @@ struct PlayerView: View {
                 break
             }
         } else {
-            return
+            return false
         }
-
-        guard !Task.isCancelled else { return }
-        appState.stopPlayback(atEnd: true)
-        if let next = await appState.autoContinueItem(after: item) {
-            item = next
-        }
+        return !Task.isCancelled
     }
 
     private func playNext() {
         Task {
-            if let next = queue.first {
-                item = next
-            } else if let next = await appState.autoContinueItem(after: item) {
-                item = next
-            }
+            show(item.type == .music
+                 ? await appState.nextTrack(skipping: true)
+                 : await appState.autoContinueItem(after: item))
+        }
+    }
+
+    /// Switches the window to `next`; the same track (Repeat All on a
+    /// one-track queue) starts over instead.
+    private func show(_ next: MediaItem?) {
+        guard let next else { return }
+        if next.id == item.id {
+            appState.seek(to: 0)
+        } else {
+            item = next
         }
     }
 }
@@ -718,10 +748,18 @@ private struct MusicPlayerLayout: View {
     @Binding var currentTime: Double
     let totalDuration: Double
     @Binding var isScrubbing: Bool
+    let isShuffled: Bool
+    let repeatMode: RepeatMode
+    let canGoNext: Bool
     let onSeek: (Double) -> Void
     let onPlayPause: () -> Void
+    let onPrevious: () -> Void
     let onNext: () -> Void
-    let onPick: (MediaItem) -> Void
+    let onShuffle: () -> Void
+    let onRepeat: () -> Void
+    /// Plays the Up Next track at this index.
+    let onPick: (Int) -> Void
+    let onEditQueue: ([MediaItem]) -> Void
 
     var body: some View {
         VStack(spacing: 14) {
@@ -779,13 +817,18 @@ private struct MusicPlayerLayout: View {
     }
 
     private var controls: some View {
-        HStack(spacing: 32) {
-            Button {
-                onSeek(max(currentTime - 15, 0))
-            } label: {
-                Image(systemName: "gobackward.15").font(.title3)
+        HStack(spacing: 22) {
+            Button(action: onShuffle) {
+                Image(systemName: "shuffle")
+                    .foregroundStyle(isShuffled ? Color.accentColor : .primary)
             }
-            .help("Back 15 seconds")
+            .help(isShuffled ? "Shuffle On" : "Shuffle Off")
+            .accessibilityLabel("Shuffle")
+            .accessibilityValue(isShuffled ? "On" : "Off")
+            Button(action: onPrevious) {
+                Image(systemName: "backward.end.fill").font(.title3)
+            }
+            .help("Previous track")
             Button(action: onPlayPause) {
                 Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
                     .font(.system(size: 42))
@@ -796,54 +839,264 @@ private struct MusicPlayerLayout: View {
                 Image(systemName: "forward.end.fill").font(.title3)
             }
             .help("Next track")
-            .disabled(queue.isEmpty)
+            .disabled(!canGoNext)
+            Button(action: onRepeat) {
+                Image(systemName: repeatMode.symbol)
+                    .foregroundStyle(repeatMode == .off ? .primary : Color.accentColor)
+            }
+            .help(repeatMode.title)
+            .accessibilityLabel("Repeat")
+            .accessibilityValue(repeatMode.title)
         }
         .buttonStyle(.plain)
     }
 
     private var upNext: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Up Next").font(.headline)
+            HStack {
+                Text("Up Next").font(.headline)
+                Spacer()
+                if !queue.isEmpty {
+                    Button("Clear") { onEditQueue([]) }
+                        .buttonStyle(.link)
+                }
+            }
             if queue.isEmpty {
                 Text("End of the queue.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                ScrollView {
-                    LazyVStack(spacing: 2) {
-                        ForEach(queue) { track in
-                            Button {
-                                onPick(track)
-                            } label: {
-                                HStack(spacing: 8) {
-                                    queueThumb(for: track)
-                                    VStack(alignment: .leading, spacing: 1) {
-                                        Text(track.title).font(.callout).lineLimit(1)
-                                        Text(track.subtitle ?? " ")
-                                            .font(.caption2)
-                                            .foregroundStyle(.secondary)
-                                            .lineLimit(1)
-                                    }
-                                    Spacer()
-                                }
-                                .padding(.vertical, 3)
-                                .padding(.horizontal, 4)
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
+                UpNextList(queue: queue, onPick: onPick, onEdit: onEditQueue)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
+}
 
-    private func queueThumb(for track: MediaItem) -> some View {
+/// Up Next as an editable list: double-click plays a track, drag reorders,
+/// the X on hover or the context menu removes.
+struct UpNextList: View {
+    static let rowHeight: CGFloat = 36
+    /// How close to the top or bottom edge the pointer has to be for a drag
+    /// to scroll the list.
+    private static let autoScrollEdge: CGFloat = 24
+
+    let queue: [MediaItem]
+    /// Plays the Up Next track at this index.
+    let onPick: (Int) -> Void
+    let onEdit: ([MediaItem]) -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var scrollPosition = ScrollPosition()
+    @State private var scrollOffset: CGFloat = 0
+    @State private var viewportHeight: CGFloat = 0
+    @State private var contentHeight: CGFloat = 0
+    @State private var draggedIndex: Int?
+    /// Where the drag began, in list coordinates.
+    @State private var dragStartY: CGFloat = 0
+    /// The pointer, in viewport coordinates, which stay put while the list
+    /// scrolls under it.
+    @State private var pointerY: CGFloat = 0
+    @State private var autoScroll: Task<Void, Never>?
+
+    private var dragTranslation: CGFloat { pointerY + scrollOffset - dragStartY }
+
+    /// Where the dragged row lands if dropped now.
+    private var dropIndex: Int? {
+        draggedIndex.map { from in
+            max(0, min(queue.count - 1, from + Int((dragTranslation / Self.rowHeight).rounded())))
+        }
+    }
+
+    var body: some View {
+        ScrollView {
+            // Rows are identified by position, since a track can be queued twice.
+            LazyVStack(spacing: 0) {
+                ForEach(Array(queue.enumerated()), id: \.offset) { index, track in
+                    UpNextRow(
+                        track: track,
+                        isDragged: false,
+                        onPlay: { onPick(index) },
+                        onRemove: { remove(at: index) }
+                    )
+                    // The floating card below stands in for the dragged row.
+                    .opacity(draggedIndex == index ? 0 : 1)
+                    .offset(y: offset(for: index))
+                    .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: dropIndex)
+                    .accessibilityAction(named: "Move Up") { move(from: index, to: index - 1) }
+                    .accessibilityAction(named: "Move Down") { move(from: index, to: index + 1) }
+                }
+            }
+            .overlay(alignment: .top) {
+                if let dropLineY {
+                    Capsule()
+                        .fill(Color.accentColor)
+                        .frame(height: 1.5)
+                        .offset(y: dropLineY - 0.75)
+                        .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: dropLineY)
+                        .allowsHitTesting(false)
+                }
+            }
+            // On the whole list rather than on each row: the lazy stack drops
+            // a row that scrolls out of view, which would end its gesture.
+            // System drag and drop didn't start in the menu at all.
+            .gesture(
+                DragGesture(minimumDistance: 4)
+                    .onChanged { value in
+                        if draggedIndex == nil {
+                            let index = Int(value.startLocation.y / Self.rowHeight)
+                            guard queue.indices.contains(index) else { return }
+                            draggedIndex = index
+                            dragStartY = value.startLocation.y
+                        }
+                        pointerY = value.location.y - scrollOffset
+                        startAutoScrollIfNeeded()
+                    }
+                    .onEnded { _ in
+                        autoScroll?.cancel()
+                        autoScroll = nil
+                        if let draggedIndex, let dropIndex { move(from: draggedIndex, to: dropIndex) }
+                        withTransaction(Transaction(animation: nil)) { draggedIndex = nil }
+                    }
+            )
+            // Overlay scrollers draw over the trailing edge, where the X sits.
+            .padding(.trailing, 14)
+        }
+        .scrollPosition($scrollPosition)
+        .onScrollGeometryChange(for: ScrollGeometry.self) { $0 } action: { _, geometry in
+            scrollOffset = geometry.contentOffset.y
+            viewportHeight = geometry.containerSize.height
+            contentHeight = geometry.contentSize.height
+        }
+        .overlay(alignment: .top) {
+            if let draggedIndex, queue.indices.contains(draggedIndex) {
+                UpNextRow(track: queue[draggedIndex], isDragged: true, onPlay: {}, onRemove: {})
+                    .padding(.trailing, 14)
+                    .offset(y: min(max(CGFloat(draggedIndex) * Self.rowHeight + dragTranslation - scrollOffset, 0),
+                                   max(viewportHeight - Self.rowHeight, 0)))
+                    .allowsHitTesting(false)
+            }
+        }
+    }
+
+    /// -1 or 1 while the pointer is near the top or bottom edge and the list
+    /// can scroll that way, else 0.
+    private var autoScrollDirection: CGFloat {
+        guard draggedIndex != nil else { return 0 }
+        if pointerY < Self.autoScrollEdge, scrollOffset > 0 { return -1 }
+        if pointerY > viewportHeight - Self.autoScrollEdge, scrollOffset < contentHeight - viewportHeight { return 1 }
+        return 0
+    }
+
+    /// A pointer held still sends no drag events, so scrolling runs on its
+    /// own until the pointer leaves the edge or the drag ends.
+    private func startAutoScrollIfNeeded() {
+        guard autoScroll == nil, autoScrollDirection != 0 else { return }
+        autoScroll = Task {
+            while !Task.isCancelled, autoScrollDirection != 0 {
+                let y = min(max(scrollOffset + autoScrollDirection * 6, 0), contentHeight - viewportHeight)
+                scrollPosition.scrollTo(y: y)
+                scrollOffset = y
+                try? await Task.sleep(for: .milliseconds(16))
+            }
+            if !Task.isCancelled { autoScroll = nil }
+        }
+    }
+
+    /// The edge between rows where the dragged row will land.
+    private var dropLineY: CGFloat? {
+        guard let draggedIndex, let dropIndex, dropIndex != draggedIndex else { return nil }
+        return CGFloat(dropIndex < draggedIndex ? dropIndex : dropIndex + 1) * Self.rowHeight
+    }
+
+    private func offset(for index: Int) -> CGFloat {
+        guard let draggedIndex, let dropIndex else { return 0 }
+        if draggedIndex < index, index <= dropIndex { return -Self.rowHeight }
+        if dropIndex <= index, index < draggedIndex { return Self.rowHeight }
+        return 0
+    }
+
+    private func move(from: Int, to: Int) {
+        guard from != to, queue.indices.contains(to) else { return }
+        var tracks = queue
+        tracks.insert(tracks.remove(at: from), at: to)
+        onEdit(tracks)
+    }
+
+    private func remove(at index: Int) {
+        var tracks = queue
+        tracks.remove(at: index)
+        onEdit(tracks)
+    }
+}
+
+private struct UpNextRow: View {
+    let track: MediaItem
+    let isDragged: Bool
+    let onPlay: () -> Void
+    let onRemove: () -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isHovering = false
+    @State private var isHoveringRemove = false
+
+    var body: some View {
+        HStack(spacing: 8) {
+            UpNextThumb(track: track)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(track.title).font(.callout).lineLimit(1)
+                Text(track.subtitle ?? " ")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+            if isHovering {
+                Button("Remove from Queue", systemImage: "xmark", action: onRemove)
+                    .labelStyle(.iconOnly)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 16, height: 16)
+                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    .scaleEffect(isHoveringRemove && !reduceMotion ? 1.2 : 1)
+                    .animation(.snappy(duration: 0.15), value: isHoveringRemove)
+                    .onHover { isHoveringRemove = $0 }
+                    .help("Remove from Queue")
+            }
+        }
+        .padding(.horizontal, 4)
+        .frame(height: UpNextList.rowHeight)
+        .background(
+            isDragged ? AnyShapeStyle(.background) : AnyShapeStyle(isHovering ? Color.primary.opacity(0.06) : .clear),
+            in: RoundedRectangle(cornerRadius: 6)
+        )
+        .shadow(color: .black.opacity(isDragged ? 0.25 : 0), radius: 6, y: 2)
+        .scaleEffect(isDragged && !reduceMotion ? 1.03 : 1)
+        .contentShape(Rectangle())
+        .onHover { isHovering = $0 }
+        .onTapGesture(count: 2, perform: onPlay)
+        .contextMenu {
+            Button("Play", systemImage: "play", action: onPlay)
+            Button("Remove from Queue", systemImage: "minus.circle", action: onRemove)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction(.default, onPlay)
+        .accessibilityAction(named: "Remove from Queue", onRemove)
+    }
+}
+
+private struct UpNextThumb: View {
+    let track: MediaItem
+
+    var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 4).fill(.quaternary)
+            // Not EmptyView: the image loads in a task on the placeholder,
+            // which never runs for a view that draws nothing.
             ArtworkImage(url: track.posterURL) {
-                EmptyView()
+                Color.clear
             } fallback: {
                 Image(systemName: "music.note").font(.caption2).foregroundStyle(.secondary)
             }
@@ -866,10 +1119,17 @@ private struct MusicPlayerLayout: View {
         currentTime: $time,
         totalDuration: 214,
         isScrubbing: $scrubbing,
+        isShuffled: true,
+        repeatMode: .all,
+        canGoNext: true,
         onSeek: { _ in },
         onPlayPause: {},
+        onPrevious: {},
         onNext: {},
-        onPick: { _ in }
+        onShuffle: {},
+        onRepeat: {},
+        onPick: { _ in },
+        onEditQueue: { _ in }
     )
     .frame(width: 340, height: 660)
 }

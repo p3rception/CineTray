@@ -89,7 +89,7 @@ final class AppState {
     /// Next/previous track: steps through the inline playlist, or asks the
     /// open player window to handle it.
     private func skipFromMediaKey(_ offset: Int) {
-        if inlinePlaylist != nil {
+        if isInlineSession {
             playInlineNeighbor(offset)
         } else {
             let name = offset > 0 ? "CineTray.MediaKeyNext" : "CineTray.MediaKeyPrevious"
@@ -692,7 +692,7 @@ final class AppState {
         let resume = inProgress.flatMap { entry in
             tracks.first { $0.id == entry.item.id }
         } ?? inProgress?.item ?? tracks[0]
-        await startPlayback(item: resume, inlinePlaylist: tracks)
+        await playInline(resume, in: tracks)
     }
 
     func load(_ section: MenuSection, force: Bool = false) async {
@@ -1190,18 +1190,134 @@ final class AppState {
         return fetched
     }
 
-    /// The remaining items after `item` in its container - the music
-    /// window's "Up Next" queue.
-    func upcomingQueue(after item: MediaItem) async -> [MediaItem] {
-        guard let siblings = await siblings(of: item),
-              let index = siblings.firstIndex(where: { $0.id == item.id }) else {
+    /// Every track of the music session in play order: played tracks before
+    /// `queueIndex`, Up Next after it. Kept in memory only.
+    private(set) var queue: [MediaItem] = []
+    private(set) var queueIndex = 0
+    private(set) var isShuffled = false
+    var repeatMode = RepeatMode.off
+    /// Up Next in its order before shuffling, restored when shuffle is
+    /// turned off.
+    @ObservationIgnored private var unshuffledUpNext: [MediaItem] = []
+
+    var upNext: [MediaItem] { Array(queue.dropFirst(queueIndex + 1)) }
+    /// Whether the menu shows Up Next under the inline player.
+    var showsInlineQueue = false
+
+    /// Starts a new queue: `tracks` (an album, playlist or carousel) from
+    /// `track`. With shuffle on, the rest of `tracks` follows in random order.
+    func setQueue(_ tracks: [MediaItem], at track: MediaItem) {
+        queue = tracks.contains { $0.id == track.id } ? tracks : [track]
+        queueIndex = queue.firstIndex { $0.id == track.id } ?? 0
+        if isShuffled {
+            unshuffledUpNext = queue.filter { $0.id != track.id }
+            queue = [track] + unshuffledUpNext.shuffled()
+            queueIndex = 0
+        }
+    }
+
+    /// Starts a queue for a track opened in a player window, unless the
+    /// window is moving through the current queue.
+    func prepareQueue(for track: MediaItem) async {
+        guard !queue.indices.contains(queueIndex) || queue[queueIndex].id != track.id else { return }
+        setQueue(await siblings(of: track) ?? [track], at: track)
+    }
+
+    func setShuffled(_ shuffled: Bool) {
+        isShuffled = shuffled
+        let upNext = upNext
+        let played = queue.prefix(queueIndex + 1)
+        if shuffled {
+            unshuffledUpNext = upNext
+            queue = played + upNext.shuffled()
+        } else {
+            // ponytail: matches by ID, so a track queued twice comes back
+            // twice even if one copy was removed while shuffled.
+            let remaining = Set(upNext.map(\.id))
+            let restored = unshuffledUpNext.filter { remaining.contains($0.id) }
+            let restoredIDs = Set(restored.map(\.id))
+            queue = played + restored + upNext.filter { !restoredIDs.contains($0.id) }
+        }
+    }
+
+    /// Play Next (`next`) or Add to Queue for a track, album, artist or
+    /// playlist.
+    func enqueue(_ item: MediaItem, next: Bool) async {
+        let tracks = await tracks(of: item)
+        guard !queue.isEmpty else { return }
+        queue.insert(contentsOf: tracks, at: next ? queueIndex + 1 : queue.count)
+        unshuffledUpNext.insert(contentsOf: tracks, at: next ? 0 : unshuffledUpNext.count)
+    }
+
+    /// Replaces Up Next after the user reorders, removes or clears tracks.
+    func setUpNext(_ tracks: [MediaItem]) {
+        queue = queue.prefix(queueIndex + 1) + tracks
+    }
+
+    /// The tracks of a track, album, playlist or artist, in order.
+    private func tracks(of item: MediaItem) async -> [MediaItem] {
+        guard item.kind.isExpandable else { return [item] }
+        do {
+            let children = if let cached = childrenByItemID[item.id] {
+                cached
+            } else {
+                try await provider(for: item)?.children(of: item) ?? []
+            }
+            var tracks: [MediaItem] = []
+            for child in children {
+                tracks += await self.tracks(of: child)
+            }
+            return tracks
+        } catch {
+            logger.error("Queueing \(item.title, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
             return []
         }
-        return Array(siblings.dropFirst(index + 1))
+    }
+
+    /// Makes the track `offset` places from the current one current and
+    /// returns it; nil past either end. Repeat All wraps around.
+    func stepQueue(by offset: Int) -> MediaItem? {
+        var index = queueIndex + offset
+        if repeatMode == .all, !queue.isEmpty {
+            index = (index % queue.count + queue.count) % queue.count
+        }
+        guard queue.indices.contains(index) else { return nil }
+        queueIndex = index
+        return queue[index]
+    }
+
+    /// The track to play on Next (`skipping`) or when the current one ends:
+    /// the same track on Repeat One, then the queue, then Shuffle by Artist.
+    func nextTrack(skipping: Bool) async -> MediaItem? {
+        guard queue.indices.contains(queueIndex) else { return nil }
+        let current = queue[queueIndex]
+        if repeatMode == .one, !skipping {
+            startOverItemID = current.id
+            return current
+        }
+        if let next = stepQueue(by: 1) { return next }
+        guard let next = await autoContinueItem(after: current) else { return nil }
+        queue.append(next)
+        queueIndex = queue.count - 1
+        return next
+    }
+
+    /// The track before the current one. Like the Music app, Previous
+    /// restarts the current track instead once it has played a few seconds.
+    func previousTrack() -> MediaItem? {
+        guard currentTime <= 3, let previous = stepQueue(by: -1) else {
+            seek(to: 0)
+            return nil
+        }
+        return previous
+    }
+
+    func canSkip(by offset: Int) -> Bool {
+        offset < 0 || !upNext.isEmpty || repeatMode == .all || musicAutoContinue == .shuffleByGenre
     }
 
     /// What to play next when `item` finishes, per the Playback preferences.
-    /// Nil means stop.
+    /// Nil means stop. Music only continues past the end of its queue.
     func autoContinueItem(after item: MediaItem) async -> MediaItem? {
         switch item.type {
         case .movies:
@@ -1211,16 +1327,9 @@ final class AppState {
             guard tvAutoContinue, item.kind == .episode else { return nil }
             return await nextSibling(after: item)
         case .music:
-            guard item.kind == .track else { return nil }
-            switch musicAutoContinue {
-            case .off:
-                // "Off" still finishes the album/playlist in order.
-                return await nextSibling(after: item)
-            case .inSequence:
-                return await nextSibling(after: item)
-            case .shuffleByGenre:
-                return try? await provider(for: item)?.randomTrack(sameArtistAs: item)
-            }
+            // Finish Album and In Order end with the queue.
+            guard item.kind == .track, musicAutoContinue == .shuffleByGenre else { return nil }
+            return try? await provider(for: item)?.randomTrack(sameArtistAs: item)
         }
     }
 
@@ -1445,9 +1554,9 @@ final class AppState {
     /// The item of the latest `startPlayback`, which `playbackError` refers
     /// to; `currentItem` is already nil once playback has failed.
     private(set) var lastStartedItem: MediaItem?
-    /// Ordered track list backing the active inline (menu-bar carousel)
-    /// session; nil when playback belongs to a player window.
-    private(set) var inlinePlaylist: [MediaItem]?
+    /// Whether playback belongs to the menu (inline music) rather than a
+    /// player window, which then advances through the queue itself.
+    private(set) var isInlineSession = false
     private var timeObserver: Any?
     private var statusObservation: NSKeyValueObservation?
     private var itemStatusObservation: NSKeyValueObservation?
@@ -1479,7 +1588,7 @@ final class AppState {
         return position.flatMap { $0 > 5 ? $0 : nil }
     }
 
-    func startPlayback(item: MediaItem, inlinePlaylist: [MediaItem]? = nil) async {
+    func startPlayback(item: MediaItem, inline: Bool = false) async {
         let resume = startOverItemID == item.id ? nil : resumePosition(for: item)
         startOverItemID = nil
         playbackGeneration += 1
@@ -1489,7 +1598,7 @@ final class AppState {
         lastStartedItem = item
         subtitleOffset = 0
         playbackError = nil
-        self.inlinePlaylist = inlinePlaylist
+        isInlineSession = inline
         do {
             let vlcPlayback = DownloadManager.shared.localURL(for: item) == nil && item.type != .music
                 ? try await provider(for: item)?.vlcPlayback(for: item) : nil
@@ -1571,7 +1680,7 @@ final class AppState {
 
                 // Inline sessions have no player window watching for track end,
                 // so the engine advances through the playlist itself.
-                if inlinePlaylist != nil, let playerItem = newPlayer.currentItem {
+                if inline, let playerItem = newPlayer.currentItem {
                     endObservationTask = Task { @MainActor [weak self] in
                         for await _ in NotificationCenter.default.notifications(
                             named: AVPlayerItem.didPlayToEndTimeNotification,
@@ -1593,7 +1702,7 @@ final class AppState {
                 }
             } else {
                 // ── SwiftVLC path (files AVFoundation can't decode, e.g. .mkv, and Jellyfin subtitle files) ──
-                await startVLCBridgePlayback(vlcPlayback ?? VLCPlayback(file: url), item: item, inlinePlaylist: inlinePlaylist, resumeAt: resume, generation: generation)
+                await startVLCBridgePlayback(vlcPlayback ?? VLCPlayback(file: url), item: item, inline: inline, resumeAt: resume, generation: generation)
             }
         } catch {
             if generation == playbackGeneration {
@@ -1610,7 +1719,7 @@ final class AppState {
     private func startVLCBridgePlayback(
         _ playback: VLCPlayback,
         item: MediaItem,
-        inlinePlaylist: [MediaItem]?,
+        inline: Bool,
         resumeAt: Double?,
         generation: Int
     ) async {
@@ -1663,7 +1772,7 @@ final class AppState {
                 }
 
                 if bridge.didReachEnd {
-                    if inlinePlaylist != nil {
+                    if inline {
                         self.handleInlineTrackEnd()
                     } else {
                         NotificationCenter.default.post(
@@ -1704,35 +1813,33 @@ final class AppState {
         try? vlcBridge?.setVolume(volume)
     }
 
-    /// Plays the playlist item `offset` positions from the current track in
-    /// the active inline session (+1 = next, -1 = previous).
+    /// Plays `track` in the menu, with `tracks` as the new queue.
+    func playInline(_ track: MediaItem, in tracks: [MediaItem]) async {
+        setQueue(tracks, at: track)
+        await startPlayback(item: track, inline: true)
+    }
+
+    /// Moves the inline session through the queue: +1 is Next, -1 Previous,
+    /// larger offsets skip into Up Next.
     func playInlineNeighbor(_ offset: Int) {
-        guard let playlist = inlinePlaylist,
-              let currentItem,
-              let index = playlist.firstIndex(where: { $0.id == currentItem.id }),
-              playlist.indices.contains(index + offset) else { return }
-        let target = playlist[index + offset]
         Task {
-            await startPlayback(item: target, inlinePlaylist: playlist)
+            let target = switch offset {
+            case 1: await nextTrack(skipping: true)
+            case -1: previousTrack()
+            default: stepQueue(by: offset)
+            }
+            if let target {
+                await startPlayback(item: target, inline: true)
+            }
         }
     }
 
-    /// Whether the active inline session has a track `offset` positions from
-    /// the current one (enables/disables the overlay's skip buttons).
-    func hasInlineNeighbor(_ offset: Int) -> Bool {
-        guard let playlist = inlinePlaylist,
-              let currentItem,
-              let index = playlist.firstIndex(where: { $0.id == currentItem.id }) else { return false }
-        return playlist.indices.contains(index + offset)
-    }
-
     private func handleInlineTrackEnd() {
-        guard let playlist = inlinePlaylist, let finished = currentItem else { return }
         stopPlayback(atEnd: true)
-        guard let index = playlist.firstIndex(where: { $0.id == finished.id }),
-              playlist.indices.contains(index + 1) else { return }
         Task {
-            await startPlayback(item: playlist[index + 1], inlinePlaylist: playlist)
+            if let next = await nextTrack(skipping: false) {
+                await startPlayback(item: next, inline: true)
+            }
         }
     }
 
@@ -1753,7 +1860,7 @@ final class AppState {
         }
         tearDownPlayer()
         currentItem = nil
-        inlinePlaylist = nil
+        isInlineSession = false
     }
 
     /// Stops playback only if `item` still owns the engine - a stale window

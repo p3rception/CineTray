@@ -86,6 +86,16 @@ struct PosterCell: View {
                     action()
                 }
             }
+            if item.type == .music, appState.currentItem?.type == .music {
+                Section {
+                    Button("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward") {
+                        Task { await appState.enqueue(item, next: true) }
+                    }
+                    Button("Add to Queue", systemImage: "text.line.last.and.arrowtriangle.forward") {
+                        Task { await appState.enqueue(item, next: false) }
+                    }
+                }
+            }
             if let name = item.source.webAppName {
                 Button("Open in \(name)", systemImage: "arrow.up.forward.square") { appState.openInWebApp(item) }
             }

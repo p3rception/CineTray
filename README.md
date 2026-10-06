@@ -116,7 +116,7 @@ Choose which libraries appear and drag them into any order in Settings > Librari
 *   **TorrServer support.** Movies and shows from a TorrServer. Releases of the same show are grouped into one poster, with seasons and episodes read from the file names.
 *   **Your libraries, your names.** The menu shows one section per server library, named as on the server (for example Movies, Shows and YouTube). Choose which libraries appear in Settings > Libraries.
 *   **Video and Music panes.** Click the menu title to switch between video and music. The Music pane has Artists, Albums and Playlists sections.
-*   **Players.** Control music from the inline player in the menu, or open a separate music or video player window.
+*   **Players.** Control music from the inline player in the menu, or open a separate music or video player window. Queue songs, albums, artists and playlists with Play Next and Add to Queue, reorder Up Next, shuffle and repeat.
 *   **Sorting.** Movies and shows are sorted by date added, newest first, by default. A small sort button on each open section changes the field and order without opening Settings. Drag the menu's sections into any order in Settings > Libraries.
 *   **Continue Watching.** Merges the server's own list (Plex Continue Watching, Jellyfin Resume and Next Up) with what you started in CineTray. Movies and episodes resume where you stopped, on any device, and posters show watched checkmarks and progress bars.
 *   **Search.** Ignores spacing, punctuation and accents ("madmen" finds "Mad Men") and shows only the sections with matches.

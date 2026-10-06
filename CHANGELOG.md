@@ -18,6 +18,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - When the menu bar icon is missing, open CineTray again from Spotlight or the Applications folder to get to Settings. Settings > General > Menu Bar has Show Again, which puts the icon back, and a link to the Menu Bar settings in System Settings, where CineTray has to be allowed.
 - Remove from Continue in a poster's right-click menu in the Continue section, for Navidrome, TorrServer and local media. For a grouped album or playlist it removes all its tracks.
 - While you type a search, a film and a note button in the search field limit the results to video or music. Each turns on and off on its own, so you can search either kind or both. Each new search starts with both.
+- A music queue. While music plays, Play Next and Add to Queue in the right-click menu of a song, album, artist or playlist add it to Up Next. Drag songs in Up Next to reorder them, double-click one to play it, and remove one with the X that appears when you point at it or with the right-click menu, or all at once with Clear. In the menu, the list button on the playing album art shows Up Next.
+- Shuffle and Repeat (all songs or one) in the music player window and in the menu's Up Next.
 
 ### Changed
 
@@ -26,9 +28,12 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - Choose… in Settings > Playback lists the installed apps that play video, with a search field, instead of opening a Finder window. Other… still lets you pick any app.
 - With Reduce Motion on, long titles under posters no longer scroll back and forth, and posters no longer grow when you point at them.
 - The buttons on posters, such as Open in Jellyfin and Download, darken and grow slightly when you point at them.
+- The music player window has a Previous button instead of Back 15 Seconds. Previous goes back a song, or to the start of the song after its first 3 seconds, as do the media keys.
+- Music played in the menu continues with Shuffle by Artist after the album ends when that is set in Settings > Playback, like the player window.
 
 ### Fixed
 
+- Songs in Up Next in the music player window show their artwork.
 - The first time CineTray opens without a server or library, it opens Settings on the Accounts tab again. On recent macOS versions it showed nothing.
 - Refresh in Settings > Libraries removes files that were deleted or moved out of a library folder. Before, they stayed in the menu and failed to play.
 - Navidrome tracks the server no longer has leave the Continue section.
