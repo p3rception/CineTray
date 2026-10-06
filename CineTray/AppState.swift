@@ -27,6 +27,10 @@ final class AppState {
     var searchText = ""
     /// While active, every section is expanded and filtered live.
     var isSearchActive = false
+    /// Limits search to music (true) or video (false); nil searches both.
+    var searchMusicPane: Bool? {
+        didSet { if searchMusicPane != oldValue { scheduleDeepSearch() } }
+    }
 
     /// Drill-down hierarchy per section (e.g., [show, season]). Each gets a child carousel.
     var drillPath: [MenuSection: [MediaItem]] = [:]
@@ -884,6 +888,7 @@ final class AppState {
     func deactivateSearch() {
         isSearchActive = false
         searchText = ""
+        searchMusicPane = nil
         isDeepSearching = false
         deepSearchTask?.cancel()
         deepSearchItems = [:]
@@ -909,7 +914,9 @@ final class AppState {
 
             var newItems: [MenuSection: [MediaItem]] = [:]
             var newChildren: [String: [MediaItem]] = [:]
-            let sections = enabledSections.filter { $0.mediaType != nil }
+            let sections = enabledSections.filter { section in
+                section.mediaType != nil && searchMusicPane.map { section.isMusic == $0 } ?? true
+            }
             // Search once per media type (music once per top level, since the
             // chains start at the artist or the album), then place each match
             // in the library section whose items contain its top-level ancestor.

@@ -17,6 +17,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - A poster's right-click menu also has Open in Plex or Jellyfin, Info, and Download or Stop Download, so they work without pointing at the poster, including with Full Keyboard Access and Voice Control.
 - When the menu bar icon is missing, open CineTray again from Spotlight or the Applications folder to get to Settings. Settings > General > Menu Bar has Show Again, which puts the icon back, and a link to the Menu Bar settings in System Settings, where CineTray has to be allowed.
 - Remove from Continue in a poster's right-click menu in the Continue section, for Navidrome, TorrServer and local media. For a grouped album or playlist it removes all its tracks.
+- While you type a search, a film and a note button in the search field limit the results to video or music. Each turns on and off on its own, so you can search either kind or both. Each new search starts with both.
 
 ### Changed
 
@@ -24,6 +25,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - Downloaded items show a green download arrow next to their title instead of a green tick on the poster, where it was hard to see on some artwork and looked like the Watched checkmark. It now also shows when downloads are turned off in Settings.
 - Choose… in Settings > Playback lists the installed apps that play video, with a search field, instead of opening a Finder window. Other… still lets you pick any app.
 - With Reduce Motion on, long titles under posters no longer scroll back and forth, and posters no longer grow when you point at them.
+- The buttons on posters, such as Open in Jellyfin and Download, darken and grow slightly when you point at them.
 
 ### Fixed
 

@@ -105,7 +105,7 @@ struct MenuBarContentView: View {
                 }
                 if appState.isFiltering {
                     searchStatus(hasResults: !shown.isEmpty)
-                    if !seerrURL.isEmpty, !appState.isOfflineMode {
+                    if !seerrURL.isEmpty, !appState.isOfflineMode, musicPane != true {
                         SeerrSearchRow(query: appState.searchText.trimmingCharacters(in: .whitespaces))
                     }
                 }
@@ -210,7 +210,8 @@ struct MenuBarContentView: View {
     /// Whether the Music pane is shown, or nil when every section is: there
     /// are no panes, or a search shows matches from both.
     private var musicPane: Bool? {
-        hasPanes && !appState.isFiltering ? showsMusic : nil
+        guard hasPanes else { return nil }
+        return appState.isFiltering ? appState.searchMusicPane : showsMusic
     }
 
     private var hasCalendar: Bool {
@@ -325,6 +326,13 @@ struct MenuBarContentView: View {
                 .font(.caption)
                 .help("Clear search")
             }
+            if hasPanes, appState.isFiltering {
+                Divider()
+                    .frame(height: 12)
+                    .padding(.horizontal, 3)
+                searchScopeButton(music: false)
+                searchScopeButton(music: true)
+            }
         }
         .padding(.horizontal, 7)
         .padding(.vertical, 5)
@@ -348,6 +356,29 @@ struct MenuBarContentView: View {
             }
             appState.scheduleDeepSearch()
         }
+    }
+
+    /// Each kind turns on and off on its own. Turning off the only kind on
+    /// switches to the other, since a search needs at least one.
+    private func searchScopeButton(music: Bool) -> some View {
+        let title = music ? "Music" : "Video"
+        let isOn = appState.searchMusicPane.map { $0 == music } ?? true
+        let isOnly = appState.searchMusicPane == music
+        return Button {
+            withAnimation(.snappy(duration: 0.2)) { appState.searchMusicPane = isOn ? !music : nil }
+        } label: {
+            Label(title, systemImage: music ? "music.note" : "film")
+                .labelStyle(.iconOnly)
+                .font(.caption)
+                .frame(width: 20, height: 18)
+                .background(.quaternary.opacity(isOn ? 1 : 0), in: .rect(cornerRadius: 4))
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(isOn ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.tertiary))
+        .help(isOnly ? "Search \(music ? "Video" : "Music") Instead" : isOn ? "Leave Out \(title)" : "Include \(title)")
+        .accessibilityLabel("Search \(title)")
+        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 
     // MARK: - Filter Helper
