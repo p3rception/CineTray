@@ -38,7 +38,7 @@ enum PlaybackProgressStore {
     /// finished. Containers are never tracked.
     static func update(item: MediaItem, positionSeconds: Double, durationSeconds: Double) {
         guard !item.kind.isExpandable, durationSeconds > 0 else { return }
-        var entries = load()
+        var (entries, unreadable) = read()
         let fraction = positionSeconds / durationSeconds
         if fraction >= finishedFraction || fraction < startedFraction {
             entries.removeValue(forKey: item.id)
@@ -50,38 +50,63 @@ enum PlaybackProgressStore {
                 updatedAt: .now
             )
         }
-        save(entries)
+        save(entries, keeping: unreadable)
     }
 
     static func remove(itemID: String) {
-        var entries = load()
+        var (entries, unreadable) = read()
         entries.removeValue(forKey: itemID)
-        save(entries)
+        unreadable.removeValue(forKey: itemID)
+        save(entries, keeping: unreadable)
     }
 
     private static func load() -> [String: PlaybackProgress] {
-        guard let data = UserDefaults.standard.data(forKey: SettingsKeys.playbackProgress) else {
-            return [:]
+        read().entries
+    }
+
+    /// The saved entries, plus the JSON of any this build can't decode (one
+    /// written by another build, say). Those are kept and saved back, so one
+    /// bad entry doesn't take every saved position with it.
+    private static func read() -> (entries: [String: PlaybackProgress], unreadable: [String: Any]) {
+        guard let data = UserDefaults.standard.data(forKey: SettingsKeys.playbackProgress) else { return ([:], [:]) }
+        if let entries = try? JSONDecoder().decode([String: PlaybackProgress].self, from: data) {
+            return (entries, [:])
         }
-        return (try? JSONDecoder().decode([String: PlaybackProgress].self, from: data)) ?? [:]
+        guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return ([:], [:]) }
+        var entries: [String: PlaybackProgress] = [:]
+        var unreadable: [String: Any] = [:]
+        for (id, value) in object {
+            if let json = try? JSONSerialization.data(withJSONObject: value),
+               let entry = try? JSONDecoder().decode(PlaybackProgress.self, from: json) {
+                entries[id] = entry
+            } else {
+                unreadable[id] = value
+            }
+        }
+        return (entries, unreadable)
     }
 
     /// Rewrites saved progress without Plex tokens; older builds stored
     /// them inside poster URLs.
     static func removeSavedPlexTokens() {
-        let entries = load()
+        let (entries, unreadable) = read()
         guard !entries.isEmpty else { return }
-        save(entries)
+        save(entries, keeping: unreadable)
     }
 
-    private static func save(_ entries: [String: PlaybackProgress]) {
+    private static func save(_ entries: [String: PlaybackProgress], keeping unreadable: [String: Any]) {
         let entries = entries.mapValues { entry in
             var entry = entry
             entry.item = entry.item.removingPlexTokens
             return entry
         }
-        if let data = try? JSONEncoder().encode(entries) {
-            UserDefaults.standard.set(data, forKey: SettingsKeys.playbackProgress)
+        guard var data = try? JSONEncoder().encode(entries) else { return }
+        if !unreadable.isEmpty {
+            guard var object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+            object.merge(unreadable) { readable, _ in readable }
+            guard let merged = try? JSONSerialization.data(withJSONObject: object) else { return }
+            data = merged
         }
+        UserDefaults.standard.set(data, forKey: SettingsKeys.playbackProgress)
     }
 }
