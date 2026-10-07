@@ -543,6 +543,7 @@ struct MenuBarContentView: View {
                 nowPlayingItem: (section.supportsInlineMusic && playerMode == PlayerMode.inline.rawValue) ? appState.currentItem : nil,
                 isPlaying: appState.isPlaying,
                 presentsEpisodesByShow: section == .continueItems,
+                marksSongs: section != .continueItems,
                 onPlayPause: appState.togglePlayPause,
                 onPrevious: { appState.playInlineNeighbor(-1) },
                 onNext: { appState.playInlineNeighbor(1) }

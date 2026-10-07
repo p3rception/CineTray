@@ -905,6 +905,9 @@ final class AppState {
     /// while the search is active).
     private(set) var deepSearchItems: [MenuSection: [MediaItem]] = [:]
     private(set) var deepSearchChildren: [String: [MediaItem]] = [:]
+    /// Songs whose title matched, shown in the top row next to the album
+    /// or artist (`topID`) they were found under.
+    private var deepSearchSongs: [MenuSection: [(song: MediaItem, topID: String)]] = [:]
     private var deepSearchTask: Task<Void, Never>?
 
     private var trimmedQuery: String {
@@ -946,6 +949,7 @@ final class AppState {
         deepSearchTask?.cancel()
         deepSearchItems = [:]
         deepSearchChildren = [:]
+        deepSearchSongs = [:]
     }
 
     /// Kicks off a debounced backend search that matches titles anywhere in
@@ -957,6 +961,7 @@ final class AppState {
         guard !query.isEmpty else {
             deepSearchItems = [:]
             deepSearchChildren = [:]
+            deepSearchSongs = [:]
             isDeepSearching = false
             return
         }
@@ -967,6 +972,7 @@ final class AppState {
 
             var newItems: [MenuSection: [MediaItem]] = [:]
             var newChildren: [String: [MediaItem]] = [:]
+            var newSongs: [MenuSection: [(song: MediaItem, topID: String)]] = [:]
             let sections = enabledSections.filter { section in
                 section.mediaType != nil && searchMusicPane.map { section.isMusic == $0 } ?? true
             }
@@ -995,12 +1001,25 @@ final class AppState {
                     where !(newChildren[parent.id] ?? []).contains(where: { $0.id == child.id }) {
                         newChildren[parent.id, default: []].append(child)
                     }
+                    // Servers also return songs matched by artist or album name;
+                    // those stay in their album.
+                    if let song = chain.last, song.kind == .track, chain.count > 1, searchMatches(song.title, query: query),
+                       !(newSongs[section] ?? []).contains(where: { $0.song.id == song.id }) {
+                        newSongs[section, default: []].append((song, top.id))
+                    }
                 }
+            }
+            // A song shows once, next to its album: artist rows leave out
+            // songs that an album row already has.
+            let songsInAlbumRows = Set(newSongs.filter { $0.key.musicTopLevel == .album }.values.joined().map(\.song.id))
+            for section in newSongs.keys where section.musicTopLevel == .artist {
+                newSongs[section]?.removeAll { songsInAlbumRows.contains($0.song.id) }
             }
             // Drop stale results if the query moved on while we searched.
             guard !Task.isCancelled, trimmedQuery == query else { return }
             deepSearchItems = newItems
             deepSearchChildren = newChildren
+            deepSearchSongs = newSongs
             isDeepSearching = false
         }
     }
@@ -1025,7 +1044,15 @@ final class AppState {
         } else {
             result = items
         }
-        return sortedItems(result, for: section)
+        var sorted = sortedItems(result, for: section)
+        if isSearchActive, !query.isEmpty {
+            // After sorting, so each song lands right before its album or artist.
+            for (song, topID) in deepSearchSongs[section] ?? [] {
+                guard let index = sorted.firstIndex(where: { $0.id == topID }) else { continue }
+                sorted.insert(song, at: index)
+            }
+        }
+        return sorted
     }
 
     private func sortedItems(_ items: [MediaItem], for section: MenuSection) -> [MediaItem] {

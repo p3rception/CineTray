@@ -22,6 +22,8 @@ struct MediaCarouselView: View {
     var isCompact: Bool = false
     /// Show episodes by their show's poster and name (Continue Watching).
     var presentsEpisodesByShow = false
+    /// Mark songs, which only appear among albums or artists as search results.
+    var marksSongs = false
 
     var onPlayPause: (() -> Void)?
     var onPrevious: (() -> Void)?
@@ -65,7 +67,7 @@ struct MediaCarouselView: View {
                 ForEach(items, id: \.uniqueID) { item in
                     let isNowPlaying = item.id == overlayItemID
                     ZStack(alignment: .top) {
-                        PosterCell(item: item, isSelected: item.id == selectedID, isCompact: isCompact, presentsEpisodesByShow: presentsEpisodesByShow) {
+                        PosterCell(item: item, isSelected: item.id == selectedID, isCompact: isCompact, presentsEpisodesByShow: presentsEpisodesByShow, marksSongs: marksSongs) {
                             onSelect(item)
                         }
                         if isNowPlaying, let onPlayPause {

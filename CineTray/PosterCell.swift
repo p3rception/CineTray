@@ -10,6 +10,7 @@ struct PosterCell: View {
     /// Show an episode by its show's poster and name, with "S1E2 - Title"
     /// underneath (Continue Watching).
     var presentsEpisodesByShow = false
+    var marksSongs = false
     let action: () -> Void
 
     @Environment(AppState.self) private var appState
@@ -304,6 +305,17 @@ struct PosterCell: View {
         .frame(width: cellWidth, height: cellHeight)
         .clipShape(.rect(cornerRadius: 8))
         .overlay(alignment: .bottom) { watchProgressBar }
+        .overlay(alignment: .bottomLeading) {
+            if marksSongs, item.kind == .track {
+                Text("SONG")
+                    .font(.system(size: 8, weight: .bold))
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 2)
+                    .background(.black.opacity(0.6), in: .capsule)
+                    .foregroundStyle(.white)
+                    .padding(5)
+            }
+        }
         .overlay {
             if let progress = DownloadManager.shared.downloadProgress[item.id] {
                 Color.black.opacity(0.65)
