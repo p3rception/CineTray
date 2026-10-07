@@ -14,6 +14,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Skipping to the next or previous item, or playing something else, now counts as stopping the one that was playing. Before, a song skipped near its end was not scrobbled to Last.fm or counted as played on Navidrome, a skipped episode was not marked watched on Trakt, and an item skipped near its end could stay in Continue.
 - Continue no longer shows an episode, movie or track watched offline from a download after the download is deleted. Playing it failed with an error.
 
 ## [1.2.0] - 2026-10-06

@@ -1718,6 +1718,10 @@ final class AppState {
     }
 
     func startPlayback(item: MediaItem, inline: Bool = false) async {
+        // Skipping or switching items: the one playing was cut short, and
+        // servers, scrobblers and Continue only finish an item on "stopped".
+        // Natural ends already stopped and cleared `currentItem`.
+        if currentItem != nil { stopPlayback() }
         let resume = startOverItemID == item.id ? nil : resumePosition(for: item)
         startOverItemID = nil
         playbackGeneration += 1
