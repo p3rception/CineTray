@@ -9,6 +9,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 ### Added
 
 - Mark as Watched and Mark as Unwatched in a poster's right-click menu, for Plex and Jellyfin movies and episodes. On a show or season it marks every episode, so the menu says Mark Show or Mark Season.
+- Control Center and the Now Playing widget show the poster or album artwork, and the album for music. Dragging their position bar seeks. Both need Settings > General > Use Mac Media Keys.
 
 ### Fixed
 

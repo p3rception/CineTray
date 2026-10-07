@@ -75,6 +75,16 @@ final class AppState {
         }
         handleMediaKey(center.nextTrackCommand) { $0.skipFromMediaKey(1) }
         handleMediaKey(center.previousTrackCommand) { $0.skipFromMediaKey(-1) }
+        center.changePlaybackPositionCommand.addTarget { [weak self] event in
+            guard let self, UserDefaults.standard.bool(forKey: SettingsKeys.useMediaKeys),
+                  let position = (event as? MPChangePlaybackPositionCommandEvent)?.positionTime else { return .commandFailed }
+            Task { @MainActor in
+                self.seek(to: position)
+                // The next report is up to 15 seconds away; until then Control Center would jump back.
+                MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPNowPlayingInfoPropertyElapsedPlaybackTime] = position
+            }
+            return .success
+        }
     }
 
     /// Routes a media key to `action` while "Use Media Keys" is enabled.
@@ -1406,6 +1416,23 @@ final class AppState {
         }
     }
 
+    /// The current item's Now Playing artwork, kept because the info is
+    /// rebuilt on every report.
+    @ObservationIgnored private var nowPlayingArtwork: (itemID: String, artwork: MPMediaItemArtwork?)?
+
+    private func loadNowPlayingArtwork(for item: MediaItem) {
+        Task {
+            guard let url = item.posterURL ?? item.parentPosterURL,
+                  let image = await ArtworkCache.image(at: url),
+                  nowPlayingArtwork?.itemID == item.id else { return }
+            let size = CGSize(width: image.width, height: image.height)
+            // Now Playing asks for the image off the main thread.
+            let artwork = MPMediaItemArtwork(boundsSize: size) { @Sendable _ in NSImage(cgImage: image, size: size) }
+            nowPlayingArtwork?.artwork = artwork
+            MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPMediaItemPropertyArtwork] = artwork
+        }
+    }
+
     private func updateNowPlayingInfo(item: MediaItem, state: PlaybackState, positionSeconds: Double, durationSeconds: Double) {
         guard UserDefaults.standard.bool(forKey: SettingsKeys.useMediaKeys) else {
             MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
@@ -1423,6 +1450,15 @@ final class AppState {
         info[MPMediaItemPropertyTitle] = item.title
         if let subtitle = item.subtitle {
             info[MPMediaItemPropertyArtist] = subtitle
+        }
+        if item.type == .music, let album = item.parentTitle {
+            info[MPMediaItemPropertyAlbumTitle] = album
+        }
+        if nowPlayingArtwork?.itemID == item.id {
+            info[MPMediaItemPropertyArtwork] = nowPlayingArtwork?.artwork
+        } else {
+            nowPlayingArtwork = (item.id, nil)
+            loadNowPlayingArtwork(for: item)
         }
         info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = positionSeconds
         if durationSeconds > 0 {
