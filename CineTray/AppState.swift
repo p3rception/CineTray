@@ -970,28 +970,30 @@ final class AppState {
             let sections = enabledSections.filter { section in
                 section.mediaType != nil && searchMusicPane.map { section.isMusic == $0 } ?? true
             }
-            // Search once per media type (music once per top level, since the
-            // chains start at the artist or the album), then place each match
-            // in the library section whose items contain its top-level ancestor.
-            for mediaType in MediaType.allCases {
-                for topLevel in Set(sections.filter { $0.mediaType == mediaType }.map(\.musicTopLevel)) {
-                    let candidates = sections.filter { $0.mediaType == mediaType && $0.musicTopLevel == topLevel }.map { section in
-                        (section, Set(itemsBySection[section]?.map(\.id) ?? []))
+            // Search each provider once per media type (music once per top
+            // level, since the chains start at the artist or the album), all at
+            // once, then place each match in the library section whose items
+            // contain its top-level ancestor. Results come back in input order,
+            // so placement stays in provider order.
+            let searches = MediaType.allCases.flatMap { mediaType in
+                Set(sections.filter { $0.mediaType == mediaType }.map(\.musicTopLevel)).flatMap { topLevel in
+                    providers(musicTopLevel: topLevel ?? .album).map { (mediaType: mediaType, topLevel: topLevel, provider: $0) }
+                }
+            }
+            let results = await concurrently(searches) { try await $0.provider.deepSearch(query, type: $0.mediaType) }
+            for (search, result) in zip(searches, results) {
+                let candidates = sections.filter { $0.mediaType == search.mediaType && $0.musicTopLevel == search.topLevel }.map { section in
+                    (section, Set(itemsBySection[section]?.map(\.id) ?? []))
+                }
+                for chain in (try? result.get()) ?? [] {
+                    guard let top = chain.first,
+                          let section = candidates.first(where: { $0.1.contains(top.id) })?.0 else { continue }
+                    if !(newItems[section] ?? []).contains(where: { $0.id == top.id }) {
+                        newItems[section, default: []].append(top)
                     }
-                    var chains: [[MediaItem]] = []
-                    for provider in providers(musicTopLevel: topLevel ?? .album) {
-                        chains += (try? await provider.deepSearch(query, type: mediaType)) ?? []
-                    }
-                    for chain in chains {
-                        guard let top = chain.first,
-                              let section = candidates.first(where: { $0.1.contains(top.id) })?.0 else { continue }
-                        if !(newItems[section] ?? []).contains(where: { $0.id == top.id }) {
-                            newItems[section, default: []].append(top)
-                        }
-                        for (parent, child) in zip(chain, chain.dropFirst())
-                        where !(newChildren[parent.id] ?? []).contains(where: { $0.id == child.id }) {
-                            newChildren[parent.id, default: []].append(child)
-                        }
+                    for (parent, child) in zip(chain, chain.dropFirst())
+                    where !(newChildren[parent.id] ?? []).contains(where: { $0.id == child.id }) {
+                        newChildren[parent.id, default: []].append(child)
                     }
                 }
             }
