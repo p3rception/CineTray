@@ -585,6 +585,8 @@ protocol MediaProvider {
     func continueWatching() async throws -> [MediaItem]
     /// Tells the server where playback is, for its resume points and play counts.
     func reportPlayback(of item: MediaItem, state: PlaybackState, positionSeconds: Double, durationSeconds: Double) async throws
+    /// Marks the item, or every episode of a show or season, as watched or not.
+    func setWatched(_ item: MediaItem, _ watched: Bool) async throws
 }
 
 extension MediaProvider {
@@ -598,6 +600,7 @@ extension MediaProvider {
     func webURL(for item: MediaItem) async throws -> URL? { nil }
     func continueWatching() async throws -> [MediaItem] { [] }
     func reportPlayback(of item: MediaItem, state: PlaybackState, positionSeconds: Double, durationSeconds: Double) async throws {}
+    func setWatched(_ item: MediaItem, _ watched: Bool) async throws {}
 }
 
 /// A video file with subtitle files to add as extra tracks.

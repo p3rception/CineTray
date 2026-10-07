@@ -891,6 +891,13 @@ struct PlexClient {
         _ = try await fetchData(path: "/:/timeline", query: query)
     }
 
+    func setWatched(ratingKey: String, _ watched: Bool) async throws {
+        _ = try await fetchData(path: watched ? "/:/scrobble" : "/:/unscrobble", query: [
+            URLQueryItem(name: "key", value: ratingKey),
+            URLQueryItem(name: "identifier", value: "com.plexapp.plugins.library"),
+        ])
+    }
+
     // MARK: - plex.tv PIN link flow
 
     struct PIN: Decodable {
@@ -1115,5 +1122,9 @@ struct PlexMediaProvider: MediaProvider {
 
     func reportPlayback(of item: MediaItem, state: PlaybackState, positionSeconds: Double, durationSeconds: Double) async throws {
         try await client.reportTimeline(ratingKey: item.id, state: state, positionSeconds: positionSeconds, durationSeconds: durationSeconds)
+    }
+
+    func setWatched(_ item: MediaItem, _ watched: Bool) async throws {
+        try await client.setWatched(ratingKey: item.id, watched)
     }
 }

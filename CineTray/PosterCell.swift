@@ -96,6 +96,11 @@ struct PosterCell: View {
                     }
                 }
             }
+            if item.source.keepsWatchState, item.type != .music, item.kind != .playlist {
+                Button(markWatchedTitle, systemImage: item.isWatched == true ? "circle" : "checkmark.circle") {
+                    appState.setWatched(item, item.isWatched != true)
+                }
+            }
             if let name = item.source.webAppName {
                 Button("Open in \(name)", systemImage: "arrow.up.forward.square") { appState.openInWebApp(item) }
             }
@@ -122,6 +127,16 @@ struct PosterCell: View {
                 Button("Open in \(name)") { appState.openInWebApp(item) }
             }
         }
+    }
+
+    /// Names shows and seasons, since marking one marks all its episodes.
+    private var markWatchedTitle: String {
+        let container = switch item.kind {
+        case .show: "Show "
+        case .season: "Season "
+        default: ""
+        }
+        return "Mark \(container)as \(item.isWatched == true ? "Unwatched" : "Watched")"
     }
 
     @ViewBuilder

@@ -799,25 +799,51 @@ final class AppState {
     }
 
     /// After a server video stops, its watched state (and its season's and
-    /// show's) may have changed, so Continue Watching, the loaded sections of
-    /// that type and the cached drill-downs containing it are re-fetched.
-    /// Waits briefly so Plex has processed the final timeline report.
+    /// show's) may have changed. Waits briefly so Plex has processed the
+    /// final timeline report.
     private func refreshAfterPlayback(of item: MediaItem) {
         guard item.source.keepsWatchState, item.type != .music else { return }
         Task {
             try? await Task.sleep(for: .seconds(2))
-            if itemsBySection[.continueItems] != nil { await load(.continueItems) }
-            for section in itemsBySection.keys where section.mediaType == item.type {
-                await refreshSilently(section)
+            await refreshWatchState(of: item)
+        }
+    }
+
+    /// Re-fetches Continue Watching, the loaded sections of the item's type
+    /// and the cached drill-downs that contain the item, are its season or
+    /// show, or are inside it.
+    private func refreshWatchState(of item: MediaItem) async {
+        if itemsBySection[.continueItems] != nil { await load(.continueItems) }
+        for section in itemsBySection.keys where section.mediaType == item.type {
+            await refreshSilently(section)
+        }
+        let containerIDs = [item.id, item.parentID, item.attributes["grandparentRatingKey"]].compactMap { $0 }
+        for parents in drillPath.values {
+            // A single-season show lists its episodes, but they name the season as parent.
+            for parent in parents where containerIDs.contains(parent.id) || parent.parentID == item.id
+                || childrenByItemID[parent.id]?.contains(where: { $0.id == item.id }) == true {
+                await refreshChildrenSilently(of: parent)
             }
-            let containerIDs = [item.parentID, item.attributes["grandparentRatingKey"]].compactMap { $0 }
-            for parents in drillPath.values {
-                // A single-season show lists its episodes, but they name the season as parent.
-                for parent in parents where containerIDs.contains(parent.id)
-                    || childrenByItemID[parent.id]?.contains(where: { $0.id == item.id }) == true {
-                    await refreshChildrenSilently(of: parent)
-                }
+        }
+    }
+
+    /// Marks `item` watched or unwatched on its server and forgets CineTray's
+    /// saved positions in it, which would otherwise win as resume points.
+    /// Beeps when the server can't be reached.
+    func setWatched(_ item: MediaItem, _ watched: Bool) {
+        Task {
+            do {
+                guard let provider = provider(for: item) else { throw URLError(.resourceUnavailable) }
+                try await provider.setWatched(item, watched)
+            } catch {
+                NSSound.beep()
+                return
             }
+            for entry in PlaybackProgressStore.all()
+            where [entry.item.id, entry.item.parentID, entry.item.attributes["grandparentRatingKey"]].contains(item.id) {
+                PlaybackProgressStore.remove(itemID: entry.item.id)
+            }
+            await refreshWatchState(of: item)
         }
     }
 

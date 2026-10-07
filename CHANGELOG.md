@@ -6,6 +6,10 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Mark as Watched and Mark as Unwatched in a poster's right-click menu, for Plex and Jellyfin movies and episodes. On a show or season it marks every episode, so the menu says Mark Show or Mark Season.
+
 ### Fixed
 
 - Continue no longer shows an episode, movie or track watched offline from a download after the download is deleted. Playing it failed with an error.

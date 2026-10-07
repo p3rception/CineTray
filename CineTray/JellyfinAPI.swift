@@ -814,6 +814,12 @@ struct JellyfinClient {
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         _ = try await URLSession.shared.data(for: request)
     }
+
+    func setPlayed(itemID: String, _ played: Bool) async throws {
+        var request = request(path: "/Users/\(config.userID)/PlayedItems/\(itemID)")
+        request.httpMethod = played ? "POST" : "DELETE"
+        _ = try await fetch(request)
+    }
 }
 
 /// MediaProvider backed by a Jellyfin server, restricted to the libraries
@@ -891,5 +897,9 @@ struct JellyfinMediaProvider: MediaProvider {
 
     func reportPlayback(of item: MediaItem, state: PlaybackState, positionSeconds: Double, durationSeconds: Double) async throws {
         try await client.reportPlayback(itemID: item.id, state: state, positionSeconds: positionSeconds)
+    }
+
+    func setWatched(_ item: MediaItem, _ watched: Bool) async throws {
+        try await client.setPlayed(itemID: item.id, watched)
     }
 }
