@@ -628,6 +628,10 @@ final class AppState {
     /// When the last complete fetch of `serverContinueItems` started; nil
     /// if a server failed.
     private var serverContinueFetchedAt: Date?
+    /// Navidrome tracks in the progress store already found on the server.
+    /// ponytail: checked once per session, so a track deleted meanwhile stays
+    /// in Continue until the next launch or catalog reset.
+    @ObservationIgnored private var confirmedNavidromeTrackIDs: Set<String> = []
 
     /// The servers' Continue Watching lists merged with CineTray's progress
     /// store, most recently played first. A server item in the local store
@@ -667,10 +671,16 @@ final class AppState {
         // Navidrome has no Continue list to compare with, so ask for each track.
         if let navidrome = sources.navidrome {
             let client = NavidromeClient(config: navidrome)
-            let ids = PlaybackProgressStore.all().filter { $0.item.source == .navidrome }.map(\.item.id)
+            let ids = PlaybackProgressStore.all()
+                .filter { $0.item.source == .navidrome && !confirmedNavidromeTrackIDs.contains($0.item.id) }
+                .map(\.item.id)
             let found = await concurrently(ids) { try await client.trackExists(id: $0) }
-            for (id, result) in zip(ids, found) where (try? result.get()) == false {
-                PlaybackProgressStore.remove(itemID: id)
+            for (id, result) in zip(ids, found) {
+                switch try? result.get() {
+                case true: confirmedNavidromeTrackIDs.insert(id)
+                case false: PlaybackProgressStore.remove(itemID: id)
+                case nil: break
+                }
             }
         }
     }
@@ -884,6 +894,7 @@ final class AppState {
         childErrorsByItemID = [:]
         serverContinueItems = nil
         serverContinueFetchedAt = nil
+        confirmedNavidromeTrackIDs = []
         sectionFetchedAt = [:]
     }
 
