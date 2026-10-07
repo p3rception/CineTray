@@ -14,6 +14,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- With more than one Plex server, opening a show or album could list another server's seasons or tracks, and a download or saved position from one server could be used for an item on another.
 - Turning Offline Mode on or off while a library was still loading could show that library's server posters in the other mode, where they failed to play.
 - Saved playback positions and the Continue list are no longer all lost when one saved entry can't be read, for example after switching between CineTray versions.
 - Skipping to the next or previous item, or playing something else, now counts as stopping the one that was playing. Before, a song skipped near its end was not scrobbled to Last.fm or counted as played on Navidrome, a skipped episode was not marked watched on Trakt, and an item skipped near its end could stay in Continue.

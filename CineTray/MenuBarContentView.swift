@@ -683,7 +683,7 @@ struct MenuBarContentView: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 12)
-            if appState.loadingChildrenIDs.contains(parent.id) {
+            if appState.loadingChildrenIDs.contains(parent.uniqueID) {
                 HStack {
                     Spacer()
                     ProgressView()
@@ -691,7 +691,7 @@ struct MenuBarContentView: View {
                     Spacer()
                 }
                 .frame(height: 60)
-            } else if let error = appState.childErrorsByItemID[parent.id] {
+            } else if let error = appState.childErrorsByItemID[parent.uniqueID] {
                 VStack(spacing: 6) {
                     Text(error)
                         .font(.caption)

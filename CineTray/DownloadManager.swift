@@ -485,7 +485,7 @@ final class DownloadManager {
         _ = downloadedIDs[item.type]
         guard let folder = Self.resolvedFolder(for: item.type) else { return false }
         let index = Self.readIndexFromFolder(folder)
-        guard let entry = index[item.id] else { return false }
+        guard let entry = index[item.id], entry.item.isFromSameServer(as: item) else { return false }
         guard let filename = entry.filename else { return true }
         return FileManager.default.fileExists(
             atPath: folder.appending(path: filename).path
@@ -499,7 +499,8 @@ final class DownloadManager {
     /// The indexed file for `item` in `folder`, if it still exists on disk.
     private static func indexedFileURL(for item: MediaItem, in folder: URL?) -> URL? {
         guard let folder,
-              let filename = readIndexFromFolder(folder)[item.id]?.filename,
+              let entry = readIndexFromFolder(folder)[item.id], entry.item.isFromSameServer(as: item),
+              let filename = entry.filename,
               let fileURL = fileURL(filename, in: folder) else { return nil }
         return FileManager.default.fileExists(atPath: fileURL.path) ? fileURL : nil
     }

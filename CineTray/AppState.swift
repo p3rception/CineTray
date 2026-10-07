@@ -815,10 +815,10 @@ final class AppState {
     /// Re-fetches a cached drill-down (a show's seasons, a season's episodes) in place.
     private func refreshChildrenSilently(of container: MediaItem) async {
         let generation = librarySectionsGeneration
-        guard childrenByItemID[container.id] != nil, let provider = provider(for: container),
+        guard childrenByItemID[container.uniqueID] != nil, let provider = provider(for: container),
               let children = try? await children(of: container, from: provider),
               generation == librarySectionsGeneration else { return }
-        childrenByItemID[container.id] = children
+        childrenByItemID[container.uniqueID] = children
         // Close an open level whose item is gone.
         for (section, path) in drillPath {
             if let index = path.firstIndex(where: { $0.id == container.id }), index + 1 < path.count,
@@ -851,7 +851,7 @@ final class AppState {
         for parents in drillPath.values {
             // A single-season show lists its episodes, but they name the season as parent.
             for parent in parents where containerIDs.contains(parent.id) || parent.parentID == item.id
-                || childrenByItemID[parent.id]?.contains(where: { $0.id == item.id }) == true {
+                || childrenByItemID[parent.uniqueID]?.contains(where: { $0.id == item.id }) == true {
                 await refreshChildrenSilently(of: parent)
             }
         }
@@ -1012,8 +1012,8 @@ final class AppState {
                         newItems[section, default: []].append(top)
                     }
                     for (parent, child) in zip(chain, chain.dropFirst())
-                    where !(newChildren[parent.id] ?? []).contains(where: { $0.id == child.id }) {
-                        newChildren[parent.id, default: []].append(child)
+                    where !(newChildren[parent.uniqueID] ?? []).contains(where: { $0.id == child.id }) {
+                        newChildren[parent.uniqueID, default: []].append(child)
                     }
                     // Servers also return songs matched by artist or album name;
                     // those stay in their album.
@@ -1116,10 +1116,10 @@ final class AppState {
     /// query is active (when the backend matched below this container),
     /// otherwise the full cached children.
     func displayedChildren(of item: MediaItem) -> [MediaItem]? {
-        if isSearchActive, !trimmedQuery.isEmpty, let filtered = deepSearchChildren[item.id] {
+        if isSearchActive, !trimmedQuery.isEmpty, let filtered = deepSearchChildren[item.uniqueID] {
             return filtered
         }
-        return childrenByItemID[item.id]
+        return childrenByItemID[item.uniqueID]
     }
 
     // MARK: - Drill-down (show → seasons → episodes, artist → albums → tracks)
@@ -1132,7 +1132,7 @@ final class AppState {
         if let index = path.firstIndex(where: { $0.id == item.id }) {
             path.removeSubrange(index...)
         } else if let parentIndex = path.firstIndex(where: { parent in
-            childrenByItemID[parent.id]?.contains { $0.id == item.id } ?? false
+            childrenByItemID[parent.uniqueID]?.contains { $0.id == item.id } ?? false
         }) {
             path = Array(path.prefix(parentIndex + 1)) + [item]
             loadChildrenIfNeeded(of: item)
@@ -1156,23 +1156,23 @@ final class AppState {
 
     func loadChildrenIfNeeded(of item: MediaItem) {
         // Search results already carry their filtered children.
-        if isSearchActive, !trimmedQuery.isEmpty, deepSearchChildren[item.id] != nil { return }
-        guard childrenByItemID[item.id] == nil, !loadingChildrenIDs.contains(item.id) else { return }
-        loadingChildrenIDs.insert(item.id)
-        childErrorsByItemID[item.id] = nil
+        if isSearchActive, !trimmedQuery.isEmpty, deepSearchChildren[item.uniqueID] != nil { return }
+        guard childrenByItemID[item.uniqueID] == nil, !loadingChildrenIDs.contains(item.uniqueID) else { return }
+        loadingChildrenIDs.insert(item.uniqueID)
+        childErrorsByItemID[item.uniqueID] = nil
         let generation = librarySectionsGeneration
         Task {
-            defer { if generation == librarySectionsGeneration { loadingChildrenIDs.remove(item.id) } }
+            defer { if generation == librarySectionsGeneration { loadingChildrenIDs.remove(item.uniqueID) } }
             do {
                 guard let provider = provider(for: item) else {
                     throw URLError(.resourceUnavailable)
                 }
                 let children = try await children(of: item, from: provider)
                 guard generation == librarySectionsGeneration else { return }
-                childrenByItemID[item.id] = children
+                childrenByItemID[item.uniqueID] = children
             } catch {
                 guard generation == librarySectionsGeneration else { return }
-                childErrorsByItemID[item.id] = error.localizedDescription
+                childErrorsByItemID[item.uniqueID] = error.localizedDescription
             }
         }
     }
@@ -1184,7 +1184,7 @@ final class AppState {
         let children = try await provider.children(of: item)
         guard item.kind == .show, children.count == 1, let season = children.first, season.kind == .season else { return children }
         let episodes = try await provider.children(of: season)
-        childrenByItemID[season.id] = episodes
+        childrenByItemID[season.uniqueID] = episodes
         return episodes
     }
 
@@ -1296,16 +1296,17 @@ final class AppState {
     /// if the drill-down hasn't already.
     func siblings(of item: MediaItem) async -> [MediaItem]? {
         guard let parentID = item.parentID else { return nil }
-        if let cached = childrenByItemID[parentID] { return cached }
-        let parentStub = MediaItem(
+        var parentStub = MediaItem(
             id: parentID,
             source: item.source,
             type: item.type,
             kind: item.parentKind ?? (item.kind == .episode ? .season : .album),
             title: ""
         )
+        parentStub.attributes[PlexMediaProvider.serverIDAttribute] = item.attributes[PlexMediaProvider.serverIDAttribute]
+        if let cached = childrenByItemID[parentStub.uniqueID] { return cached }
         let fetched = try? await provider(for: item)?.children(of: parentStub)
-        if let fetched { childrenByItemID[parentID] = fetched }
+        if let fetched { childrenByItemID[parentStub.uniqueID] = fetched }
         return fetched
     }
 
@@ -1377,7 +1378,7 @@ final class AppState {
     private func tracks(of item: MediaItem) async -> [MediaItem] {
         guard item.kind.isExpandable else { return [item] }
         do {
-            let children = if let cached = childrenByItemID[item.id] {
+            let children = if let cached = childrenByItemID[item.uniqueID] {
                 cached
             } else {
                 try await provider(for: item)?.children(of: item) ?? []
@@ -1724,7 +1725,7 @@ final class AppState {
     /// Where to start `item`: the more recent of CineTray's saved position and
     /// the server's resume point (which may come from another device).
     private func resumePosition(for item: MediaItem) -> Double? {
-        let local = PlaybackProgressStore.entry(forItemID: item.id)
+        let local = PlaybackProgressStore.entry(for: item)
         let position = if let local, local.updatedAt >= item.lastViewedAt ?? .distantPast {
             local.positionSeconds
         } else {

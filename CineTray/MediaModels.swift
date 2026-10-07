@@ -450,13 +450,22 @@ struct MediaItem: Identifiable, Hashable, Codable {
         year ?? Int(attributes["releaseDate"]?.prefix(4) ?? "")
     }
 
-    /// Globally-unique identity for SwiftUI rendering. `id` alone is a Plex
-    /// ratingKey, which can collide across servers; scoping it by source and
-    /// originating server keeps `ForEach`/`scrollPosition` identities distinct
+    /// Globally-unique identity, for SwiftUI rendering and the child caches.
+    /// `id` alone is a Plex ratingKey, which can collide across servers;
+    /// scoping it by source and originating server keeps identities distinct
     /// when multiple servers each expose the same library type.
     var uniqueID: String {
         let server = attributes["plexServerID"] ?? ""
         return "\(source.rawValue)|\(server)|\(id)"
+    }
+
+    /// For saved entries, which are keyed by `id` alone: false when both
+    /// items name a Plex server and they differ. Entries saved without one
+    /// (local items, older builds) still match.
+    func isFromSameServer(as other: MediaItem) -> Bool {
+        let key = PlexMediaProvider.serverIDAttribute
+        guard let server = attributes[key], let otherServer = other.attributes[key] else { return true }
+        return server == otherServer
     }
 
     /// Carousel cell artwork height: 2:3 portrait for movies/shows/seasons,

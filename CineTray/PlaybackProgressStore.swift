@@ -30,8 +30,8 @@ enum PlaybackProgressStore {
             .sorted { $0.updatedAt > $1.updatedAt }
     }
 
-    static func entry(forItemID id: String) -> PlaybackProgress? {
-        load()[id]
+    static func entry(for item: MediaItem) -> PlaybackProgress? {
+        load()[item.id].flatMap { $0.item.isFromSameServer(as: item) ? $0 : nil }
     }
 
     /// Records progress, or clears the entry when playback is effectively
