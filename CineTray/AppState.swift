@@ -664,8 +664,10 @@ final class AppState {
 
     private func refreshServerContinueItems() async {
         guard !isOfflineMode else { return }
+        let generation = librarySectionsGeneration
         let started = Date.now
         let results = await concurrently(providers()) { try await $0.continueWatching() }
+        guard generation == librarySectionsGeneration else { return }
         serverContinueItems = results.flatMap { (try? $0.get()) ?? [] }
         serverContinueFetchedAt = results.allSatisfy { (try? $0.get()) != nil } ? started : nil
         // Navidrome has no Continue list to compare with, so ask for each track.
@@ -723,6 +725,9 @@ final class AppState {
 
     func load(_ section: MenuSection, force: Bool = false) async {
         if loadingSections.contains(section) { return }
+        // After a reset, a load started before it neither writes its results
+        // nor clears the loading mark, which a newer load may own.
+        let generation = librarySectionsGeneration
         // Continue Watching always refreshes: local progress shows at once,
         // then the servers' lists are merged in. The first time, a spinner
         // shows until they arrive, rather than a list that then reshuffles.
@@ -733,6 +738,7 @@ final class AppState {
                 loadingSections.insert(section)
             }
             await refreshServerContinueItems()
+            guard generation == librarySectionsGeneration else { return }
             loadingSections.remove(section)
             itemsBySection[section] = continueDisplayItems()
             return
@@ -740,9 +746,10 @@ final class AppState {
         if !force, itemsBySection[section]?.isEmpty == false { return }
         loadingSections.insert(section)
         errorsBySection[section] = nil
-        defer { loadingSections.remove(section) }
+        defer { if generation == librarySectionsGeneration { loadingSections.remove(section) } }
 
         let (items, failures) = await fetchCatalog(for: section)
+        guard generation == librarySectionsGeneration else { return }
         itemsBySection[section] = items
         sectionFetchedAt[section] = .now
         // Only surface errors when nothing loaded; partial results win.
@@ -798,16 +805,19 @@ final class AppState {
     /// items if any source fails.
     private func refreshSilently(_ section: MenuSection) async {
         guard itemsBySection[section] != nil, !loadingSections.contains(section) else { return }
+        let generation = librarySectionsGeneration
         let (items, failures) = await fetchCatalog(for: section)
-        guard failures.isEmpty else { return }
+        guard failures.isEmpty, generation == librarySectionsGeneration else { return }
         itemsBySection[section] = items
         sectionFetchedAt[section] = .now
     }
 
     /// Re-fetches a cached drill-down (a show's seasons, a season's episodes) in place.
     private func refreshChildrenSilently(of container: MediaItem) async {
+        let generation = librarySectionsGeneration
         guard childrenByItemID[container.id] != nil, let provider = provider(for: container),
-              let children = try? await children(of: container, from: provider) else { return }
+              let children = try? await children(of: container, from: provider),
+              generation == librarySectionsGeneration else { return }
         childrenByItemID[container.id] = children
         // Close an open level whose item is gone.
         for (section, path) in drillPath {
@@ -892,6 +902,8 @@ final class AppState {
         drillPath = [:]
         childrenByItemID = [:]
         childErrorsByItemID = [:]
+        loadingSections = []
+        loadingChildrenIDs = []
         serverContinueItems = nil
         serverContinueFetchedAt = nil
         confirmedNavidromeTrackIDs = []
@@ -1148,14 +1160,18 @@ final class AppState {
         guard childrenByItemID[item.id] == nil, !loadingChildrenIDs.contains(item.id) else { return }
         loadingChildrenIDs.insert(item.id)
         childErrorsByItemID[item.id] = nil
+        let generation = librarySectionsGeneration
         Task {
-            defer { loadingChildrenIDs.remove(item.id) }
+            defer { if generation == librarySectionsGeneration { loadingChildrenIDs.remove(item.id) } }
             do {
                 guard let provider = provider(for: item) else {
                     throw URLError(.resourceUnavailable)
                 }
-                childrenByItemID[item.id] = try await children(of: item, from: provider)
+                let children = try await children(of: item, from: provider)
+                guard generation == librarySectionsGeneration else { return }
+                childrenByItemID[item.id] = children
             } catch {
+                guard generation == librarySectionsGeneration else { return }
                 childErrorsByItemID[item.id] = error.localizedDescription
             }
         }
