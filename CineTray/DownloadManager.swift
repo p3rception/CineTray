@@ -808,10 +808,11 @@ final class DownloadManager {
                 }
 
                 let observation = task.progress.observe(\.fractionCompleted) { [weak self] progress, _ in
-                    let fraction = progress.fractionCompleted
+                    // Whole percents: every write redraws every poster that reads the dictionary.
+                    let fraction = (progress.fractionCompleted * 100).rounded(.down) / 100
                     DispatchQueue.main.async {
                         // A late update must not bring back the entry of a finished or stopped download.
-                        if self?.downloadProgress[itemID] != nil {
+                        if let current = self?.downloadProgress[itemID], current != fraction {
                             self?.downloadProgress[itemID] = fraction
                         }
                     }
