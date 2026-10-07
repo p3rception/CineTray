@@ -950,6 +950,7 @@ final class AppState {
         deepSearchItems = [:]
         deepSearchChildren = [:]
         deepSearchSongs = [:]
+        reconcileDrillPaths()
     }
 
     /// Kicks off a debounced backend search that matches titles anywhere in
@@ -963,6 +964,7 @@ final class AppState {
             deepSearchChildren = [:]
             deepSearchSongs = [:]
             isDeepSearching = false
+            reconcileDrillPaths()
             return
         }
         isDeepSearching = true
@@ -1021,6 +1023,25 @@ final class AppState {
             deepSearchChildren = newChildren
             deepSearchSongs = newSongs
             isDeepSearching = false
+            reconcileDrillPaths()
+        }
+    }
+
+    /// After the search results change, closes open levels whose item left
+    /// the row above, and loads the full children of levels opened from
+    /// search results, which only had the matches.
+    private func reconcileDrillPaths() {
+        for (section, path) in drillPath {
+            var row = displayedItems(for: section)
+            var kept: [MediaItem] = []
+            for item in path {
+                // A row still loading can't tell yet, so the level stays.
+                if let row, !row.contains(where: { $0.id == item.id }) { break }
+                kept.append(item)
+                loadChildrenIfNeeded(of: item)
+                row = displayedChildren(of: item)
+            }
+            drillPath[section] = kept.isEmpty ? nil : kept
         }
     }
 
