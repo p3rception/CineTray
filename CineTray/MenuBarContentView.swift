@@ -87,12 +87,16 @@ struct MenuBarContentView: View {
                 }
 
                 // Filtered and sorted once per redraw, shared by the match check,
-                // the count and the carousel.
+                // the count and the carousel. Closed rows show only a count, so
+                // they skip the sort; Continue isn't sorted but keeps its filter.
                 let pane = musicPane
                 let sections = appState.enabledSections.filter { section in
                     pane.map { section == .continueItems || section.isMusic == $0 } ?? true
                 }
-                let itemsBySection = Dictionary(uniqueKeysWithValues: sections.map { ($0, visibleItems(for: $0)) })
+                let itemsBySection = Dictionary(uniqueKeysWithValues: sections.map { section in
+                    (section, isExpanded(section) || section == .continueItems
+                        ? visibleItems(for: section) : appState.itemsBySection[section])
+                })
                 // While a query is typed, show only the sections with matches.
                 let shown = appState.isFiltering
                     ? sections.filter { itemsBySection[$0]??.isEmpty == false }
