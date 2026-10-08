@@ -73,12 +73,18 @@ nonisolated enum ArtworkCache {
     static func clear() {
         persistentSession.configuration.urlCache?.removeAllCachedResponses()
         ephemeralSession.configuration.urlCache?.removeAllCachedResponses()
+        decoded.removeAllObjects()
     }
+
+    /// Decoded posters, so reopening the menu or scrolling back doesn't decode
+    /// them again. The system empties it under memory pressure.
+    private static let decoded = NSCache<NSURL, CGImage>()
 
     /// Fetches and decodes artwork off the main thread, downsampled so a
     /// full-size poster doesn't sit in memory at original resolution.
     @concurrent
     static func image(at url: URL) async -> CGImage? {
+        if let image = decoded.object(forKey: url as NSURL) { return image }
         guard let data = await data(at: url),
               let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
         // ponytail: fixed 600 px cap covers the largest view (280 pt music artwork @2x).
@@ -88,7 +94,9 @@ nonisolated enum ArtworkCache {
             kCGImageSourceShouldCacheImmediately: true,
             kCGImageSourceThumbnailMaxPixelSize: 600,
         ]
-        return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+        decoded.setObject(image, forKey: url as NSURL)
+        return image
     }
 
     /// Navidrome's credentials are in the query, and the disk cache keys
