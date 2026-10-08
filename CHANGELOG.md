@@ -18,6 +18,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Downloaded episodes of a show without seasons now save the show's poster, so the show has artwork in Offline Mode.
 - With more than one Plex server, opening a show or album could list another server's seasons or tracks, and a download or saved position from one server could be used for an item on another.
 - Turning Offline Mode on or off while a library was still loading could show that library's server posters in the other mode, where they failed to play.
 - Saved playback positions and the Continue list are no longer all lost when one saved entry can't be read, for example after switching between CineTray versions.

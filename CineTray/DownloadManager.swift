@@ -763,17 +763,17 @@ final class DownloadManager {
                         await downloadArtwork(from: url, stem: showFolderName, destinationFolder: rootFolder)
                     } else if let urlString = item.attributes["grandparentPosterURL"], let url = URL(string: urlString) {
                         await downloadArtwork(from: url, stem: showFolderName, destinationFolder: rootFolder)
-                    } else {
-                        let showFolder = episodeFolder
-                        let rootFolder = showFolder.deletingLastPathComponent()
-                        let showFolderName = showFolder.lastPathComponent
-                        
-                        if let showAncestor = ancestors.first(where: { $0.kind == .show }),
-                           let url = showAncestor.posterURL {
-                            await downloadArtwork(from: url, stem: showFolderName, destinationFolder: rootFolder)
-                        } else if item.parentKind == .show, let url = item.parentPosterURL {
-                            await downloadArtwork(from: url, stem: showFolderName, destinationFolder: rootFolder)
-                        }
+                    }
+                } else {
+                    // Episodes straight in the show folder, without season folders.
+                    let rootFolder = episodeFolder.deletingLastPathComponent()
+                    let showFolderName = episodeFolder.lastPathComponent
+
+                    if let showAncestor = ancestors.first(where: { $0.kind == .show }),
+                       let url = showAncestor.posterURL {
+                        await downloadArtwork(from: url, stem: showFolderName, destinationFolder: rootFolder)
+                    } else if item.parentKind == .show, let url = item.parentPosterURL {
+                        await downloadArtwork(from: url, stem: showFolderName, destinationFolder: rootFolder)
                     }
                 }
             }
