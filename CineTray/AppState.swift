@@ -1606,6 +1606,8 @@ final class AppState {
         // Every track of an album asks for the same cover; MusicBrainz alone
         // allows one request per second.
         var musicArtwork: [String: URL?] = [:]
+        // Every episode and season of a show asks for the same poster.
+        var showPosters: [String: URL?] = [:]
 
         for type in MediaType.allCases {
             guard let folder = DownloadManager.resolvedLibraryFolder(for: type) else { continue }
@@ -1652,6 +1654,10 @@ final class AppState {
                     let showTitle: String = entry.filename.map { f in
                         String(f.split(separator: "/").first ?? "")
                     } ?? item.title
+                    if let cached = showPosters[showTitle] {
+                        item.posterURL = cached
+                        break
+                    }
                     var tmdbID: Int?
                     tmdbID = await trakt.searchShow(title: showTitle)?.tmdbID
                     if tmdbID == nil, let t = tmdb {
@@ -1661,6 +1667,7 @@ final class AppState {
                        let path = await t.tvPosterPath(tmdbID: id) {
                         item.posterURL = TMDbClient.posterURL(path: path)
                     }
+                    showPosters[showTitle] = item.posterURL
                 }
                 enriched.append(DownloadIndexEntry(item: item, filename: entry.filename))
             }
