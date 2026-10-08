@@ -12,6 +12,10 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - Control Center and the Now Playing widget show the poster or album artwork, and the album for music. Dragging their position bar seeks. Both need Settings > General > Use Mac Media Keys.
 - Searching a song title shows the song itself in the Music row, marked SONG, right before its album. Click it to play. Before, only the album appeared.
 
+### Changed
+
+- Continue and resume points keep the 500 most recently played items. Older half-played items drop out, even with the Continue timeout set to Forever.
+
 ### Fixed
 
 - With more than one Plex server, opening a show or album could list another server's seasons or tracks, and a download or saved position from one server could be used for an item on another.

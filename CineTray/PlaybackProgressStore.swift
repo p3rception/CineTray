@@ -15,6 +15,12 @@ struct PlaybackProgress: Codable {
 enum PlaybackProgressStore {
     private static let startedFraction = 0.05
     private static let finishedFraction = 0.92
+    /// Saving keeps the most recently played entries up to this many, since
+    /// the default timeout (Forever) never drops any.
+    private static let maxEntries = 500
+    /// The decoded store, so playback reports (every 15 seconds) don't decode
+    /// it again. Only `save` writes the stored data.
+    private static var cache: (entries: [String: PlaybackProgress], unreadable: [String: Any])?
 
     /// Items last played before this drop out of Continue Watching.
     static var cutoff: Date? {
@@ -68,6 +74,13 @@ enum PlaybackProgressStore {
     /// written by another build, say). Those are kept and saved back, so one
     /// bad entry doesn't take every saved position with it.
     private static func read() -> (entries: [String: PlaybackProgress], unreadable: [String: Any]) {
+        if let cache { return cache }
+        let result = decodeStored()
+        cache = result
+        return result
+    }
+
+    private static func decodeStored() -> (entries: [String: PlaybackProgress], unreadable: [String: Any]) {
         guard let data = UserDefaults.standard.data(forKey: SettingsKeys.playbackProgress) else { return ([:], [:]) }
         if let entries = try? JSONDecoder().decode([String: PlaybackProgress].self, from: data) {
             return (entries, [:])
@@ -95,10 +108,11 @@ enum PlaybackProgressStore {
     }
 
     private static func save(_ entries: [String: PlaybackProgress], keeping unreadable: [String: Any]) {
-        let entries = entries.mapValues { entry in
-            var entry = entry
+        let newest = entries.values.sorted { $0.updatedAt > $1.updatedAt }.prefix(maxEntries)
+        var entries: [String: PlaybackProgress] = [:]
+        for var entry in newest {
             entry.item = entry.item.removingPlexTokens
-            return entry
+            entries[entry.item.id] = entry
         }
         guard var data = try? JSONEncoder().encode(entries) else { return }
         if !unreadable.isEmpty {
@@ -108,5 +122,6 @@ enum PlaybackProgressStore {
             data = merged
         }
         UserDefaults.standard.set(data, forKey: SettingsKeys.playbackProgress)
+        cache = (entries, unreadable)
     }
 }
