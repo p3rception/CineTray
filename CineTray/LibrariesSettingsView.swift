@@ -14,6 +14,7 @@ struct LibrariesSettingsView: View {
     @State private var jellyfinLibraries: [JellyfinLibrary] = []
     @State private var jellyfinStatus = ""
     @State private var localRefresh = 0
+    @State private var libraryCounts: [MediaType: String] = [:]
     @State private var isRefreshing = false
 
     var body: some View {
@@ -105,8 +106,7 @@ struct LibrariesSettingsView: View {
             ForEach(MediaType.allCases) { type in
                 HStack {
                     Label(type.title, systemImage: type.systemImage)
-                    let countText = libraryCountText(for: type)
-                    if !countText.isEmpty {
+                    if let countText = libraryCounts[type], !countText.isEmpty {
                         Text(countText)
                             .foregroundStyle(.secondary)
                     }
@@ -149,10 +149,16 @@ struct LibrariesSettingsView: View {
         } header: {
             SectionInfoHeader(title: "Local Library", info: "Choose a folder for each media type to make local files available in the menu bar. Press Refresh to index new files and fetch metadata from Last.fm, Trakt, and TMDb.")
         }
+        .task(id: localRefresh) {
+            for type in MediaType.allCases {
+                libraryCounts[type] = await libraryCountText(for: type)
+            }
+        }
     }
 
-    private func libraryCountText(for type: MediaType) -> String {
-        let counts = DownloadManager.mediaCounts(for: type)
+    private func libraryCountText(for type: MediaType) async -> String {
+        guard let folder = DownloadManager.resolvedLibraryFolder(for: type) else { return "" }
+        let counts = await DownloadManager.mediaCounts(in: folder)
         guard counts.leaves > 0 else { return "" }
         switch type {
         case .movies:

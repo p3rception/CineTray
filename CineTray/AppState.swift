@@ -1611,7 +1611,7 @@ final class AppState {
 
         for type in MediaType.allCases {
             guard let folder = DownloadManager.resolvedLibraryFolder(for: type) else { continue }
-            let scanned = LocalLibraryScanner(type: type, folder: folder).scan()
+            let scanned = await LocalLibraryScanner(type: type, folder: folder).scan()
             let existingByID: [String: DownloadIndexEntry] = {
                 var d: [String: DownloadIndexEntry] = [:]
                 for e in DownloadManager.libraryIndexedEntries(for: type) { d[e.item.id] = e }

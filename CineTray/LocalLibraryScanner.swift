@@ -10,7 +10,7 @@ import Foundation
 ///
 /// Items that don't match are still returned as bare leaves so they remain
 /// accessible in the UI.
-struct LocalLibraryScanner {
+nonisolated struct LocalLibraryScanner {
 
     let type: MediaType
     let folder: URL
@@ -18,8 +18,9 @@ struct LocalLibraryScanner {
     // MARK: - Public API
 
     /// Returns index entries for all media files found in `folder`, plus
-    /// container entries for the hierarchy above them.
-    func scan() -> [DownloadIndexEntry] {
+    /// container entries for the hierarchy above them. Off the main thread,
+    /// since it walks the whole folder.
+    @concurrent func scan() async -> [DownloadIndexEntry] {
         switch type {
         case .movies: return scanMovies()
         case .tvShows: return scanTV()

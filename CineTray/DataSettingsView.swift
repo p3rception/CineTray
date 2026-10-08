@@ -8,6 +8,7 @@ struct DataSettingsView: View {
 
     // Refresh trigger for folder paths and usage after choosing folders.
     @State private var folderRefresh = 0
+    @State private var usageDescriptions: [MediaType: String] = [:]
     @State private var cacheSizeDescription = ""
     @State private var confirmingDelete: MediaType?
 
@@ -101,7 +102,7 @@ struct DataSettingsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            LabeledContent("Used", value: usageDescription(for: type))
+            LabeledContent("Used", value: usageDescriptions[type] ?? "")
             Button("Delete Downloads…", role: .destructive) {
                 confirmingDelete = type
             }
@@ -115,12 +116,16 @@ struct DataSettingsView: View {
                 adoptLibraryFolder(for: type)
             }
         }
+        // Also when a download finishes or is removed while Settings is open.
+        .task(id: "\(folderRefresh)-\(DownloadManager.shared.downloadedIDs[type]?.count ?? 0)") {
+            usageDescriptions[type] = await usageDescription(for: type)
+        }
         .disabled(!downloadsEnabled)
     }
 
-    private func usageDescription(for type: MediaType) -> String {
+    private func usageDescription(for type: MediaType) async -> String {
         guard DownloadManager.folderPath(for: type) != nil else { return "-" }
-        let details = DownloadManager.folderUsageDetails(for: type)
+        let details = await DownloadManager.folderUsageDetails(for: type)
         let downloaded = ByteCountFormatter.string(fromByteCount: details.downloadedBytes, countStyle: .file)
         guard details.localBytes > 0 else { return downloaded }
         let local = ByteCountFormatter.string(fromByteCount: details.localBytes, countStyle: .file)

@@ -157,13 +157,14 @@ final class DownloadManager {
         return url
     }
 
-    static let mediaExtensions: Set<String> = [
+    nonisolated static let mediaExtensions: Set<String> = [
         "mp4", "mkv", "mov", "m4v", "avi",
         "mp3", "m4a", "flac", "aiff", "wav",
     ]
 
-    static func mediaCounts(for type: MediaType) -> (containers: Int, leaves: Int) {
-        guard let folder = resolvedLibraryFolder(for: type) else { return (0, 0) }
+    /// Walks the whole folder, so it runs off the main thread: a large or
+    /// network library would freeze Settings.
+    @concurrent nonisolated static func mediaCounts(in folder: URL) async -> (containers: Int, leaves: Int) {
         guard let enumerator = FileManager.default.enumerator(
             at: folder,
             includingPropertiesForKeys: [.isRegularFileKey, .isDirectoryKey],
@@ -173,7 +174,7 @@ final class DownloadManager {
         var leafCount = 0
         var containerDirs: Set<String> = []
 
-        for case let url as URL in enumerator {
+        while let url = enumerator.nextObject() as? URL {
             let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isDirectoryKey])
             guard values?.isRegularFile == true,
                   mediaExtensions.contains(url.pathExtension.lowercased()) else { continue }
@@ -217,15 +218,19 @@ final class DownloadManager {
         return Int64(gigabytes * 1_000_000_000)
     }
 
-    static func usageBytes(for type: MediaType) -> Int64 {
-        guard let folder = resolvedFolder(for: type),
-              let enumerator = FileManager.default.enumerator(
+    static func usageBytes(for type: MediaType) async -> Int64 {
+        guard let folder = resolvedFolder(for: type) else { return 0 }
+        return await usageBytes(in: folder)
+    }
+
+    @concurrent nonisolated private static func usageBytes(in folder: URL) async -> Int64 {
+        guard let enumerator = FileManager.default.enumerator(
                 at: folder,
                 includingPropertiesForKeys: [.isRegularFileKey, .totalFileSizeKey],
                 options: [.skipsHiddenFiles]
               ) else { return 0 }
         var total: Int64 = 0
-        for case let file as URL in enumerator {
+        while let file = enumerator.nextObject() as? URL {
             let values = try? file.resourceValues(forKeys: [.isRegularFileKey, .totalFileSizeKey])
             guard values?.isRegularFile == true else { continue }
             total += Int64(values?.totalFileSize ?? 0)
@@ -233,9 +238,9 @@ final class DownloadManager {
         return total
     }
 
-    static func folderUsageDetails(for type: MediaType) -> (localBytes: Int64, downloadedBytes: Int64) {
+    static func folderUsageDetails(for type: MediaType) async -> (localBytes: Int64, downloadedBytes: Int64) {
         guard let folder = resolvedFolder(for: type) else { return (0, 0) }
-        let total = usageBytes(for: type)
+        let total = await usageBytes(in: folder)
         var downloaded: Int64 = 0
         let index = readIndexFromFolder(folder)
         for entry in index.values {
@@ -647,7 +652,7 @@ final class DownloadManager {
             let expected = await Self.expectedSize(of: url)
             let limit = Self.limitBytes(for: item.type)
             if limit > 0 {
-                let usage = Self.usageBytes(for: item.type)
+                let usage = await Self.usageBytes(for: item.type)
                 if usage + max(expected, 0) > limit {
                     if showAlerts {
                         let formatter = ByteCountFormatter()
