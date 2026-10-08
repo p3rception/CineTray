@@ -1227,6 +1227,9 @@ final class AppState {
     /// beginning and CineTray can't follow it, so there is no resume, progress,
     /// scrobbling or auto-continue.
     func play(_ item: MediaItem, in app: URL) {
+        let start = startOverItemID == item.id ? nil : resumePosition(for: item)
+        startOverItemID = nil
+        let appID = Bundle(url: app)?.bundleIdentifier
         Task {
             do {
                 let readsPlaylists = NSWorkspace.shared.urlsForApplications(toOpen: .m3uPlaylist).contains { $0.path == app.path }
@@ -1239,8 +1242,19 @@ final class AppState {
                 } else {
                     try await streamURL(for: item)
                 }
-                if !url.isFileURL, readsPlaylists {
-                    url = try Self.playlist(for: item, streaming: url)
+                // VLC reads the start from the playlist, so local files get one too when resuming.
+                let vlcStart = appID == "org.videolan.vlc" ? start : nil
+                if readsPlaylists, !url.isFileURL || vlcStart != nil {
+                    url = try Self.playlist(for: item, streaming: url, vlcStart: vlcStart)
+                }
+                // IINA takes the start only through its URL scheme.
+                if appID == "com.colliderli.iina", let start {
+                    var components = URLComponents(string: "iina://open")
+                    components?.queryItems = [
+                        URLQueryItem(name: "url", value: url.absoluteString),
+                        URLQueryItem(name: "mpv_start", value: String(Int(start))),
+                    ]
+                    if let iinaURL = components?.url { url = iinaURL }
                 }
                 try await NSWorkspace.shared.open([url], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
             } catch {
@@ -1254,7 +1268,7 @@ final class AppState {
     /// playlist rather than that URL in their recent items. Only the latest
     /// playlist is kept, and none after CineTray quits, since its URL
     /// carries the token.
-    private static func playlist(for item: MediaItem, streaming url: URL) throws -> URL {
+    private static func playlist(for item: MediaItem, streaming url: URL, vlcStart: Double?) throws -> URL {
         let folder = playlistFolder
         if FileManager.default.fileExists(atPath: folder.path) {
             try FileManager.default.removeItem(at: folder)
@@ -1263,7 +1277,8 @@ final class AppState {
         let file = folder.appending(path: item.title.replacing(/[\/:]/, with: "-") + ".m3u")
         // A line break in a server title would start another playlist entry.
         let title = item.title.replacing(/[\r\n]/, with: " ")
-        try "#EXTM3U\n#EXTINF:-1,\(title)\n\(url.absoluteString)\n".write(to: file, atomically: true, encoding: .utf8)
+        let startLine = vlcStart.map { "#EXTVLCOPT:start-time=\(Int($0))\n" } ?? ""
+        try "#EXTM3U\n#EXTINF:-1,\(title)\n\(startLine)\(url.absoluteString)\n".write(to: file, atomically: true, encoding: .utf8)
         return file
     }
 

@@ -11,6 +11,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - Mark as Watched and Mark as Unwatched in a poster's right-click menu, for Plex and Jellyfin movies and episodes. On a show or season it marks every episode, so the menu says Mark Show or Mark Season.
 - Control Center and the Now Playing widget show the poster or album artwork, and the album for music. Dragging their position bar seeks. Both need Settings > General > Use Mac Media Keys.
 - Searching a song title shows the song itself in the Music row, marked SONG, right before its album. Click it to play. Before, only the album appeared.
+- Playing a movie or episode in IINA or VLC starts where CineTray's progress bar shows, as CineTray's own player does. Play from Beginning starts at the beginning. If IINA remembers its own spot for the same file, IINA's may still win.
 
 ### Changed
 
