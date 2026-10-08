@@ -98,6 +98,7 @@ struct LocalMediaProvider: MediaProvider {
     /// Dynamically recalculates episode counts for Seasons and extracts missing year metadata
     /// for synthesized TV Shows while in offline mode.
     private func enrich(items: [MediaItem], allEntries: [DownloadIndexEntry]) -> [MediaItem] {
+        let entriesByID = Dictionary(allEntries.map { ($0.item.id, $0) }, uniquingKeysWith: { first, _ in first })
         return items.map { item in
             var enriched = item
             
@@ -114,10 +115,9 @@ struct LocalMediaProvider: MediaProvider {
                 let episode = allEntries.first { entry in
                     guard entry.item.kind == .episode else { return false }
                     if entry.item.attributes["grandparentRatingKey"] == enriched.id { return true }
-                    if entry.item.parentKind == .season, let seasonID = entry.item.parentID {
-                        if let seasonEntry = allEntries.first(where: { $0.item.id == seasonID }) {
-                            return seasonEntry.item.parentID == enriched.id
-                        }
+                    if entry.item.parentKind == .season, let seasonID = entry.item.parentID,
+                       let seasonEntry = entriesByID[seasonID] {
+                        return seasonEntry.item.parentID == enriched.id
                     }
                     return false
                 }?.item

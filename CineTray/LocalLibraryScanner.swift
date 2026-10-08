@@ -31,7 +31,7 @@ nonisolated struct LocalLibraryScanner {
     // MARK: - Movies
 
     private func scanMovies() -> [DownloadIndexEntry] {
-        let files = mediaFiles(in: folder, recursive: false)
+        let files = mediaFiles(in: folder)
         return files.map { url in
             let relativePath = url.lastPathComponent
             let stem = url.deletingPathExtension().lastPathComponent
@@ -61,7 +61,7 @@ nonisolated struct LocalLibraryScanner {
             let seasonDirs = subdirectories(of: showDir)
             if seasonDirs.isEmpty {
                 // Flat show layout: files directly under the show directory.
-                let files = mediaFiles(in: showDir, recursive: false)
+                let files = mediaFiles(in: showDir)
                 for file in files {
                     let rel = "\(showTitle)/\(file.lastPathComponent)"
                     let stem = file.deletingPathExtension().lastPathComponent
@@ -89,7 +89,7 @@ nonisolated struct LocalLibraryScanner {
                         ?? Self.artworkURL(in: seasonDir, stem: nil)
                         ?? showItem.posterURL
 
-                    let files = mediaFiles(in: seasonDir, recursive: false)
+                    let files = mediaFiles(in: seasonDir)
                     for file in files {
                         let rel = "\(showTitle)/\(seasonTitle)/\(file.lastPathComponent)"
                         let stem = file.deletingPathExtension().lastPathComponent
@@ -117,7 +117,7 @@ nonisolated struct LocalLibraryScanner {
         }
 
         // Also catch flat episode files dropped directly into the root.
-        let rootFiles = mediaFiles(in: folder, recursive: false)
+        let rootFiles = mediaFiles(in: folder)
         for file in rootFiles {
             let rel = file.lastPathComponent
             let stem = file.deletingPathExtension().lastPathComponent
@@ -154,7 +154,7 @@ nonisolated struct LocalLibraryScanner {
                 albumItem.parentKind = .artist
                 albumItem.posterURL = Self.artworkURL(in: albumDir, stem: nil) ?? artistItem.posterURL
 
-                let files = mediaFiles(in: albumDir, recursive: false)
+                let files = mediaFiles(in: albumDir)
                 for file in files {
                     let rel = "\(artistName)/\(albumName)/\(file.lastPathComponent)"
                     let stem = file.deletingPathExtension().lastPathComponent
@@ -179,7 +179,7 @@ nonisolated struct LocalLibraryScanner {
             }
 
             // Flat tracks directly under the artist dir (no album).
-            let flatTracks = mediaFiles(in: artistDir, recursive: false)
+            let flatTracks = mediaFiles(in: artistDir)
             for file in flatTracks {
                 let rel = "\(artistName)/\(file.lastPathComponent)"
                 let stem = file.deletingPathExtension().lastPathComponent
@@ -195,7 +195,7 @@ nonisolated struct LocalLibraryScanner {
         }
 
         // Flat tracks at the root.
-        let rootFiles = mediaFiles(in: folder, recursive: false)
+        let rootFiles = mediaFiles(in: folder)
         for file in rootFiles {
             let rel = file.lastPathComponent
             let stem = file.deletingPathExtension().lastPathComponent
@@ -236,26 +236,14 @@ nonisolated struct LocalLibraryScanner {
         )) ?? []).filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
     }
 
-    private func mediaFiles(in url: URL, recursive: Bool) -> [URL] {
-        if recursive {
-            guard let enumerator = FileManager.default.enumerator(
-                at: url,
-                includingPropertiesForKeys: [.isRegularFileKey],
-                options: [.skipsHiddenFiles]
-            ) else { return [] }
-            return (enumerator.allObjects as? [URL] ?? []).filter {
-                (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true &&
-                DownloadManager.mediaExtensions.contains($0.pathExtension.lowercased())
-            }
-        } else {
-            return ((try? FileManager.default.contentsOfDirectory(
-                at: url,
-                includingPropertiesForKeys: [.isRegularFileKey],
-                options: [.skipsHiddenFiles]
-            )) ?? []).filter {
-                (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true &&
-                DownloadManager.mediaExtensions.contains($0.pathExtension.lowercased())
-            }
+    private func mediaFiles(in url: URL) -> [URL] {
+        ((try? FileManager.default.contentsOfDirectory(
+            at: url,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )) ?? []).filter {
+            (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true &&
+            DownloadManager.mediaExtensions.contains($0.pathExtension.lowercased())
         }
     }
 
